@@ -633,7 +633,7 @@ $nodeStatsHtml = '
                      `${Math.floor(node.last_seen_minutes / 1440)}${t("days_ago")}`);
                 
                 html += `
-                    <tr onclick="showNodeDetails(${node.id})">
+                    <tr onclick="showNodeDetails(${node.id}, event)" data-node-name="${node.name.replace(/"/g, '&quot;')}">
                         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
                         <td>${node.id}</td>
                         <td title="${node.name}">${node.name}</td>
@@ -662,8 +662,26 @@ $nodeStatsHtml = '
             tbody.innerHTML = html;
         }
         
-        function showNodeDetails(nodeId) {
+        function showNodeDetails(nodeId, event) {
             currentNodeId = nodeId;
+            
+            // Get node name from the clicked row
+            let currentRow;
+            if (event && event.currentTarget) {
+                currentRow = event.currentTarget;
+            } else {
+                // Fallback: find the row by searching all table rows
+                const rows = document.querySelectorAll('#rankings-tbody tr');
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (row.onclick && row.onclick.toString().includes(nodeId)) {
+                        currentRow = row;
+                        break;
+                    }
+                }
+            }
+            currentNodeName = currentRow ? currentRow.getAttribute('data-node-name') : null;
+            
             const modal = document.getElementById("node-modal");
             const nodeInfo = document.getElementById("node-info");
             const recordsTbody = document.getElementById("node-records-tbody");
@@ -699,15 +717,16 @@ $nodeStatsHtml = '
                 })
                 .then(data => {
                     if (data.status === "success" && data.data) {
+                        // Ensure node name is available for chart display
+                        data.data.node_name = currentNodeName;
+                        data.data.node_id = currentNodeId;
+                        
                         displayNodeChart(data.data);
                         
                         // Calculate totals for display
                         const totalUpload = data.data.upload ? data.data.upload.reduce((sum, val) => sum + val, 0) : 0;
                         const totalDownload = data.data.download ? data.data.download.reduce((sum, val) => sum + val, 0) : 0;
                         const totalTraffic = data.data.total ? data.data.total.reduce((sum, val) => sum + val, 0) : 0;
-                        
-                        // Display chart first
-                        displayNodeChart(data.data);
                         
                         // Node info will be updated by loadNodeShortTermStats function
                         // This ensures we get both chart data and short-term traffic stats
@@ -716,13 +735,14 @@ $nodeStatsHtml = '
                         const nodeInfo = document.getElementById("node-info");
                         nodeInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${data.message || t("no_traffic_records_period")}</div>`;
                         
-                        // Still try to display empty chart
+                        // Still try to display empty chart with node name
                         displayNodeChart({
                             labels: [],
                             upload: [],
                             download: [],
                             total: [],
-                            node_id: currentNodeId
+                            node_id: currentNodeId,
+                            node_name: currentNodeName
                         });
                     }
                 })
@@ -731,13 +751,14 @@ $nodeStatsHtml = '
                     const nodeInfo = document.getElementById("node-info");
                     nodeInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
                     
-                    // Display empty chart on error
+                    // Display empty chart on error with node name
                     displayNodeChart({
                         labels: [],
                         upload: [],
                         download: [],
                         total: [],
-                        node_id: currentNodeId
+                        node_id: currentNodeId,
+                        node_name: currentNodeName
                     });
                 });
         }
@@ -746,27 +767,69 @@ $nodeStatsHtml = '
             const sortBy = document.getElementById("sort-by").value;
             const showOffline = document.getElementById("show-offline").value === "true";
             
-            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        let nodes = data.data;
-                        
-                        // Filter offline nodes if needed (same as main ranking)
-                        if (!showOffline) {
-                            nodes = nodes.filter(node => node.is_online);
+            // Add retry logic for better reliability
+            function attemptFetch(retries = 3) {
+                fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                         }
-                        
-                        // Find the current node in the rankings data
-                        const currentNode = nodes.find(node => node.id == currentNodeId);
-                        if (currentNode) {
-                            updateNodeInfoWithShortTermStats(currentNode);
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.status === "success" && data.data) {
+                            let nodes = data.data;
+                            
+                            // Filter offline nodes if needed (same as main ranking)
+                            if (!showOffline) {
+                                nodes = nodes.filter(node => node.is_online);
+                            }
+                            
+                            // Find the current node in the rankings data
+                            const currentNode = nodes.find(node => node.id == currentNodeId);
+                            if (currentNode) {
+                                updateNodeInfoWithShortTermStats(currentNode);
+                            } else {
+                                console.warn("Current node not found in rankings data, using fallback");
+                                // Fallback: create minimal node data with current node info
+                                updateNodeInfoWithShortTermStats({
+                                    id: currentNodeId,
+                                    name: currentNodeName,
+                                    traffic_5min: 0,
+                                    traffic_1hour: 0,
+                                    traffic_4hour: 0,
+                                    total_upload: 0,
+                                    total_download: 0,
+                                    total_traffic: 0
+                                });
+                            }
+                        } else {
+                            throw new Error(data.message || "API returned no data");
                         }
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading node short-term stats:", error);
-                });
+                    })
+                    .catch(error => {
+                        console.error("Error loading node short-term stats:", error);
+                        if (retries > 0) {
+                            console.log(`Retrying... (${retries} attempts left)`);
+                            setTimeout(() => attemptFetch(retries - 1), 1000);
+                        } else {
+                            // Final fallback when all retries failed
+                            console.warn("All retries failed, using fallback data");
+                            updateNodeInfoWithShortTermStats({
+                                id: currentNodeId,
+                                name: currentNodeName,
+                                traffic_5min: 0,
+                                traffic_1hour: 0,
+                                traffic_4hour: 0,
+                                total_upload: 0,
+                                total_download: 0,
+                                total_traffic: 0
+                            });
+                        }
+                    });
+            }
+            
+            attemptFetch();
         }
         
         function updateNodeInfoWithShortTermStats(nodeData) {
@@ -775,26 +838,57 @@ $nodeStatsHtml = '
             // Store the current node name for use in chart title
             currentNodeName = nodeData.name;
             
-            // Get chart totals if available
+            // Get chart totals if available, otherwise use ranking data
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
+            let dataSource = "ranking"; // Track data source for debugging
+            
             try {
-                if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
+                if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets && 
+                    currentNodeChart.data.datasets.length > 0 && 
+                    currentNodeChart.data.datasets[0].data && 
+                    currentNodeChart.data.datasets[0].data.length > 0) {
+                    
+                    // Use chart data if available and has actual data
                     const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传"));
                     const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载"));
                     
-                    if (uploadData && uploadData.data) {
+                    if (uploadData && uploadData.data && uploadData.data.some(val => val > 0)) {
                         totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
+                        dataSource = "chart";
                     }
-                    if (downloadData && downloadData.data) {
+                    if (downloadData && downloadData.data && downloadData.data.some(val => val > 0)) {
                         totalDownload = downloadData.data.reduce((sum, val) => sum + val, 0);
+                        dataSource = "chart";
                     }
                     totalTraffic = totalUpload + totalDownload;
                 }
             } catch (e) {
-                console.log("Chart data not available yet, using total traffic from rankings");
+                console.log("Chart data not available or invalid, using ranking data");
+                dataSource = "ranking";
+            }
+            
+            // Fallback to ranking data if chart data is not available or empty
+            if (dataSource === "ranking" || (totalUpload === 0 && totalDownload === 0)) {
                 totalUpload = nodeData.total_upload || 0;
                 totalDownload = nodeData.total_download || 0;
-                totalTraffic = nodeData.total_traffic || 0;
+                totalTraffic = nodeData.total_traffic || (totalUpload + totalDownload);
+                dataSource = "ranking";
+            }
+            
+            // Data format handling - ranking data is in GB, chart data is already converted
+            let uploadDisplay, downloadDisplay, totalDisplay;
+            if (dataSource === "ranking") {
+                // Ranking data is in GB, convert to bytes for display
+                uploadDisplay = totalUpload * 1000000000;
+                downloadDisplay = totalDownload * 1000000000;
+                totalDisplay = totalTraffic * 1000000000;
+            } else {
+                // Chart data units depend on chart settings, but the values shown should be converted to bytes
+                const unit = document.getElementById("chart-unit") ? document.getElementById("chart-unit").value : "auto";
+                const multiplier = getUnitMultiplier(unit === "auto" ? "GB" : unit);
+                uploadDisplay = totalUpload * multiplier;
+                downloadDisplay = totalDownload * multiplier;
+                totalDisplay = totalTraffic * multiplier;
             }
             
             nodeInfo.innerHTML = `
@@ -809,15 +903,15 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
-                        <div class="info-value text-success">${formatBytes(totalUpload * 1000000000)}</div>
+                        <div class="info-value text-success">${formatBytes(uploadDisplay)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("download_traffic")}</div>
-                        <div class="info-value text-info">${formatBytes(totalDownload * 1000000000)}</div>
+                        <div class="info-value text-info">${formatBytes(downloadDisplay)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("total_traffic_label")}</div>
-                        <div class="info-value text-primary">${formatBytes(totalTraffic * 1000000000)}</div>
+                        <div class="info-value text-primary">${formatBytes(totalDisplay)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
@@ -1005,7 +1099,8 @@ $nodeStatsHtml = '
                     upload: new Array(defaultLabels.length).fill(0),
                     download: new Array(defaultLabels.length).fill(0), 
                     total: new Array(defaultLabels.length).fill(0),
-                    node_id: chartData.node_id || "Unknown"
+                    node_id: chartData.node_id || currentNodeId || "Unknown",
+                    node_name: chartData.node_name || currentNodeName
                 };
             }
             
@@ -1163,7 +1258,7 @@ $nodeStatsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("node_today_usage_trends", {node_name: currentNodeName || (t("node_prefix") + " " + chartData.node_id)}),
+                            text: t("node_today_usage_trends", {node_name: chartData.node_name || currentNodeName || (t("node_prefix") + " " + (chartData.node_id || currentNodeId))}),
                             font: {
                                 size: 16,
                                 weight: "bold"
