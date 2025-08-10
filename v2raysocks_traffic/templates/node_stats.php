@@ -615,7 +615,7 @@ $nodeStatsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!nodes || nodes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 return;
             }
             
