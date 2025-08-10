@@ -351,6 +351,7 @@ $userRankingsHtml = '
             "last_15_days_range": "' . v2raysocks_traffic_lang('last_15_days_range') . '",
             "last_30_days_range": "' . v2raysocks_traffic_lang('last_30_days_range') . '",
             "custom_range_option": "' . v2raysocks_traffic_lang('custom_range_option') . '",
+            "to": "' . v2raysocks_traffic_lang('to') . '",
             "upload_traffic_unit": "' . v2raysocks_traffic_lang('upload_traffic_unit') . '",
             "download_traffic_unit": "' . v2raysocks_traffic_lang('download_traffic_unit') . '",
             "total_traffic_unit": "' . v2raysocks_traffic_lang('total_traffic_unit') . '",
@@ -870,27 +871,45 @@ $userRankingsHtml = '
             const userInfo = document.getElementById("user-info");
             const timeRange = document.getElementById("time-range").value;
             
-            // Get chart totals if available
+            // Get chart totals if available, with proper fallback to user ranking data
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
+            let useChartData = false;
+            
             try {
                 if (currentUserChart && currentUserChart.data && currentUserChart.data.datasets) {
-                    const uploadData = currentUserChart.data.datasets.find(d => d.label.includes("上传"));
-                    const downloadData = currentUserChart.data.datasets.find(d => d.label.includes("下载"));
+                    const uploadData = currentUserChart.data.datasets.find(d => d.label.includes("上传") || d.label.includes("Upload"));
+                    const downloadData = currentUserChart.data.datasets.find(d => d.label.includes("下载") || d.label.includes("Download"));
                     
-                    if (uploadData && uploadData.data) {
-                        totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
+                    if (uploadData && uploadData.data && uploadData.data.length > 0) {
+                        totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        useChartData = true;
                     }
-                    if (downloadData && downloadData.data) {
-                        totalDownload = downloadData.data.reduce((sum, val) => sum + val, 0);
+                    if (downloadData && downloadData.data && downloadData.data.length > 0) {
+                        totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        useChartData = true;
                     }
                     totalTraffic = totalUpload + totalDownload;
                 }
             } catch (e) {
-                console.log("Chart data not available yet, using period traffic from rankings");
+                console.log("Chart data not available, using period traffic from rankings");
+                useChartData = false;
+            }
+            
+            // If chart data is not available or empty, use period traffic from user ranking data
+            if (!useChartData || totalTraffic === 0) {
                 totalUpload = userData.period_upload || 0;
                 totalDownload = userData.period_download || 0;
                 totalTraffic = userData.period_traffic || 0;
+                // No need to convert, these are already in bytes
+            } else {
+                // Convert GB to bytes for display
+                totalUpload = totalUpload * 1000000000;
+                totalDownload = totalDownload * 1000000000;
+                totalTraffic = totalTraffic * 1000000000;
             }
+            
+            // Get the display text for time range
+            const timeRangeDisplayText = getTimeRangeDisplayText(timeRange);
             
             userInfo.innerHTML = `
                 <div class="info-grid">
@@ -900,19 +919,19 @@ $userRankingsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("time_range_label")}</div>
-                        <div class="info-value">${getTimeRangeText(timeRange)}</div>
+                        <div class="info-value">${timeRangeDisplayText}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
-                        <div class="info-value text-success">${formatBytes(totalUpload * 1000000000)}</div>
+                        <div class="info-value text-success">${formatBytes(totalUpload)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("download_traffic")}</div>
-                        <div class="info-value text-info">${formatBytes(totalDownload * 1000000000)}</div>
+                        <div class="info-value text-info">${formatBytes(totalDownload)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("total_traffic_label")}</div>
-                        <div class="info-value text-primary">${formatBytes(totalTraffic * 1000000000)}</div>
+                        <div class="info-value text-primary">${formatBytes(totalTraffic)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
@@ -1325,7 +1344,7 @@ $userRankingsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("user_traffic_usage_trends", {user_id: chartData.user_id}),
+                            text: t("user_traffic_usage_trends", {user_id: currentUserId}),
                             font: {
                                 size: 16,
                                 weight: "bold"
@@ -1441,6 +1460,21 @@ $userRankingsHtml = '
                 case "custom": return t("custom_range_option");
                 default: return timeRange;
             }
+        }
+        
+        function getTimeRangeDisplayText(timeRange) {
+            if (timeRange === "custom") {
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                
+                if (startDate && endDate) {
+                    return `${startDate} ${t("to")} ${endDate}`;
+                } else {
+                    return t("custom_range_option");
+                }
+            }
+            
+            return getTimeRangeText(timeRange);
         }
         
         // Close modal when clicking outside

@@ -314,6 +314,7 @@ $nodeStatsHtml = '
             "node_name_label": "' . v2raysocks_traffic_lang('node_name_label') . '",
             "node_prefix": "' . v2raysocks_traffic_lang('node_prefix') . '",
             "today_range": "' . v2raysocks_traffic_lang('today_range') . '",
+            "time_range_label": "' . v2raysocks_traffic_lang('time_range_label') . '",
             "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
             "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
             "total_traffic_label": "' . v2raysocks_traffic_lang('total_traffic_label') . '",
@@ -775,26 +776,41 @@ $nodeStatsHtml = '
             // Store the current node name for use in chart title
             currentNodeName = nodeData.name;
             
-            // Get chart totals if available
+            // Get chart totals if available, with proper fallback to node ranking data
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
+            let useChartData = false;
+            
             try {
                 if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
-                    const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传"));
-                    const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载"));
+                    const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传") || d.label.includes("Upload"));
+                    const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载") || d.label.includes("Download"));
                     
-                    if (uploadData && uploadData.data) {
-                        totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
+                    if (uploadData && uploadData.data && uploadData.data.length > 0) {
+                        totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        useChartData = true;
                     }
-                    if (downloadData && downloadData.data) {
-                        totalDownload = downloadData.data.reduce((sum, val) => sum + val, 0);
+                    if (downloadData && downloadData.data && downloadData.data.length > 0) {
+                        totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        useChartData = true;
                     }
                     totalTraffic = totalUpload + totalDownload;
                 }
             } catch (e) {
-                console.log("Chart data not available yet, using total traffic from rankings");
+                console.log("Chart data not available, using total traffic from rankings");
+                useChartData = false;
+            }
+            
+            // If chart data is not available or empty, use total traffic from node ranking data
+            if (!useChartData || totalTraffic === 0) {
                 totalUpload = nodeData.total_upload || 0;
                 totalDownload = nodeData.total_download || 0;
                 totalTraffic = nodeData.total_traffic || 0;
+                // No need to convert, these are already in bytes
+            } else {
+                // Convert GB to bytes for display
+                totalUpload = totalUpload * 1000000000;
+                totalDownload = totalDownload * 1000000000;
+                totalTraffic = totalTraffic * 1000000000;
             }
             
             nodeInfo.innerHTML = `
@@ -809,15 +825,15 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
-                        <div class="info-value text-success">${formatBytes(totalUpload * 1000000000)}</div>
+                        <div class="info-value text-success">${formatBytes(totalUpload)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("download_traffic")}</div>
-                        <div class="info-value text-info">${formatBytes(totalDownload * 1000000000)}</div>
+                        <div class="info-value text-info">${formatBytes(totalDownload)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("total_traffic_label")}</div>
-                        <div class="info-value text-primary">${formatBytes(totalTraffic * 1000000000)}</div>
+                        <div class="info-value text-primary">${formatBytes(totalTraffic)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
@@ -1163,7 +1179,7 @@ $nodeStatsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("node_today_usage_trends", {node_name: currentNodeName || (t("node_prefix") + " " + chartData.node_id)}),
+                            text: t("node_today_usage_trends", {node_name: currentNodeName || (t("node_prefix") + " " + currentNodeId)}),
                             font: {
                                 size: 16,
                                 weight: "bold"
@@ -1286,7 +1302,9 @@ $nodeStatsHtml = '
             const k = 1000;
             const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB"];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + "&nbsp;" + sizes[i];
+            const value = bytes / Math.pow(k, i);
+            // Use Number.prototype.toFixed() to match PHP number_format() behavior
+            return Number(value.toFixed(2)) + "&nbsp;" + sizes[i];
         }
         
         // Close modal when clicking outside
