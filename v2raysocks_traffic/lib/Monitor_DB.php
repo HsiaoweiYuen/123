@@ -2717,11 +2717,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: ''));
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2745,6 +2745,22 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             case 'today':
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'last_1_hour':
+                $startTime = strtotime('-1 hour');
+                $endTime = time();
+                break;
+            case 'last_3_hours':
+                $startTime = strtotime('-3 hours');
+                $endTime = time();
+                break;
+            case 'last_6_hours':
+                $startTime = strtotime('-6 hours');
+                $endTime = time();
+                break;
+            case 'last_12_hours':
+                $startTime = strtotime('-12 hours');
+                $endTime = time();
                 break;
             case 'week':
             case '7days':
@@ -2778,6 +2794,12 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
                 $startTime = 0;
                 $endTime = time();
                 break;
+        }
+
+        // Override time range if timestamp parameters are provided
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
         }
 
         $sql = '
@@ -2819,6 +2841,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         if ($userId !== null) {
             $sql .= ' AND uu.user_id = :user_id';
             $params[':user_id'] = $userId;
+        }
+
+        if ($uuid !== null) {
+            $sql .= ' AND u.uuid = :uuid';
+            $params[':uuid'] = $uuid;
         }
 
         $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
@@ -3112,11 +3139,16 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
     try {
         $nodeId = $filters['node_id'] ?? null;
         $userId = $filters['user_id'] ?? null;
+        $uuid = $filters['uuid'] ?? null;
         $timeRange = $filters['time_range'] ?? 'today';
+        $startDate = $filters['start_date'] ?? null;
+        $endDate = $filters['end_date'] ?? null;
+        $startTimestamp = $filters['start_timestamp'] ?? null;
+        $endTimestamp = $filters['end_timestamp'] ?? null;
         $exportLimit = $limit ?? 1000; // Default to 1000 records if not specified
         
         // Get usage records data
-        $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $exportLimit);
+        $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $exportLimit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
         
         if (empty($records)) {
             echo "No usage records found for the specified criteria.";
@@ -3130,6 +3162,9 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         }
         if ($userId) {
             $filename .= '_user_' . $userId;
+        }
+        if ($uuid) {
+            $filename .= '_uuid_' . substr($uuid, 0, 8); // Only first 8 characters for filename
         }
         $filename .= '_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
