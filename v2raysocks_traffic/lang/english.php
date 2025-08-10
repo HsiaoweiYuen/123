@@ -198,6 +198,10 @@ $_LANG = [
     'export_usage_records' => 'Export usage records',
     'custom_time_range_option' => 'Custom time range',
     
+    // Unified Export Error Messages
+    'no_usage_records_found' => 'No usage records found for the specified criteria.',
+    'export_no_data_error' => 'Node statistics export error: No data found matching the specified criteria',
+    
     // Date/Time Validation
     'select_start_end_dates' => 'Please select start and end dates',
     'date_format_incorrect' => 'Date format incorrect, please use correct date format',

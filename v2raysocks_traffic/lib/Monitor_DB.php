@@ -1247,6 +1247,13 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
         // Get traffic data with applied filters
         $data = v2raysocks_traffic_getTrafficData($filters);
         
+        // Check if data is empty and return error message instead of empty file
+        if (empty($data)) {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo v2raysocks_traffic_lang('no_usage_records_found');
+            return;
+        }
+        
         // Apply limit if specified
         if ($limit && is_numeric($limit) && $limit > 0) {
             $data = array_slice($data, 0, intval($limit));
@@ -2913,6 +2920,13 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
         
         $data = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $onlyToday);
         
+        // Check if data is empty and return error message instead of empty file
+        if (empty($data)) {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo v2raysocks_traffic_lang('export_no_data_error');
+            return;
+        }
+        
         // Apply limit if specified
         if ($limit && is_numeric($limit) && $limit > 0) {
             $data = array_slice($data, 0, intval($limit));
@@ -3027,6 +3041,13 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
         $limitNum = $limit ?: intval($filters['limit'] ?? 100);
         
         $data = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limitNum);
+        
+        // Check if data is empty and return error message instead of empty file
+        if (empty($data)) {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo v2raysocks_traffic_lang('export_no_data_error');
+            return;
+        }
         
         $filename = 'user_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
@@ -3161,7 +3182,8 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         }
         
         if (empty($records)) {
-            echo "No usage records found for the specified criteria.";
+            header('Content-Type: text/plain; charset=utf-8');
+            echo v2raysocks_traffic_lang('no_usage_records_found');
             return;
         }
         

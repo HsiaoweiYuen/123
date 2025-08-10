@@ -1488,9 +1488,6 @@ $nodeStatsHtml = '
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
-                    } else {
-                        alert(t("select_start_end_times"));
-                        return;
                     }
                 }
                 

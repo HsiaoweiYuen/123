@@ -198,6 +198,10 @@ $_LANG = [
     'export_usage_records' => '導出使用記錄',
     'custom_time_range_option' => '自定義時間段',
     
+    // Unified Export Error Messages
+    'no_usage_records_found' => 'No usage records found for the specified criteria.',
+    'export_no_data_error' => '節點統計導出錯誤：未找到符合條件的數據',
+    
     // Date/Time Validation
     'select_start_end_dates' => '請選擇開始和結束日期',
     'date_format_incorrect' => '日期格式不正確，請使用正確的日期格式',

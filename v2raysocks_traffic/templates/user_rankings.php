@@ -626,33 +626,6 @@ $userRankingsHtml = '
             if (timeRange === "custom") {
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
-                
-                // Validate date format using regex (YYYY-MM-DD)
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
-                if (!startDate || !endDate) {
-                    alert(t("select_start_end_dates"));
-                    return;
-                }
-                
-                if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-                    alert(t("date_format_incorrect"));
-                    return;
-                }
-                
-                // Validate date range logic
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                
-                if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                    alert(t("date_invalid"));
-                    return;
-                }
-                
-                if (start > end) {
-                    alert(t("start_date_after_end_date"));
-                    return;
-                }
             }
             
             // Use form serialization approach (similar to traffic dashboard)
@@ -1653,21 +1626,10 @@ $userRankingsHtml = '
                         
                         // Only add dates if they are valid and start <= end  
                         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                            // Validate against main page time range
-                            if (!validateExportTimeRange(start, end)) {
-                                return;
-                            }
-                            
                             // Override timeRange to custom and use standard date parameters
                             exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
                             exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
-                        } else {
-                            alert("Invalid date range. Please check your start and end dates.");
-                            return;
                         }
-                    } else {
-                        alert("Please select both start and end dates for custom date range export.");
-                        return;
                     }
                 } else if (exportType === "time_range") {
                     const startTime = $("#user_export_start_time").val();
@@ -1689,9 +1651,6 @@ $userRankingsHtml = '
                         }
                         
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
-                    } else {
-                        alert("Please select both start and end times");
-                        return;
                     }
                 }
                 
