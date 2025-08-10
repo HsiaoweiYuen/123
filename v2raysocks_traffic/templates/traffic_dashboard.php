@@ -474,7 +474,8 @@ $trafficDashboardHtml = '
                         <label>' . v2raysocks_traffic_lang('export_type') . '</label><br>
                         <label><input type="radio" name="export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                         <label><input type="radio" name="export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
-                        <label><input type="radio" name="export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
+                        <label><input type="radio" name="export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label><br>
+                        <label><input type="radio" name="export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="limit-options" style="margin-bottom: 15px; display: none;">
@@ -487,6 +488,14 @@ $trafficDashboardHtml = '
                         <input type="date" id="export_start_date" name="export_start_date"><br><br>
                         <label for="export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
                         <input type="date" id="export_end_date" name="export_end_date">
+                    </div>
+                    
+                    <div id="time-range-options" style="margin-bottom: 15px; display: none;">
+                        <label for="export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                        <input type="time" id="export_start_time" name="export_start_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
+                        <label for="export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                        <input type="time" id="export_end_time" name="export_end_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
@@ -604,6 +613,7 @@ $trafficDashboardHtml = '
                 const type = $(this).val();
                 $("#limit-options").toggle(type === "limited");
                 $("#date-range-options").toggle(type === "date_range");
+                $("#time-range-options").toggle(type === "time_range");
             });
             
             // Export form submission
@@ -638,6 +648,30 @@ $trafficDashboardHtml = '
                     
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
+                } else if (exportType === "time_range") {
+                    const startTime = $("#export_start_time").val();
+                    const endTime = $("#export_end_time").val();
+                    
+                    if (startTime && endTime) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                        const startDateTime = today + " " + startTime;
+                        const endDateTime = today + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        
+                        // Validate time range against main page bounds
+                        const exportStartDate = new Date(startDateTime);
+                        const exportEndDate = new Date(endDateTime);
+                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                            return;
+                        }
+                        
+                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                    } else {
+                        alert("Please select both start and end times");
+                        return;
+                    }
                 }
                 
                 // Trigger download
