@@ -725,8 +725,10 @@ $serviceSearchHtml = '
                 
                 // Generate table rows for current page
                 pageData.forEach(function(row) {
+                    // Use consistent local timezone formatting for display
+                    const displayTime = new Date(row.t * 1000).toLocaleString();
                     html += `<tr>
-                        <td>${new Date(row.t * 1000).toLocaleString()}</td>
+                        <td>${displayTime}</td>
                         <td>${row.service_id || "-"}</td>
                         <td>${row.user_id || "-"}</td>
                         <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
@@ -782,9 +784,13 @@ $serviceSearchHtml = '
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
                 if (timeRange === "today") {
-                    labels.push(timestamp.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }));
+                    // Format as HH:00 for consistency with data processing
+                    labels.push(timestamp.getHours() + ":00");
                 } else {
-                    labels.push(timestamp.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }));
+                    // Format as MM/DD for consistency with data processing
+                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
+                    const day = String(timestamp.getDate()).padStart(2, "0");
+                    labels.push(month + "/" + day);
                 }
             }
             
@@ -889,27 +895,37 @@ $serviceSearchHtml = '
             
             // Group data by time periods for chart
             const timeData = {};
+            const timeKeys = []; // Track insertion order for proper sorting
             let allDataPoints = [];
             
             data.forEach(function(row) {
                 const date = new Date(row.t * 1000);
                 let timeKey;
                 
-                // Group by different time periods based on range
+                // Group by different time periods based on range - use consistent formatting
                 const timeRange = $("#time_range").val();
                 if (timeRange === "today") {
                     timeKey = date.getHours() + ":00";
                 } else {
-                    timeKey = date.toLocaleDateString();
+                    // Format as MM/DD for consistency with default labels
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    timeKey = month + "/" + day;
                 }
                 
                 if (!timeData[timeKey]) {
-                    timeData[timeKey] = { upload: 0, download: 0 };
+                    timeData[timeKey] = { upload: 0, download: 0, timestamp: row.t };
+                    timeKeys.push(timeKey);
                 }
                 const upload = (row.u || 0);
                 const download = (row.d || 0);
                 timeData[timeKey].upload += upload;
                 timeData[timeKey].download += download;
+                
+                // Update timestamp to the latest one for this time period
+                if (row.t > timeData[timeKey].timestamp) {
+                    timeData[timeKey].timestamp = row.t;
+                }
                 
                 // Collect all data points for auto unit detection
                 allDataPoints.push(upload);
@@ -917,7 +933,10 @@ $serviceSearchHtml = '
                 allDataPoints.push(upload + download);
             });
             
-            const labels = Object.keys(timeData).sort();
+            // Sort labels chronologically instead of alphabetically
+            const labels = timeKeys.sort((a, b) => {
+                return timeData[a].timestamp - timeData[b].timestamp;
+            });
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();
             
