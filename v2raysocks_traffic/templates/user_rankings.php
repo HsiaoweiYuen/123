@@ -1504,7 +1504,6 @@ $userRankingsHtml = '
                 $("#user-limit-options").toggle(type === "limited");
                 $("#user-date-range-options").toggle(type === "date_range");
                 $("#user-time-range-options").toggle(type === "time_range");
-                $("#user-time-filter-options").toggle(type === "time_filter");
             });
             
             // Pagination event listeners for user usage records
@@ -1582,8 +1581,8 @@ $userRankingsHtml = '
                     exportParams = "export_type=user_rankings&time_range=" + timeRange + "&sort_by=" + sortBy + "&limit=" + limit + "&format=" + format;
                 }
                 
-                // Add custom date range parameters if applicable
-                if (timeRange === "custom") {
+                // Add custom date range parameters if applicable  
+                if (timeRange === "custom" && exportType !== "date_range") {
                     const startDate = document.getElementById("start-date").value;
                     const endDate = document.getElementById("end-date").value;
                     
@@ -1609,11 +1608,25 @@ $userRankingsHtml = '
                     const startDate = $("#user_export_start_date").val();
                     const endDate = $("#user_export_end_date").val();
                     
-                    if (startDate) {
-                        exportParams += "&export_start_date=" + startDate;
-                    }
-                    if (endDate) {
-                        exportParams += "&export_end_date=" + endDate;
+                    // Validate export modal dates
+                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                    
+                    if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        
+                        // Only add dates if they are valid and start <= end  
+                        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                            // Override timeRange to custom and use standard date parameters
+                            exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
+                            exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
+                        } else {
+                            alert("Invalid date range. Please check your start and end dates.");
+                            return;
+                        }
+                    } else {
+                        alert("Please select both start and end dates for custom date range export.");
+                        return;
                     }
                 } else if (exportType === "time_range") {
                     const startTime = $("#user_export_start_time").val();
@@ -1631,11 +1644,6 @@ $userRankingsHtml = '
                         alert("Please select both start and end times");
                         return;
                     }
-                } else if (exportType === "time_filter") {
-                    const timeFilter = $("#user_time_filter").val();
-                    
-                    // Override the main time_range parameter with the selected filter
-                    exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=" + timeFilter);
                 }
                 
                 // Trigger download
@@ -1657,7 +1665,7 @@ $userRankingsHtml = '
                     <label><input type="radio" name="user_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                     <label><input type="radio" name="user_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
                     <label><input type="radio" name="user_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label><br>
-                    <label><input type="radio" name="user_export_type" value="time_filter"> ' . v2raysocks_traffic_lang('time_filter_export') . '</label><br>
+
                     <label><input type="radio" name="user_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                 </div>
                 
@@ -1672,17 +1680,7 @@ $userRankingsHtml = '
                     <label for="user_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
                     <input type="date" id="user_export_end_date" name="export_end_date">
                 </div>
-                
-                <div id="user-time-filter-options" style="margin-bottom: 15px; display: none;">
-                    <label for="user_time_filter">' . v2raysocks_traffic_lang('time_filter_label') . '</label>
-                    <select id="user_time_filter" name="time_filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-top: 5px;">
-                        <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
-                        <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
-                        <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
-                        <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
-                        <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
-                    </select>
-                </div>
+
                 
                 <div id="user-time-range-options" style="margin-bottom: 15px; display: none;">
                     <label for="user_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
