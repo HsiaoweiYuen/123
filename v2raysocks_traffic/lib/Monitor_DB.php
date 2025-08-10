@@ -2313,7 +2313,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 MIN(uu.t) as first_usage,
                 MAX(uu.t) as last_usage
             FROM user u
-            LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != \'DAY\'
+            LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
             WHERE u.enable = 1
             GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark
         ';
