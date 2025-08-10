@@ -1585,7 +1585,6 @@ $userRankingsHtml = '
                 }
                 
                 if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                    alert("No usage records found for the specified criteria.");
                     return false;
                 }
                 

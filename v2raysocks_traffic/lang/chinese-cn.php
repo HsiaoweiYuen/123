@@ -293,6 +293,7 @@ $_LANG = [
     'total_cumulative_traffic_unit' => '总累积流量 ({unit})',
     'no_user_selected' => '没有选中的用户',
     'no_usage_records' => '暂无使用记录',
+    'no_usage_records_criteria' => 'No usage records found for the specified criteria.',
     'failed_load_usage_records' => '加载使用记录失败:',
     'loading_usage_records' => '正在加载使用记录...',
     

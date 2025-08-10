@@ -1252,6 +1252,12 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
             $data = array_slice($data, 0, intval($limit));
         }
         
+        // Check for empty data
+        if (empty($data)) {
+            echo "No usage records found for the specified criteria.";
+            return;
+        }
+        
         // Generate filename with timestamp and filter info
         $filterInfo = '';
         if (!empty($filters['service_id'])) {
@@ -2918,6 +2924,12 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
             $data = array_slice($data, 0, intval($limit));
         }
         
+        // Check for empty data
+        if (empty($data)) {
+            echo "No usage records found for the specified criteria.";
+            return;
+        }
+        
         $timeRange = $onlyToday ? 'today' : 'all';
         $filename = 'node_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
@@ -3027,6 +3039,12 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
         $limitNum = $limit ?: intval($filters['limit'] ?? 100);
         
         $data = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limitNum);
+        
+        // Check for empty data
+        if (empty($data)) {
+            echo "No usage records found for the specified criteria.";
+            return;
+        }
         
         $filename = 'user_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         

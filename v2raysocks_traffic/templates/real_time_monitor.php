@@ -1047,7 +1047,7 @@ $realTimeMonitorHtml = '
             let html = "";
             
             if (allTodayData.length === 0) {
-                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
+                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No usage records found for the specified criteria.</td></tr>";
                 $("#today-pagination-controls").hide();
             } else {
                 // Calculate pagination

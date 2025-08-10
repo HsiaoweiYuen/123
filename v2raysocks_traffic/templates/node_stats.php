@@ -329,7 +329,7 @@ $nodeStatsHtml = '
             "minutes_ago": "' . v2raysocks_traffic_lang('minutes_ago') . '",
             "hours_ago": "' . v2raysocks_traffic_lang('hours_ago') . '",
             "days_ago": "' . v2raysocks_traffic_lang('days_ago') . '",
-            "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
+            "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records_criteria') . '",
             "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
             "showing_records": "' . v2raysocks_traffic_lang('showing_records') . '",
             "page_info": "' . v2raysocks_traffic_lang('page_info') . '",

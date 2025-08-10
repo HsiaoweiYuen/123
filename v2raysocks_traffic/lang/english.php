@@ -294,6 +294,7 @@ $_LANG = [
     'total_cumulative_traffic_unit' => 'Total cumulative traffic ({unit})',
     'no_user_selected' => 'No user selected',
     'no_usage_records' => 'No usage records',
+    'no_usage_records_criteria' => 'No usage records found for the specified criteria.',
     'failed_load_usage_records' => 'Failed to load usage records:',
     'loading_usage_records' => 'Loading usage records...',
     

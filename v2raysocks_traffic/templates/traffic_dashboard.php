@@ -240,7 +240,6 @@ $trafficDashboardHtml = '
             }
             
             if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                alert("No usage records found for the specified criteria.");
                 return false;
             }
             
@@ -847,7 +846,7 @@ $trafficDashboardHtml = '
             let html = "";
             
             if (allTrafficData.length === 0) {
-                html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
+                html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No usage records found for the specified criteria.</td></tr>";
                 $("#pagination-controls").hide();
             } else {
                 // Calculate pagination
