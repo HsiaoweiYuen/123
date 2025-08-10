@@ -915,9 +915,9 @@ $userRankingsHtml = '
                         const userData = rankingsResponse.data.find(user => user.user_id == currentUserId);
                         if (userData) {
                             // Update recent traffic data with actual values
-                            document.getElementById("recent-5min-traffic").textContent = formatBytes(userData.traffic_5min);
-                            document.getElementById("recent-1hour-traffic").textContent = formatBytes(userData.traffic_1hour);
-                            document.getElementById("recent-4hour-traffic").textContent = formatBytes(userData.traffic_4hour);
+                            document.getElementById("recent-5min-traffic").innerHTML = formatBytes(userData.traffic_5min);
+                            document.getElementById("recent-1hour-traffic").innerHTML = formatBytes(userData.traffic_1hour);
+                            document.getElementById("recent-4hour-traffic").innerHTML = formatBytes(userData.traffic_4hour);
                         }
                     }
                 })
