@@ -682,57 +682,40 @@ $nodeStatsHtml = '
             document.getElementById("chart-unit").addEventListener("change", updateNodeChart);
             document.getElementById("chart-mode").addEventListener("change", updateNodeChart);
             
-            // Load node chart data (today only) and node ranking data for short-term stats
-            loadNodeChartData();
-            loadNodeShortTermStats();
-            
-            // Load usage records (today only)
-            loadNodeUsageRecords();
+            // Load all modal data atomically to prevent race conditions
+            loadNodeModalData();
         }
         
-        function loadNodeChartData() {
-            fetch(`addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`)
-                .then(response => {
+        function loadNodeModalData() {
+            const chartUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`;
+            const usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&time_range=today&limit=1000`;
+            
+            // Load chart data and usage records atomically using Promise.all
+            Promise.all([
+                fetch(chartUrlParams).then(response => {
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error(`Chart API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                }),
+                fetch(usageUrlParams).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Usage API HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
-                .then(data => {
-                    if (data.status === "success" && data.data) {
-                        displayNodeChart(data.data);
-                        
-                        // Calculate totals for display
-                        const totalUpload = data.data.upload ? data.data.upload.reduce((sum, val) => sum + val, 0) : 0;
-                        const totalDownload = data.data.download ? data.data.download.reduce((sum, val) => sum + val, 0) : 0;
-                        const totalTraffic = data.data.total ? data.data.total.reduce((sum, val) => sum + val, 0) : 0;
-                        
-                        // Display chart first
-                        displayNodeChart(data.data);
-                        
-                        // Node info will be updated by loadNodeShortTermStats function
-                        // This ensures we get both chart data and short-term traffic stats
-                    } else {
-                        console.log("API returned error or no data:", data);
-                        const nodeInfo = document.getElementById("node-info");
-                        nodeInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${data.message || t("no_traffic_records_period")}</div>`;
-                        
-                        // Still try to display empty chart
-                        displayNodeChart({
-                            labels: [],
-                            upload: [],
-                            download: [],
-                            total: [],
-                            node_id: currentNodeId
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading node chart:", error);
+            ])
+            .then(([chartResponse, usageResponse]) => {
+                // Process chart data
+                if (chartResponse.status === "success" && chartResponse.data) {
+                    displayNodeChart(chartResponse.data);
+                    updateNodeInfoWithChartData(chartResponse.data);
+                } else {
+                    console.log("Chart API returned error:", chartResponse);
                     const nodeInfo = document.getElementById("node-info");
-                    nodeInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
+                    nodeInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
                     
-                    // Display empty chart on error
+                    // Display empty chart
                     displayNodeChart({
                         labels: [],
                         upload: [],
@@ -740,78 +723,48 @@ $nodeStatsHtml = '
                         total: [],
                         node_id: currentNodeId
                     });
+                }
+                
+                // Process usage records
+                if (usageResponse.status === "success") {
+                    allNodeUsageRecords = usageResponse.data || [];
+                    updateNodeUsagePagination();
+                } else {
+                    const recordsTbody = document.getElementById("node-records-tbody");
+                    recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error loading node modal data:", error);
+                const nodeInfo = document.getElementById("node-info");
+                const recordsTbody = document.getElementById("node-records-tbody");
+                
+                nodeInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
+                recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("network_error_retry")}</td></tr>`;
+                
+                // Display empty chart on error
+                displayNodeChart({
+                    labels: [],
+                    upload: [],
+                    download: [],
+                    total: [],
+                    node_id: currentNodeId
                 });
+            });
         }
         
-        function loadNodeShortTermStats() {
-            const sortBy = document.getElementById("sort-by").value;
-            const showOffline = document.getElementById("show-offline").value === "true";
-            
-            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        let nodes = data.data;
-                        
-                        // Filter offline nodes if needed (same as main ranking)
-                        if (!showOffline) {
-                            nodes = nodes.filter(node => node.is_online);
-                        }
-                        
-                        // Find the current node in the rankings data
-                        const currentNode = nodes.find(node => node.id == currentNodeId);
-                        if (currentNode) {
-                            updateNodeInfoWithShortTermStats(currentNode);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading node short-term stats:", error);
-                });
-        }
-        
-        function updateNodeInfoWithShortTermStats(nodeData) {
+        function updateNodeInfoWithChartData(chartData) {
             const nodeInfo = document.getElementById("node-info");
             
-            // Store the current node name for use in chart title
-            currentNodeName = nodeData.name;
+            // Calculate totals from chart data (already in GB from API)
+            const totalUpload = chartData.upload ? chartData.upload.reduce((sum, val) => sum + (val || 0), 0) : 0;
+            const totalDownload = chartData.download ? chartData.download.reduce((sum, val) => sum + (val || 0), 0) : 0;
+            const totalTraffic = totalUpload + totalDownload;
             
-            // Get chart totals if available, with proper fallback to node ranking data
-            let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
-            let useChartData = false;
-            
-            try {
-                if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
-                    const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传") || d.label.includes("Upload"));
-                    const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载") || d.label.includes("Download"));
-                    
-                    if (uploadData && uploadData.data && uploadData.data.length > 0) {
-                        totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
-                    }
-                    if (downloadData && downloadData.data && downloadData.data.length > 0) {
-                        totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
-                    }
-                    totalTraffic = totalUpload + totalDownload;
-                }
-            } catch (e) {
-                console.log("Chart data not available, using total traffic from rankings");
-                useChartData = false;
-            }
-            
-            // If chart data is not available or empty, use total traffic from node ranking data
-            if (!useChartData || totalTraffic === 0) {
-                totalUpload = nodeData.total_upload || 0;
-                totalDownload = nodeData.total_download || 0;
-                totalTraffic = nodeData.total_traffic || 0;
-                // No need to convert, these are already in bytes
-            } else {
-                // Convert GB to bytes for display
-                totalUpload = totalUpload * 1000000000;
-                totalDownload = totalDownload * 1000000000;
-                totalTraffic = totalTraffic * 1000000000;
-            }
+            // Convert GB to bytes for display
+            const totalUploadBytes = totalUpload * 1000000000;
+            const totalDownloadBytes = totalDownload * 1000000000;
+            const totalTrafficBytes = totalTraffic * 1000000000;
             
             nodeInfo.innerHTML = `
                 <div class="info-grid">
@@ -825,27 +778,27 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
-                        <div class="info-value text-success">${formatBytes(totalUpload)}</div>
+                        <div class="info-value text-success">${formatBytes(totalUploadBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("download_traffic")}</div>
-                        <div class="info-value text-info">${formatBytes(totalDownload)}</div>
+                        <div class="info-value text-info">${formatBytes(totalDownloadBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("total_traffic_label")}</div>
-                        <div class="info-value text-primary">${formatBytes(totalTraffic)}</div>
+                        <div class="info-value text-primary">${formatBytes(totalTrafficBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_5min || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_1hour_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_1hour || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_4hour || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                 </div>
             `;
@@ -908,8 +861,8 @@ $nodeStatsHtml = '
         }
         
         function updateNodeChart() {
-            // Reload chart data with current settings
-            loadNodeChartData();
+            // Reload all modal data to ensure consistency
+            loadNodeModalData();
         }
         
         function updateNodeUsagePagination() {

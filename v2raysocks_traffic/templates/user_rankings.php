@@ -746,17 +746,14 @@ $userRankingsHtml = '
             document.getElementById("user-chart-unit").addEventListener("change", updateUserChart);
             document.getElementById("user-chart-mode").addEventListener("change", updateUserChart);
             
-            // Load user chart data and user ranking data for short-term stats
-            loadUserChartData();
-            loadUserShortTermStats();
-            
-            // Load usage records
-            loadUserUsageRecords();
+            // Load all modal data atomically to prevent race conditions
+            loadUserModalData();
         }
         
-        function loadUserChartData() {
+        function loadUserModalData() {
             const timeRange = document.getElementById("time-range").value;
-            let urlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_chart&user_id=" + currentUserId + "&time_range=" + timeRange;
+            let chartUrlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_chart&user_id=" + currentUserId + "&time_range=" + timeRange;
+            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=1000`;
             
             // Add custom date range parameters if applicable
             if (timeRange === "custom") {
@@ -772,53 +769,39 @@ $userRankingsHtml = '
                     
                     // Only add dates if they are valid and start <= end
                     if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                        urlParams += "&start_date=" + startDate + "&end_date=" + endDate;
+                        const dateParams = "&start_date=" + startDate + "&end_date=" + endDate;
+                        chartUrlParams += dateParams;
+                        usageUrlParams += dateParams;
                     }
                 }
             }
             
-            fetch(urlParams)
-                .then(response => {
+            // Load chart data and usage records atomically using Promise.all
+            Promise.all([
+                fetch(chartUrlParams).then(response => {
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error(`Chart API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                }),
+                fetch(usageUrlParams).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Usage API HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
-                .then(data => {
-                    if (data.status === "success" && data.data) {
-                        displayUserChart(data.data);
-                        
-                        // Calculate totals for display
-                        const totalUpload = data.data.upload ? data.data.upload.reduce((sum, val) => sum + val, 0) : 0;
-                        const totalDownload = data.data.download ? data.data.download.reduce((sum, val) => sum + val, 0) : 0;
-                        const totalTraffic = data.data.total ? data.data.total.reduce((sum, val) => sum + val, 0) : 0;
-                        
-                        // Display chart first
-                        displayUserChart(data.data);
-                        
-                        // User info will be updated by loadUserShortTermStats function
-                        // This ensures we get both chart data and short-term traffic stats
-                    } else {
-                        console.log("API returned error or no data:", data);
-                        const userInfo = document.getElementById("user-info");
-                        userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${data.message || t("no_traffic_records_period")}</div>`;
-                        
-                        // Still try to display empty chart
-                        displayUserChart({
-                            labels: [],
-                            upload: [],
-                            download: [],
-                            total: [],
-                            user_id: currentUserId
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading user chart:", error);
+            ])
+            .then(([chartResponse, usageResponse]) => {
+                // Process chart data
+                if (chartResponse.status === "success" && chartResponse.data) {
+                    displayUserChart(chartResponse.data);
+                    updateUserInfoWithChartData(chartResponse.data);
+                } else {
+                    console.log("Chart API returned error:", chartResponse);
                     const userInfo = document.getElementById("user-info");
-                    userInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
+                    userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
                     
-                    // Display empty chart on error
+                    // Display empty chart
                     displayUserChart({
                         labels: [],
                         upload: [],
@@ -826,88 +809,49 @@ $userRankingsHtml = '
                         total: [],
                         user_id: currentUserId
                     });
-                });
-        }
-        
-        function loadUserShortTermStats() {
-            const timeRange = document.getElementById("time-range").value;
-            let urlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=" + timeRange + "&sort_by=traffic_desc&limit=1000";
-            
-            // Add custom date range parameters if applicable
-            if (timeRange === "custom") {
-                const startDate = document.getElementById("start-date").value;
-                const endDate = document.getElementById("end-date").value;
-                
-                // Validate date format and values
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
-                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
-                    const start = new Date(startDate);
-                    const end = new Date(endDate);
-                    
-                    // Only add dates if they are valid and start <= end
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                        urlParams += "&start_date=" + startDate + "&end_date=" + endDate;
-                    }
                 }
-            }
-            
-            fetch(urlParams)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        // Find the current user in the rankings data
-                        const currentUser = data.data.find(user => user.user_id == currentUserId);
-                        if (currentUser) {
-                            updateUserInfoWithShortTermStats(currentUser);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading user short-term stats:", error);
+                
+                // Process usage records
+                if (usageResponse.status === "success") {
+                    allUserUsageRecords = usageResponse.data || [];
+                    filterAndUpdateUserUsageRecords();
+                } else {
+                    const recordsTbody = document.getElementById("user-records-tbody");
+                    recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error loading user modal data:", error);
+                const userInfo = document.getElementById("user-info");
+                const recordsTbody = document.getElementById("user-records-tbody");
+                
+                userInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
+                recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("network_error_retry")}</td></tr>`;
+                
+                // Display empty chart on error
+                displayUserChart({
+                    labels: [],
+                    upload: [],
+                    download: [],
+                    total: [],
+                    user_id: currentUserId
                 });
+            });
         }
         
-        function updateUserInfoWithShortTermStats(userData) {
+        function updateUserInfoWithChartData(chartData) {
             const userInfo = document.getElementById("user-info");
             const timeRange = document.getElementById("time-range").value;
             
-            // Get chart totals if available, with proper fallback to user ranking data
-            let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
-            let useChartData = false;
+            // Calculate totals from chart data (already in GB from API)
+            const totalUpload = chartData.upload ? chartData.upload.reduce((sum, val) => sum + (val || 0), 0) : 0;
+            const totalDownload = chartData.download ? chartData.download.reduce((sum, val) => sum + (val || 0), 0) : 0;
+            const totalTraffic = totalUpload + totalDownload;
             
-            try {
-                if (currentUserChart && currentUserChart.data && currentUserChart.data.datasets) {
-                    const uploadData = currentUserChart.data.datasets.find(d => d.label.includes("上传") || d.label.includes("Upload"));
-                    const downloadData = currentUserChart.data.datasets.find(d => d.label.includes("下载") || d.label.includes("Download"));
-                    
-                    if (uploadData && uploadData.data && uploadData.data.length > 0) {
-                        totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
-                    }
-                    if (downloadData && downloadData.data && downloadData.data.length > 0) {
-                        totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
-                    }
-                    totalTraffic = totalUpload + totalDownload;
-                }
-            } catch (e) {
-                console.log("Chart data not available, using period traffic from rankings");
-                useChartData = false;
-            }
-            
-            // If chart data is not available or empty, use period traffic from user ranking data
-            if (!useChartData || totalTraffic === 0) {
-                totalUpload = userData.period_upload || 0;
-                totalDownload = userData.period_download || 0;
-                totalTraffic = userData.period_traffic || 0;
-                // No need to convert, these are already in bytes
-            } else {
-                // Convert GB to bytes for display
-                totalUpload = totalUpload * 1000000000;
-                totalDownload = totalDownload * 1000000000;
-                totalTraffic = totalTraffic * 1000000000;
-            }
+            // Convert GB to bytes for display
+            const totalUploadBytes = totalUpload * 1000000000;
+            const totalDownloadBytes = totalDownload * 1000000000;
+            const totalTrafficBytes = totalTraffic * 1000000000;
             
             // Get the display text for time range
             const timeRangeDisplayText = getTimeRangeDisplayText(timeRange);
@@ -924,27 +868,27 @@ $userRankingsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
-                        <div class="info-value text-success">${formatBytes(totalUpload)}</div>
+                        <div class="info-value text-success">${formatBytes(totalUploadBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("download_traffic")}</div>
-                        <div class="info-value text-info">${formatBytes(totalDownload)}</div>
+                        <div class="info-value text-info">${formatBytes(totalDownloadBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("total_traffic_label")}</div>
-                        <div class="info-value text-primary">${formatBytes(totalTraffic)}</div>
+                        <div class="info-value text-primary">${formatBytes(totalTrafficBytes)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(userData.traffic_5min || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_1hour_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(userData.traffic_1hour || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
-                        <div class="info-value text-warning">${formatBytes(userData.traffic_4hour || 0)}</div>
+                        <div class="info-value text-warning">-</div>
                     </div>
                 </div>
             `;
@@ -1009,8 +953,8 @@ $userRankingsHtml = '
         }
         
         function updateUserChart() {
-            // Reload chart data with current settings
-            loadUserChartData();
+            // Reload all modal data to ensure consistency
+            loadUserModalData();
         }
         
         function updateUserUsagePagination() {
