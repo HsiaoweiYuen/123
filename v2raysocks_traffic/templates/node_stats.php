@@ -665,13 +665,13 @@ $nodeStatsHtml = '
         function showNodeDetails(nodeId, event) {
             currentNodeId = nodeId;
             
-            // Get node name from the clicked row
+            /* Get node name from the clicked row */
             let currentRow;
             if (event && event.currentTarget) {
                 currentRow = event.currentTarget;
             } else {
-                // Fallback: find the row by searching all table rows
-                const rows = document.querySelectorAll('#rankings-tbody tr');
+                /* Fallback: find the row by searching all table rows */
+                const rows = document.querySelectorAll("#rankings-tbody tr");
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (row.onclick && row.onclick.toString().includes(nodeId)) {
@@ -680,7 +680,7 @@ $nodeStatsHtml = '
                     }
                 }
             }
-            currentNodeName = currentRow ? currentRow.getAttribute('data-node-name') : null;
+            currentNodeName = currentRow ? currentRow.getAttribute("data-node-name") : null;
             
             const modal = document.getElementById("node-modal");
             const nodeInfo = document.getElementById("node-info");
@@ -690,20 +690,20 @@ $nodeStatsHtml = '
             nodeInfo.innerHTML = `<div class="loading">${t("loading")}</div>`;
             recordsTbody.innerHTML = `<tr><td colspan="7" class="loading">${t("loading_usage_records")}</td></tr>`;
             
-            // Reset pagination
+            /* Reset pagination */
             currentNodeUsagePage = 1;
             allNodeUsageRecords = [];
             document.getElementById("node-usage-pagination").style.display = "none";
             
-            // Add event listeners for chart controls
+            /* Add event listeners for chart controls */
             document.getElementById("chart-unit").addEventListener("change", updateNodeChart);
             document.getElementById("chart-mode").addEventListener("change", updateNodeChart);
             
-            // Load node chart data (today only) and node ranking data for short-term stats
+            /* Load node chart data (today only) and node ranking data for short-term stats */
             loadNodeChartData();
             loadNodeShortTermStats();
             
-            // Load usage records (today only)
+            /* Load usage records (today only) */
             loadNodeUsageRecords();
         }
         
