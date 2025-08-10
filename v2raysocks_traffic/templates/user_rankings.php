@@ -1412,6 +1412,12 @@ $userRankingsHtml = '
                 return;
             }
             
+            // Get current node search filter value
+            const nodeSearchValue = document.getElementById("user-node-search").value.trim();
+            
+            // Store the search value globally for use in export
+            window.currentUserNodeSearchFilter = nodeSearchValue;
+            
             // Show the enhanced export modal instead of direct export
             document.getElementById("user-export-modal").style.display = "block";
         }
@@ -1498,6 +1504,7 @@ $userRankingsHtml = '
                 $("#user-limit-options").toggle(type === "limited");
                 $("#user-date-range-options").toggle(type === "date_range");
                 $("#user-time-range-options").toggle(type === "time_range");
+                $("#user-time-filter-options").toggle(type === "time_filter");
             });
             
             // Pagination event listeners for user usage records
@@ -1564,6 +1571,11 @@ $userRankingsHtml = '
                 // Otherwise, export the user rankings list
                 if (currentUserId) {
                     exportParams = "export_type=usage_records&user_id=" + currentUserId + "&time_range=" + timeRange + "&format=" + format;
+                    
+                    // Add node search filter if available
+                    if (window.currentUserNodeSearchFilter) {
+                        exportParams += "&node_search=" + encodeURIComponent(window.currentUserNodeSearchFilter);
+                    }
                 } else {
                     const sortBy = document.getElementById("sort-by").value;
                     const limit = document.getElementById("limit").value;
@@ -1619,6 +1631,11 @@ $userRankingsHtml = '
                         alert("Please select both start and end times");
                         return;
                     }
+                } else if (exportType === "time_filter") {
+                    const timeFilter = $("#user_time_filter").val();
+                    
+                    // Override the main time_range parameter with the selected filter
+                    exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=" + timeFilter);
                 }
                 
                 // Trigger download
@@ -1640,6 +1657,7 @@ $userRankingsHtml = '
                     <label><input type="radio" name="user_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                     <label><input type="radio" name="user_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
                     <label><input type="radio" name="user_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label><br>
+                    <label><input type="radio" name="user_export_type" value="time_filter"> ' . v2raysocks_traffic_lang('time_filter_export') . '</label><br>
                     <label><input type="radio" name="user_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                 </div>
                 
@@ -1653,6 +1671,17 @@ $userRankingsHtml = '
                     <input type="date" id="user_export_start_date" name="export_start_date"><br><br>
                     <label for="user_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
                     <input type="date" id="user_export_end_date" name="export_end_date">
+                </div>
+                
+                <div id="user-time-filter-options" style="margin-bottom: 15px; display: none;">
+                    <label for="user_time_filter">' . v2raysocks_traffic_lang('time_filter_label') . '</label>
+                    <select id="user_time_filter" name="time_filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-top: 5px;">
+                        <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
+                        <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
+                        <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
+                        <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
+                        <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
+                    </select>
                 </div>
                 
                 <div id="user-time-range-options" style="margin-bottom: 15px; display: none;">

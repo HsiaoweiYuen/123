@@ -3140,6 +3140,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         $nodeId = $filters['node_id'] ?? null;
         $userId = $filters['user_id'] ?? null;
         $uuid = $filters['uuid'] ?? null;
+        $nodeSearch = $filters['node_search'] ?? null;
         $timeRange = $filters['time_range'] ?? 'today';
         $startDate = $filters['start_date'] ?? null;
         $endDate = $filters['end_date'] ?? null;
@@ -3149,6 +3150,15 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         
         // Get usage records data
         $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $exportLimit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+        
+        // Apply node name filtering if specified
+        if (!empty($nodeSearch) && !empty($records)) {
+            $nodeSearchLower = strtolower(trim($nodeSearch));
+            $records = array_filter($records, function($record) use ($nodeSearchLower) {
+                $nodeName = strtolower($record['node_name'] ?? '节点 ' . ($record['node'] ?? ''));
+                return strpos($nodeName, $nodeSearchLower) !== false;
+            });
+        }
         
         if (empty($records)) {
             echo "No usage records found for the specified criteria.";
@@ -3165,6 +3175,9 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         }
         if ($uuid) {
             $filename .= '_uuid_' . substr($uuid, 0, 8); // Only first 8 characters for filename
+        }
+        if ($nodeSearch) {
+            $filename .= '_search_' . substr(preg_replace('/[^a-zA-Z0-9]/', '', $nodeSearch), 0, 10);
         }
         $filename .= '_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         

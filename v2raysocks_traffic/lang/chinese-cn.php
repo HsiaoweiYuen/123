@@ -174,6 +174,7 @@ $_LANG = [
     // Export Functionality
     'export_service_traffic_data' => '导出服务流量数据',
     'export_type' => '导出选择：',
+    'time_filter_export' => '时间筛选导出',
     'all_filtered_data' => '所有数据',
     'limited_number_of_records' => '自定义数量',
     'custom_date_range' => '自定义范围',
