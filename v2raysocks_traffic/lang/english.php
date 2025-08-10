@@ -174,7 +174,6 @@ $_LANG = [
     // Export Functionality
     'export_service_traffic_data' => 'Export Service Traffic Data',
     'export_type' => 'Export Selection',
-    'time_filter_export' => 'Time Filter Export',
     'all_filtered_data' => 'All Data',
     'limited_number_of_records' => 'Custom Quantity',
     'custom_date_range' => 'Custom Range',
@@ -317,8 +316,6 @@ $_LANG = [
     'search_type_label' => 'Search Type:',
     'search_value_label' => 'Search Value:',
     'search_value_placeholder' => 'Enter search value',
-    'time_filter_label' => 'Time Filter:',
-    'time_filter_label_colon' => 'Time filter:',
     'start_time_label' => 'Start Time:',
     'end_time_label' => 'End Time:',
     'current_search_conditions' => 'Current search conditions:',

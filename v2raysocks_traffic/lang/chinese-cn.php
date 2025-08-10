@@ -174,7 +174,6 @@ $_LANG = [
     // Export Functionality
     'export_service_traffic_data' => '导出服务流量数据',
     'export_type' => '导出选择：',
-    'time_filter_export' => '时间筛选导出',
     'all_filtered_data' => '所有数据',
     'limited_number_of_records' => '自定义数量',
     'custom_date_range' => '自定义范围',
@@ -316,8 +315,6 @@ $_LANG = [
     'search_type_label' => '搜索类型:',
     'search_value_label' => '搜索值:',
     'search_value_placeholder' => '输入搜索值',
-    'time_filter_label' => '时间筛选:',
-    'time_filter_label_colon' => '时间筛选:',
     'start_time_label' => '开始时间:',
     'end_time_label' => '结束时间:',
     'current_search_conditions' => '当前搜索条件:',
