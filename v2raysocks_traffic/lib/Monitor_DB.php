@@ -2291,6 +2291,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
         // Get users with traffic data including short-term traffic
+        // period_traffic represents the total traffic (upload + download) for the selected time range
+        // This ensures the "Used Traffic" column shows time-range-based statistics as required
         $sql = '
             SELECT 
                 u.id as user_id,
@@ -2304,6 +2306,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.remark,
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
+                -- period_traffic: Total traffic (upload + download) within the selected time range
+                -- This field is used for the "Used Traffic" column to show time-range-based statistics
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
                 COALESCE(SUM(CASE WHEN uu.t >= :time_5min THEN uu.u + uu.d ELSE 0 END), 0) as traffic_5min,
                 COALESCE(SUM(CASE WHEN uu.t >= :time_1hour THEN uu.u + uu.d ELSE 0 END), 0) as traffic_1hour,
@@ -2313,17 +2317,22 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 MIN(uu.t) as first_usage,
                 MAX(uu.t) as last_usage
             FROM user u
-            LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != \'DAY\'
+            LEFT JOIN user_usage uu ON u.id = uu.user_id 
+                AND uu.t >= :start_time 
+                AND uu.t <= :end_time 
+                AND uu.node != \'DAY\'
             WHERE u.enable = 1
             GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark
         ';
 
-        // Add sorting
+        // Add sorting - traffic sorting uses period_traffic (time-range-based)
         switch ($sortBy) {
             case 'traffic_desc':
+                // Sort by time-range-based traffic (highest first)
                 $sql .= ' ORDER BY period_traffic DESC';
                 break;
             case 'traffic_asc':
+                // Sort by time-range-based traffic (lowest first)
                 $sql .= ' ORDER BY period_traffic ASC';
                 break;
             case 'remaining_desc':
@@ -2360,6 +2369,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['user_id'] = intval($user['user_id']);
             $user['period_upload'] = floatval($user['period_upload']);
             $user['period_download'] = floatval($user['period_download']);
+            // period_traffic represents the total traffic for the selected time range
+            // This is used in the "Used Traffic" column to show time-range-based statistics
             $user['period_traffic'] = floatval($user['period_traffic']);
             $user['traffic_5min'] = floatval($user['traffic_5min']);
             $user['traffic_1hour'] = floatval($user['traffic_1hour']);
@@ -2372,12 +2383,12 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['first_usage'] = intval($user['first_usage']);
             $user['last_usage'] = intval($user['last_usage']);
             
-            // Calculate remaining quota
+            // Calculate remaining quota based on lifetime usage (not period usage)
             $totalUsed = $user['total_upload_user'] + $user['total_download_user'];
             $user['remaining_quota'] = max(0, $user['transfer_enable'] - $totalUsed);
             $user['quota_utilization'] = $user['transfer_enable'] > 0 ? ($totalUsed / $user['transfer_enable']) * 100 : 0;
             
-            // Activity metrics
+            // Activity metrics based on period traffic
             $user['has_activity'] = $user['period_traffic'] > 0;
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }

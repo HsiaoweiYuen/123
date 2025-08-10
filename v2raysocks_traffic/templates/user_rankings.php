@@ -705,6 +705,8 @@ $userRankingsHtml = '
                         <td class="numeric-cell">${user.sid || "N/A"}</td>
                         <td>${formatBytes(user.transfer_enable)}</td>
                         <td>${formatBytes(user.remaining_quota)}</td>
+                        <!-- Used Traffic: Shows total traffic (upload + download) for the selected time range -->
+                        <!-- This implements time-range-based traffic statistics as requested -->
                         <td>${formatBytes(user.period_traffic)}</td>
                         <td>
                             <div class="progress-bar">
