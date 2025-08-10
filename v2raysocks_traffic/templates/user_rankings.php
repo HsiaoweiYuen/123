@@ -900,8 +900,10 @@ $userRankingsHtml = '
                 totalTraffic = userData.period_traffic || 0;
                 // Since individual upload/download not available in ranking data,
                 // approximate split based on typical patterns (roughly 1:2 upload:download ratio)
-                totalUpload = Math.round(totalTraffic * 0.33);
-                totalDownload = Math.round(totalTraffic * 0.67);
+                // Note: period_traffic is already in bytes, but chart data is in GB
+                totalUpload = Math.round((totalTraffic / 1000000000) * 0.33);
+                totalDownload = Math.round((totalTraffic / 1000000000) * 0.67);
+                totalTraffic = totalTraffic / 1000000000;
                 
                 // If chart might still be loading and this is first attempt, try again after a delay
                 if (retryCount === 0 && currentUserChart) {
