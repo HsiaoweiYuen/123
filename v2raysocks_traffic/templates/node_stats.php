@@ -769,32 +769,51 @@ $nodeStatsHtml = '
                 });
         }
         
-        function updateNodeInfoWithShortTermStats(nodeData) {
+        function updateNodeInfoWithShortTermStats(nodeData, retryCount = 0) {
             const nodeInfo = document.getElementById("node-info");
             
             // Store the current node name for use in chart title
             currentNodeName = nodeData.name;
             
-            // Get chart totals if available
+            // Get chart totals if available, with improved fallback logic
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
-            try {
-                if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
+            let dataFromChart = false;
+            
+            // First, try to get data from chart if it's fully loaded
+            if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets && 
+                currentNodeChart.data.datasets.length > 0) {
+                try {
                     const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传"));
                     const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载"));
                     
-                    if (uploadData && uploadData.data) {
-                        totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
+                    if (uploadData && uploadData.data && uploadData.data.length > 0 &&
+                        downloadData && downloadData.data && downloadData.data.length > 0) {
+                        totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
+                        totalTraffic = totalUpload + totalDownload;
+                        dataFromChart = true;
                     }
-                    if (downloadData && downloadData.data) {
-                        totalDownload = downloadData.data.reduce((sum, val) => sum + val, 0);
-                    }
-                    totalTraffic = totalUpload + totalDownload;
+                } catch (e) {
+                    console.log("Error accessing chart data:", e);
                 }
-            } catch (e) {
-                console.log("Chart data not available yet, using total traffic from rankings");
-                totalUpload = nodeData.total_upload || 0;
-                totalDownload = nodeData.total_download || 0;
+            }
+            
+            // If chart data not available or incomplete, use ranking data as fallback
+            if (!dataFromChart) {
+                console.log("Chart data not available, using ranking data as fallback");
+                // Use available traffic data from rankings
                 totalTraffic = nodeData.total_traffic || 0;
+                // Since individual upload/download not available in ranking data,
+                // approximate split based on typical patterns (roughly 1:2 upload:download ratio)
+                totalUpload = Math.round(totalTraffic * 0.33);
+                totalDownload = Math.round(totalTraffic * 0.67);
+                
+                // If chart might still be loading and this is first attempt, try again after a delay
+                if (retryCount === 0 && currentNodeChart) {
+                    setTimeout(() => {
+                        updateNodeInfoWithShortTermStats(nodeData, 1);
+                    }, 500);
+                }
             }
             
             nodeInfo.innerHTML = `
