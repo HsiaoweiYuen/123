@@ -281,16 +281,16 @@ function v2raysocks_traffic_getTrafficData($filters = [])
                     break;
                 case 'week':
                     $sql .= ' AND uu.t >= :start_time';
-                    $params[':start_time'] = strtotime('-7 days');
+                    $params[':start_time'] = strtotime('-6 days', strtotime('today'));
                     break;
                 case 'halfmonth':
                     $sql .= ' AND uu.t >= :start_time';
-                    $params[':start_time'] = strtotime('-15 days');
+                    $params[':start_time'] = strtotime('-14 days', strtotime('today'));
                     break;
                 case 'month':
                 case 'month_including_today':
                     $sql .= ' AND uu.t >= :start_time';
-                    $params[':start_time'] = strtotime('-30 days');
+                    $params[':start_time'] = strtotime('-29 days', strtotime('today'));
                     break;
                 case 'current_month':
                     $sql .= ' AND uu.t >= :start_time';
@@ -689,12 +689,12 @@ function v2raysocks_traffic_getTimeFilter($timeRange)
         case 'last_12_hours':
             return strtotime('-12 hours');
         case 'week':
-            return strtotime('-7 days');
+            return strtotime('-6 days', strtotime('today'));
         case 'halfmonth':
-            return strtotime('-15 days');
+            return strtotime('-14 days', strtotime('today'));
         case 'month':
         case 'month_including_today':
-            return strtotime('-30 days');
+            return strtotime('-29 days', strtotime('today'));
         case 'current_month':
             return strtotime('first day of this month 00:00:00');
         default:
@@ -1051,7 +1051,7 @@ function v2raysocks_traffic_getUserDetails($userID)
         ');
         $stmt->execute([
             ':user_id' => $userID,
-            ':thirty_days_ago' => strtotime('-30 days')
+            ':thirty_days_ago' => strtotime('-29 days', strtotime('today'))
         ]);
         $trafficHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -1128,7 +1128,7 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
             $stmt->execute([
                 ':node_id' => $nodeID,
                 ':node_name' => $node['name'],
-                ':thirty_days_ago' => strtotime('-30 days')
+                ':thirty_days_ago' => strtotime('-29 days', strtotime('today'))
             ]);
             $trafficStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
@@ -1377,11 +1377,11 @@ function v2raysocks_traffic_getTimeRangeTimestamps($range)
         case 'today':
             return ['start' => strtotime('today')];
         case 'week':
-            return ['start' => $now - (7 * 86400)];
+            return ['start' => strtotime('-6 days', strtotime('today'))];
         case 'halfmonth':
-            return ['start' => $now - (15 * 86400)];
+            return ['start' => strtotime('-14 days', strtotime('today'))];
         case 'month':
-            return ['start' => $now - (30 * 86400)];
+            return ['start' => strtotime('-29 days', strtotime('today'))];
         case 'month_including_today':
             // Fix for 30-day query to include current day
             return ['start' => strtotime('-29 days', strtotime('today'))];
@@ -2440,12 +2440,12 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 $interval = 3600; // 1 hour intervals
                 break;
             case 'week':
-                $startTime = strtotime('-7 days');
+                $startTime = strtotime('-6 days', strtotime('today'));
                 $endTime = time();
                 $interval = 86400; // 1 day intervals
                 break;
             case 'month':
-                $startTime = strtotime('-30 days');
+                $startTime = strtotime('-29 days', strtotime('today'));
                 $endTime = time();
                 $interval = 86400; // 1 day intervals
                 break;
