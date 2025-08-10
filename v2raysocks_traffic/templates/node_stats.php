@@ -1302,7 +1302,9 @@ $nodeStatsHtml = '
             const k = 1000;
             const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB"];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + "&nbsp;" + sizes[i];
+            const value = bytes / Math.pow(k, i);
+            // Use Number.prototype.toFixed() to match PHP number_format() behavior
+            return Number(value.toFixed(2)) + "&nbsp;" + sizes[i];
         }
         
         // Close modal when clicking outside
