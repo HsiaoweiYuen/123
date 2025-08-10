@@ -204,6 +204,7 @@ $_LANG = [
     'date_invalid' => 'Date invalid, please select valid dates',
     'start_date_after_end_date' => 'Start date cannot be later than end date',
     'select_start_end_times' => 'Please select start and end times',
+    'no_usage_records_criteria' => 'No usage records found for the specified criteria.',
     'minutes_ago' => 'minutes ago',
     'hours_ago' => 'hours ago',
     'days_ago' => 'days ago',

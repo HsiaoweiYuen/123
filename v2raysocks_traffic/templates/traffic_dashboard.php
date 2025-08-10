@@ -819,7 +819,7 @@ $trafficDashboardHtml = '
             let html = "";
             
             if (allTrafficData.length === 0) {
-                html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
+                html = "<tr><td colspan=\\"11\\" class=\\"loading\\">' . v2raysocks_traffic_lang('no_usage_records_criteria') . '</td></tr>";
                 $("#pagination-controls").hide();
             } else {
                 // Calculate pagination

@@ -204,6 +204,7 @@ $_LANG = [
     'date_invalid' => '日期無效，請選擇有效的日期',
     'start_date_after_end_date' => '開始日期不能晚於結束日期',
     'select_start_end_times' => '請選擇開始時間和結束時間',
+    'no_usage_records_criteria' => '未找到符合指定條件的使用記錄。',
     'minutes_ago' => '分鐘前',
     'hours_ago' => '小時前',
     'days_ago' => '天前',

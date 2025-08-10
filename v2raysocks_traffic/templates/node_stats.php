@@ -1510,13 +1510,13 @@ $nodeStatsHtml = '
                 <form id="node-export-form">
                     <div style="margin-bottom: 15px;">
                         <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
-                        <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
-                        <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
-                        <label><input type="radio" name="node_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range_option') . '</label>
+                        <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
                     </div>
                     
                     <div id="node-limit-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records') . '</label>
                         <input type="number" id="node_limit_count" name="limit_count" value="1000" min="1" max="10000">
                     </div>
                     
@@ -1529,7 +1529,7 @@ $nodeStatsHtml = '
                     </div>
                     
                     <div style="margin-bottom: 15px;">
-                        <label for="node_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <label for="node_export_format">' . v2raysocks_traffic_lang('format') . '</label>
                         <select id="node_export_format" name="format">
                             <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
                             <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
@@ -1538,8 +1538,8 @@ $nodeStatsHtml = '
                     </div>
                     
                     <div style="text-align: right;">
-                        <button type="button" onclick="closeNodeExportModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel_button') . '</button>
-                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('confirm_export') . '</button>
+                        <button type="button" onclick="closeNodeExportModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel') . '</button>
+                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('export') . '</button>
                     </div>
                 </form>
             </div>
@@ -1552,13 +1552,13 @@ $nodeStatsHtml = '
                 <form id="node-usage-export-form">
                     <div style="margin-bottom: 15px;">
                         <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range_option') . '</label>
+                        <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records') . '</label>
                         <input type="number" id="node_usage_limit_count" name="limit_count" value="1000" min="1" max="10000">
                     </div>
                     
@@ -1571,7 +1571,7 @@ $nodeStatsHtml = '
                     </div>
                     
                     <div style="margin-bottom: 15px;">
-                        <label for="node_usage_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <label for="node_usage_export_format">' . v2raysocks_traffic_lang('format') . '</label>
                         <select id="node_usage_export_format" name="format">
                             <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
                             <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
@@ -1590,8 +1590,8 @@ $nodeStatsHtml = '
                     </div>
                     
                     <div style="text-align: right;">
-                        <button type="button" onclick="closeNodeExportUsageModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel_button') . '</button>
-                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('confirm_export') . '</button>
+                        <button type="button" onclick="closeNodeExportUsageModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel') . '</button>
+                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('export') . '</button>
                     </div>
                 </form>
             </div>
