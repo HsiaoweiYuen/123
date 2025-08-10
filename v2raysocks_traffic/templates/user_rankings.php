@@ -872,9 +872,17 @@ $userRankingsHtml = '
             const userInfo = document.getElementById("user-info");
             const timeRange = document.getElementById("time-range").value;
             
-            // Get chart totals if available, with proper fallback to user ranking data
+            // Wait for chart data to be available before showing info
+            waitForUserChartDataAndUpdate(userData);
+        }
+        
+        function waitForUserChartDataAndUpdate(userData, retryCount = 0) {
+            const maxRetries = 10; // Maximum 5 seconds wait (500ms * 10)
+            const retryDelay = 500; // 500ms between retries
+            
+            // Check if chart data is available
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
-            let useChartData = false;
+            let chartDataAvailable = false;
             
             try {
                 if (currentUserChart && currentUserChart.data && currentUserChart.data.datasets) {
@@ -883,31 +891,45 @@ $userRankingsHtml = '
                     
                     if (uploadData && uploadData.data && uploadData.data.length > 0) {
                         totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
+                        chartDataAvailable = true;
                     }
                     if (downloadData && downloadData.data && downloadData.data.length > 0) {
                         totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
+                        chartDataAvailable = true;
                     }
                     totalTraffic = totalUpload + totalDownload;
                 }
             } catch (e) {
-                console.log("Chart data not available, using period traffic from rankings");
-                useChartData = false;
+                console.log("Chart data not yet available, retrying...");
+                chartDataAvailable = false;
             }
             
-            // If chart data is not available or empty, use period traffic from user ranking data
-            if (!useChartData || totalTraffic === 0) {
-                totalUpload = userData.period_upload || 0;
-                totalDownload = userData.period_download || 0;
-                totalTraffic = userData.period_traffic || 0;
-                // No need to convert, these are already in bytes
-            } else {
+            // If chart data is available, display the info
+            if (chartDataAvailable) {
                 // Convert GB to bytes for display
                 totalUpload = totalUpload * 1000000000;
                 totalDownload = totalDownload * 1000000000;
                 totalTraffic = totalTraffic * 1000000000;
+                
+                displayUserInfo(totalUpload, totalDownload, totalTraffic, userData);
+            } else if (retryCount < maxRetries) {
+                // Show loading state and retry
+                const userInfo = document.getElementById("user-info");
+                userInfo.innerHTML = `<div class="loading">${t("loading")} (${retryCount + 1}/${maxRetries})</div>`;
+                
+                setTimeout(() => {
+                    waitForUserChartDataAndUpdate(userData, retryCount + 1);
+                }, retryDelay);
+            } else {
+                // Max retries reached, show error
+                const userInfo = document.getElementById("user-info");
+                userInfo.innerHTML = `<div class="no-data">${t("loading_failed")} - ${t("chart_data_timeout")}</div>`;
             }
+        }
+        
+        function displayUserInfo(totalUpload, totalDownload, totalTraffic, userData) {
+            const userInfo = document.getElementById("user-info");
+            const timeRange = document.getElementById("time-range").value;
             
             // Get the display text for time range
             const timeRangeDisplayText = getTimeRangeDisplayText(timeRange);
@@ -948,6 +970,7 @@ $userRankingsHtml = '
                     </div>
                 </div>
             `;
+        }
         }
         
         function loadUserUsageRecords() {

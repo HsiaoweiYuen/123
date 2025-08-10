@@ -126,6 +126,7 @@ $_LANG = [
     'data_updated' => 'Data updated successfully',
     'export_success' => 'Data exported successfully',
     'loading_failed' => 'Loading failed:',
+    'chart_data_timeout' => 'Chart data loading timeout',
     'unknown_error' => 'Unknown error',
     'network_error_retry' => 'Network error, please try again',
     'network_connection_error' => 'Network connection error',

@@ -126,6 +126,7 @@ $_LANG = [
     'data_updated' => '数据更新成功',
     'export_success' => '数据导出成功',
     'loading_failed' => '加载失败:',
+    'chart_data_timeout' => '图表数据加载超时',
     'unknown_error' => '未知错误',
     'network_error_retry' => '网络错误，请重试',
     'network_connection_error' => '网络连接错误',

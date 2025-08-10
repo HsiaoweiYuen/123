@@ -776,9 +776,17 @@ $nodeStatsHtml = '
             // Store the current node name for use in chart title
             currentNodeName = nodeData.name;
             
-            // Get chart totals if available, with proper fallback to node ranking data
+            // Wait for chart data to be available before showing info
+            waitForNodeChartDataAndUpdate(nodeData);
+        }
+        
+        function waitForNodeChartDataAndUpdate(nodeData, retryCount = 0) {
+            const maxRetries = 10; // Maximum 5 seconds wait (500ms * 10)
+            const retryDelay = 500; // 500ms between retries
+            
+            // Check if chart data is available
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
-            let useChartData = false;
+            let chartDataAvailable = false;
             
             try {
                 if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
@@ -787,31 +795,44 @@ $nodeStatsHtml = '
                     
                     if (uploadData && uploadData.data && uploadData.data.length > 0) {
                         totalUpload = uploadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
+                        chartDataAvailable = true;
                     }
                     if (downloadData && downloadData.data && downloadData.data.length > 0) {
                         totalDownload = downloadData.data.reduce((sum, val) => sum + (val || 0), 0);
-                        useChartData = true;
+                        chartDataAvailable = true;
                     }
                     totalTraffic = totalUpload + totalDownload;
                 }
             } catch (e) {
-                console.log("Chart data not available, using total traffic from rankings");
-                useChartData = false;
+                console.log("Chart data not yet available, retrying...");
+                chartDataAvailable = false;
             }
             
-            // If chart data is not available or empty, use total traffic from node ranking data
-            if (!useChartData || totalTraffic === 0) {
-                totalUpload = nodeData.total_upload || 0;
-                totalDownload = nodeData.total_download || 0;
-                totalTraffic = nodeData.total_traffic || 0;
-                // No need to convert, these are already in bytes
-            } else {
+            // If chart data is available, display the info
+            if (chartDataAvailable) {
                 // Convert GB to bytes for display
                 totalUpload = totalUpload * 1000000000;
                 totalDownload = totalDownload * 1000000000;
                 totalTraffic = totalTraffic * 1000000000;
+                
+                displayNodeInfo(totalUpload, totalDownload, totalTraffic, nodeData);
+            } else if (retryCount < maxRetries) {
+                // Show loading state and retry
+                const nodeInfo = document.getElementById("node-info");
+                nodeInfo.innerHTML = `<div class="loading">${t("loading")} (${retryCount + 1}/${maxRetries})</div>`;
+                
+                setTimeout(() => {
+                    waitForNodeChartDataAndUpdate(nodeData, retryCount + 1);
+                }, retryDelay);
+            } else {
+                // Max retries reached, show error
+                const nodeInfo = document.getElementById("node-info");
+                nodeInfo.innerHTML = `<div class="no-data">${t("loading_failed")} - ${t("chart_data_timeout")}</div>`;
             }
+        }
+        
+        function displayNodeInfo(totalUpload, totalDownload, totalTraffic, nodeData) {
+            const nodeInfo = document.getElementById("node-info");
             
             nodeInfo.innerHTML = `
                 <div class="info-grid">
@@ -848,6 +869,8 @@ $nodeStatsHtml = '
                         <div class="info-value text-warning">${formatBytes(nodeData.traffic_4hour || 0)}</div>
                     </div>
                 </div>
+            `;
+        }
             `;
         }
         
