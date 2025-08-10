@@ -1140,9 +1140,13 @@ $userRankingsHtml = '
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
                 if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    labels.push(timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+                    // Use consistent time formatting like service_search.php
+                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
                 } else {
-                    labels.push(timestamp.toLocaleDateString([], { month: "2-digit", day: "2-digit" }));
+                    // Use consistent date formatting like service_search.php
+                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
+                    const day = String(timestamp.getDate()).padStart(2, "0");
+                    labels.push(month + "/" + day);
                 }
             }
             

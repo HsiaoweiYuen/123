@@ -892,9 +892,13 @@ $trafficDashboardHtml = '
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
                 if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    labels.push(timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+                    // Use consistent time formatting like service_search.php
+                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
                 } else {
-                    labels.push(timestamp.toLocaleDateString([], { month: "2-digit", day: "2-digit" }));
+                    // Use consistent date formatting like service_search.php
+                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
+                    const day = String(timestamp.getDate()).padStart(2, "0");
+                    labels.push(month + "/" + day);
                 }
             }
             
@@ -991,11 +995,28 @@ $trafficDashboardHtml = '
             // Improved sorting for different time formats
             const labels = Object.keys(timeData).sort((a, b) => {
                 // Handle different time formats properly
-                if (a.includes(":") && !a.includes("-")) {
+                if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
                     // Hour:minute format
                     const [aHour, aMin] = a.split(":").map(Number);
                     const [bHour, bMin] = b.split(":").map(Number);
                     return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                } else if (a.includes("/")) {
+                    // Date format sorting (MM/DD or MM/DD/YYYY)
+                    const aParts = a.split("/").map(Number);
+                    const bParts = b.split("/").map(Number);
+                    
+                    if (aParts.length === 3 && bParts.length === 3) {
+                        // Format: MM/DD/YYYY
+                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
+                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
+                        return aDate - bDate;
+                    } else if (aParts.length === 2 && bParts.length === 2) {
+                        // Format: MM/DD (assume same year)
+                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
+                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
+                        return aDate - bDate;
+                    }
+                    return a.localeCompare(b);
                 } else if (a.includes("-")) {
                     // Date format YYYY-MM-DD
                     return new Date(a) - new Date(b);

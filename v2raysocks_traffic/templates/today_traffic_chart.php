@@ -400,7 +400,38 @@ $todayTrafficChartHtml = '
             const chartType = $("#chart-type").val();
             let unit = $("#data-unit").val();
             
-            const hours = Object.keys(todayData.hourly_stats).sort();
+            // Sort hours chronologically instead of alphabetically
+            const hours = Object.keys(todayData.hourly_stats).sort((a, b) => {
+                if (a.includes(":") && !a.includes("/")) {
+                    // Time format sorting (HH:MM)
+                    const [aHour, aMin] = a.split(":").map(Number);
+                    const [bHour, bMin] = b.split(":").map(Number);
+                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                } else if (a.includes("/")) {
+                    // Date format sorting (MM/DD or MM/DD/YYYY)
+                    const aParts = a.split("/").map(Number);
+                    const bParts = b.split("/").map(Number);
+                    
+                    if (aParts.length === 3 && bParts.length === 3) {
+                        // Format: MM/DD/YYYY
+                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
+                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
+                        return aDate - bDate;
+                    } else if (aParts.length === 2 && bParts.length === 2) {
+                        // Format: MM/DD (assume same year)
+                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
+                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
+                        return aDate - bDate;
+                    }
+                    return a.localeCompare(b);
+                } else if (a.includes("-")) {
+                    // Date format sorting (YYYY-MM-DD)
+                    return new Date(a) - new Date(b);
+                } else {
+                    // For numeric hour strings (0, 1, 2, ..., 23)
+                    return parseInt(a) - parseInt(b);
+                }
+            });
             
             if (hours.length === 0) {
                 console.log("No hourly data available");
