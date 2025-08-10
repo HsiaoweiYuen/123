@@ -779,8 +779,16 @@ $nodeStatsHtml = '
             let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
             try {
                 if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
-                    const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传"));
-                    const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载"));
+                    // Use language-agnostic approach to find upload and download datasets
+                    const uploadLabels = [t("upload_traffic_unit", {unit: ""}), "上传", "Upload"];
+                    const downloadLabels = [t("download_traffic_unit", {unit: ""}), "下载", "Download"];
+                    
+                    const uploadData = currentNodeChart.data.datasets.find(d => 
+                        uploadLabels.some(label => d.label.toLowerCase().includes(label.trim().toLowerCase()))
+                    );
+                    const downloadData = currentNodeChart.data.datasets.find(d => 
+                        downloadLabels.some(label => d.label.toLowerCase().includes(label.trim().toLowerCase()))
+                    );
                     
                     if (uploadData && uploadData.data) {
                         totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
