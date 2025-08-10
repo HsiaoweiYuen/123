@@ -328,10 +328,6 @@ $userRankingsHtml = '
         
         // JavaScript translation function
         const translations = {
-            "select_start_end_dates": "' . v2raysocks_traffic_lang('select_start_end_dates') . '",
-            "date_format_incorrect": "' . v2raysocks_traffic_lang('date_format_incorrect') . '", 
-            "date_invalid": "' . v2raysocks_traffic_lang('date_invalid') . '",
-            "start_date_after_end_date": "' . v2raysocks_traffic_lang('start_date_after_end_date') . '",
             "loading_user_rankings": "' . v2raysocks_traffic_lang('loading_user_rankings') . '",
             "no_data": "' . v2raysocks_traffic_lang('no_data') . '",
             "loading_failed": "' . v2raysocks_traffic_lang('loading_failed') . '",
@@ -622,39 +618,6 @@ $userRankingsHtml = '
         function loadUserRankings() {
             const timeRange = document.getElementById("time-range").value;
             
-            // Validate custom date range if selected
-            if (timeRange === "custom") {
-                const startDate = document.getElementById("start-date").value;
-                const endDate = document.getElementById("end-date").value;
-                
-                // Validate date format using regex (YYYY-MM-DD)
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
-                if (!startDate || !endDate) {
-                    alert(t("select_start_end_dates"));
-                    return;
-                }
-                
-                if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-                    alert(t("date_format_incorrect"));
-                    return;
-                }
-                
-                // Validate date range logic
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                
-                if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                    alert(t("date_invalid"));
-                    return;
-                }
-                
-                if (start > end) {
-                    alert(t("start_date_after_end_date"));
-                    return;
-                }
-            }
-            
             // Use form serialization approach (similar to traffic dashboard)
             const formData = $("#user-rankings-filter").serialize();
             const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData;
@@ -760,19 +723,10 @@ $userRankingsHtml = '
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
                 
-                // Validate date format and values
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
-                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
-                    const start = new Date(startDate);
-                    const end = new Date(endDate);
-                    
-                    // Only add dates if they are valid and start <= end
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                        const dateParams = "&start_date=" + startDate + "&end_date=" + endDate;
-                        chartUrlParams += dateParams;
-                        usageUrlParams += dateParams;
-                    }
+                if (startDate && endDate) {
+                    const dateParams = "&start_date=" + startDate + "&end_date=" + endDate;
+                    chartUrlParams += dateParams;
+                    usageUrlParams += dateParams;
                 }
             }
             
@@ -936,17 +890,8 @@ $userRankingsHtml = '
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
                 
-                // Validate date format and values
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                
-                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
-                    const start = new Date(startDate);
-                    const end = new Date(endDate);
-                    
-                    // Only add dates if they are valid and start <= end
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                        urlParams += "&start_date=" + startDate + "&end_date=" + endDate;
-                    }
+                if (startDate && endDate) {
+                    urlParams += "&start_date=" + startDate + "&end_date=" + endDate;
                 }
             }
             
@@ -1098,34 +1043,26 @@ $userRankingsHtml = '
                     interval = (endOfToday30.getTime() - start.getTime()) / (points - 1);
                     break;
                 case "custom":
-                    // Handle custom date range by reading form inputs with proper validation
+                    // Handle custom date range by reading form inputs
                     const startDateInput = document.getElementById("start-date");
                     const endDateInput = document.getElementById("end-date");
                     
                     if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
-                        // Validate date format
-                        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                        if (dateRegex.test(startDateInput.value) && dateRegex.test(endDateInput.value)) {
-                            const startDate = new Date(startDateInput.value + "T00:00:00");
-                            const endDate = new Date(endDateInput.value + "T23:59:59");
-                            
-                            // Validate dates are valid and in correct order
-                            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && startDate <= endDate) {
-                                start = startDate;
-                                const totalMs = endDate.getTime() - startDate.getTime();
-                                interval = totalMs / (points - 1);
-                            } else {
-                                // Fallback to today if dates are invalid
-                                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                                interval = (24 * 60 * 60 * 1000) / (points - 1);
-                            }
+                        const startDate = new Date(startDateInput.value + "T00:00:00");
+                        const endDate = new Date(endDateInput.value + "T23:59:59");
+                        
+                        // Use provided dates if available
+                        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                            start = startDate;
+                            const totalMs = endDate.getTime() - startDate.getTime();
+                            interval = totalMs / (points - 1);
                         } else {
-                            // Fallback to today if date format is invalid
+                            // Fallback to today if dates are invalid
                             start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                             interval = (24 * 60 * 60 * 1000) / (points - 1);
                         }
                     } else {
-                        // Fallback to today if no valid custom dates
+                        // Fallback to today if no custom dates
                         start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                         interval = (24 * 60 * 60 * 1000) / (points - 1);
                     }
@@ -1533,65 +1470,6 @@ $userRankingsHtml = '
                 }
             });
             
-            // Helper function to get main page time range bounds
-            function getMainPageTimeRange() {
-                const timeRange = document.getElementById("time-range").value;
-                const today = new Date();
-                let startDate, endDate;
-                
-                switch(timeRange) {
-                    case "today":
-                        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                        break;
-                    case "week":
-                        startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                        break;
-                    case "15days":
-                        startDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
-                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                        break;
-                    case "month":
-                        startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                        break;
-                    case "custom":
-                        const startDateInput = document.getElementById("start-date").value;
-                        const endDateInput = document.getElementById("end-date").value;
-                        if (startDateInput && endDateInput) {
-                            startDate = new Date(startDateInput);
-                            endDate = new Date(endDateInput + " 23:59:59");
-                        } else {
-                            return null; // Invalid custom range
-                        }
-                        break;
-                    default:
-                        return null;
-                }
-                
-                return { start: startDate, end: endDate };
-            }
-            
-            // Function to validate export time range against main page bounds
-            function validateExportTimeRange(exportStartDate, exportEndDate) {
-                const mainRange = getMainPageTimeRange();
-                if (!mainRange) {
-                    alert("Please set a valid time range on the main page before exporting.");
-                    return false;
-                }
-                
-                if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                    alert("No usage records found for the specified criteria.");
-                    return false;
-                }
-                
-                return true;
-            }
-            
             // Export form submission for users
             $("#user-export-form").on("submit", function(e) {
                 e.preventDefault();
@@ -1622,17 +1500,8 @@ $userRankingsHtml = '
                     const startDate = document.getElementById("start-date").value;
                     const endDate = document.getElementById("end-date").value;
                     
-                    // Validate date format and values
-                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                    
-                    if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
-                        const start = new Date(startDate);
-                        const end = new Date(endDate);
-                        
-                        // Only add dates if they are valid and start <= end
-                        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                            exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
-                        }
+                    if (startDate && endDate) {
+                        exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
                     }
                 }
                 
@@ -1644,30 +1513,10 @@ $userRankingsHtml = '
                     const startDate = $("#user_export_start_date").val();
                     const endDate = $("#user_export_end_date").val();
                     
-                    // Validate export modal dates
-                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                    
-                    if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
-                        const start = new Date(startDate);
-                        const end = new Date(endDate + " 23:59:59");
-                        
-                        // Only add dates if they are valid and start <= end  
-                        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                            // Validate against main page time range
-                            if (!validateExportTimeRange(start, end)) {
-                                return;
-                            }
-                            
-                            // Override timeRange to custom and use standard date parameters
-                            exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
-                            exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
-                        } else {
-                            alert("Invalid date range. Please check your start and end dates.");
-                            return;
-                        }
-                    } else {
-                        alert("Please select both start and end dates for custom date range export.");
-                        return;
+                    if (startDate && endDate) {
+                        // Override timeRange to custom and use standard date parameters
+                        exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
+                        exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
                     }
                 } else if (exportType === "time_range") {
                     const startTime = $("#user_export_start_time").val();
@@ -1681,17 +1530,7 @@ $userRankingsHtml = '
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
-                            return;
-                        }
-                        
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
-                    } else {
-                        alert("Please select both start and end times");
-                        return;
                     }
                 }
                 

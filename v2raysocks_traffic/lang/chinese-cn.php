@@ -198,12 +198,7 @@ $_LANG = [
     'export_usage_records' => '导出使用记录',
     'custom_time_range_option' => '自定义时间段',
     
-    // Date/Time Validation
-    'select_start_end_dates' => '请选择开始和结束日期',
-    'date_format_incorrect' => '日期格式不正确，请使用正确的日期格式',
-    'date_invalid' => '日期无效，请选择有效的日期',
-    'start_date_after_end_date' => '开始日期不能晚于结束日期',
-    'select_start_end_times' => '请选择开始时间和结束时间',
+    // Date/Time Validation - REMOVED
     'minutes_ago' => '分钟前',
     'hours_ago' => '小时前',
     'days_ago' => '天前',

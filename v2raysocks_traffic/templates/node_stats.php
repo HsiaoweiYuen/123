@@ -342,8 +342,7 @@ $nodeStatsHtml = '
             "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
             "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
             "node_today_usage_trends": "' . v2raysocks_traffic_lang('node_today_usage_trends') . '",
-            "no_node_selected": "' . v2raysocks_traffic_lang('no_node_selected') . '",
-            "select_start_end_times": "' . v2raysocks_traffic_lang('select_start_end_times') . '"
+            "no_node_selected": "' . v2raysocks_traffic_lang('no_node_selected') . '"
         };
         
         function t(key, replacements = {}) {
@@ -1488,9 +1487,6 @@ $nodeStatsHtml = '
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
-                    } else {
-                        alert(t("select_start_end_times"));
-                        return;
                     }
                 }
                 

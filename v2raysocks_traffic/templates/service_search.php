@@ -219,22 +219,6 @@ $serviceSearchHtml = '
             
             return { start: startDate, end: endDate };
         }
-        
-        // Function to validate export time range against main page bounds
-        function validateExportTimeRange(exportStartDate, exportEndDate) {
-            const mainRange = getMainPageTimeRange();
-            if (!mainRange) {
-                alert("Please set a valid time range on the main page before exporting.");
-                return false;
-            }
-            
-            if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                alert("No usage records found for the specified criteria.");
-                return false;
-            }
-            
-            return true;
-        }
     </script>
 </head>
 <body>
@@ -550,16 +534,6 @@ $serviceSearchHtml = '
                     const startDate = $("#service_export_start_date").val();
                     const endDate = $("#service_export_end_date").val();
                     
-                    // Validate export date range against main page search range
-                    if (startDate && endDate) {
-                        const exportStart = new Date(startDate);
-                        const exportEnd = new Date(endDate);
-                        
-                        if (!validateExportTimeRange(exportStart, exportEnd)) {
-                            return; // Stop submission if validation fails
-                        }
-                    }
-                    
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
                 } else if (exportType === "time_range") {
@@ -574,17 +548,7 @@ $serviceSearchHtml = '
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
-                            return;
-                        }
-                        
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
-                    } else {
-                        alert("Please select both start and end times");
-                        return;
                     }
                 }
                 

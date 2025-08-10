@@ -198,12 +198,7 @@ $_LANG = [
     'export_usage_records' => 'Export usage records',
     'custom_time_range_option' => 'Custom time range',
     
-    // Date/Time Validation
-    'select_start_end_dates' => 'Please select start and end dates',
-    'date_format_incorrect' => 'Date format incorrect, please use correct date format',
-    'date_invalid' => 'Date invalid, please select valid dates',
-    'start_date_after_end_date' => 'Start date cannot be later than end date',
-    'select_start_end_times' => 'Please select start and end times',
+    // Date/Time Validation - REMOVED
     'minutes_ago' => 'minutes ago',
     'hours_ago' => 'hours ago',
     'days_ago' => 'days ago',
