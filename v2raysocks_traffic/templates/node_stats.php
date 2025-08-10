@@ -1,0 +1,1584 @@
+<?php
+
+if (!defined("WHMCS")) {
+    die("This file cannot be accessed directly");
+}
+
+// Include unified navigation component
+require_once(__DIR__ . '/navigation_component.php');
+
+$nodeStatsHtml = '
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . v2raysocks_traffic_lang('node_statistics') . '</title>
+    <style>
+        ' . v2raysocks_traffic_getNavigationCSS() . '
+        ' . v2raysocks_traffic_getUnifiedStyles() . '
+        
+        .rank-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+        .rank-1 { background: #ffd700; color: #333; }
+        .rank-2 { background: #c0c0c0; color: #333; }
+        .rank-3 { background: #cd7f32; color: white; }
+        .rank-other { background: #6c757d; color: white; }
+        
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-online { background: #d4edda; color: #155724; }
+        .status-offline { background: #f8d7da; color: #721c24; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .loading, .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .no-data { font-style: italic; }
+        
+        /* Modal styles for node details */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 50px auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .modal-title {
+            margin: 0;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        .close {
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0 5px;
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close:hover { 
+            color: #000; 
+            background: #f0f0f0;
+            transform: translateY(-50%) scale(1.1);
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .chart-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 400px;
+            position: relative;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        
+        /* Fixed usage records and export section */
+        .usage-records-section {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            margin-top: 20px;
+        }
+        
+        .usage-records-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 11;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 15px;
+        }
+        .node-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .info-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #6c757d;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .info-value {
+            font-size: 1.2em;
+            color: #495057;
+        }
+        .text-success { color: #28a745 !important; }
+        .text-warning { color: #ffc107 !important; }
+        .text-danger { color: #dc3545 !important; }
+        .text-info { color: #17a2b8 !important; }
+        .text-primary { color: #007bff !important; }
+        
+        /* Chart controls panel */
+        .chart-controls-panel .control-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        .chart-controls-panel select {
+            min-width: 120px;
+        }
+        
+        /* Responsive styles for mobile devices */
+        @media (max-width: 768px) {
+            .rank-badge {
+                min-width: 25px;
+                padding: 2px 4px;
+                font-size: 0.8em;
+            }
+            .progress-bar {
+                height: 16px;
+            }
+            .progress-text {
+                font-size: 0.7em;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 20px auto;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .chart-controls-panel {
+                padding: 10px !important;
+            }
+            .chart-controls-panel > div {
+                flex-direction: column;
+                gap: 10px !important;
+            }
+            .chart-controls-panel .control-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .chart-controls-panel select {
+                min-width: 100px;
+                flex: 1;
+                margin-left: 8px;
+            }
+            .chart-container {
+                height: 300px;
+                padding: 10px;
+            }
+            .usage-records-section {
+                margin-top: 10px;
+            }
+            
+            /* Mobile responsive search controls for new structure */
+            .usage-records-section div[style*="background: #f8f9fa"] div[style*="display: flex"] {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            .usage-records-section div[style*="flex: 0 0"] {
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+            }
+            div[style*="background: #f8f9fa"] div[style*="display: flex"] {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            div[style*="flex: 0 0 180px"],
+            div[style*="flex: 0 0 200px"] {
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+            }
+            #node-custom-time-range div[style*="display: flex"] {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            #node-custom-time-range div[style*="flex: 0 0"] {
+                flex: 1 1 100% !important;
+            }
+        }
+        
+        /* Ensure charts stay within bounds */
+        .chart-container canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        /* UUID column font consistency */
+        .uuid-column {
+            font-family: inherit;
+            font-size: inherit;
+            font-weight: normal;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Include standardized chart colors
+        ' . file_get_contents(__DIR__ . '/chart_colors.js') . '
+        
+        // JavaScript translation function
+        const translations = {
+            "loading_node_rankings": "' . v2raysocks_traffic_lang('loading_node_rankings') . '",
+            "no_data": "' . v2raysocks_traffic_lang('no_data') . '",
+            "loading_failed": "' . v2raysocks_traffic_lang('loading_failed') . '",
+            "unknown_error": "' . v2raysocks_traffic_lang('unknown_error') . '",
+            "network_error_retry": "' . v2raysocks_traffic_lang('network_error_retry') . '",
+            "loading": "' . v2raysocks_traffic_lang('loading') . '",
+            "loading_usage_records": "' . v2raysocks_traffic_lang('loading_usage_records') . '",
+            "node_name_label": "' . v2raysocks_traffic_lang('node_name_label') . '",
+            "node_prefix": "' . v2raysocks_traffic_lang('node_prefix') . '",
+            "today_range": "' . v2raysocks_traffic_lang('today_range') . '",
+            "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
+            "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
+            "total_traffic_label": "' . v2raysocks_traffic_lang('total_traffic_label') . '",
+            "recent_5min_traffic_label": "' . v2raysocks_traffic_lang('recent_5min_traffic_label') . '",
+            "recent_1hour_traffic_label": "' . v2raysocks_traffic_lang('recent_1hour_traffic_label') . '",
+            "recent_4hour_traffic_label": "' . v2raysocks_traffic_lang('recent_4hour_traffic_label') . '",
+            "no_traffic_data": "' . v2raysocks_traffic_lang('no_traffic_data') . '",
+            "no_traffic_records_period": "' . v2raysocks_traffic_lang('no_traffic_records_period') . '",
+            "network_connection_error": "' . v2raysocks_traffic_lang('network_connection_error') . '",
+            "online": "' . v2raysocks_traffic_lang('online') . '",
+            "offline": "' . v2raysocks_traffic_lang('offline') . '",
+            "minutes_ago": "' . v2raysocks_traffic_lang('minutes_ago') . '",
+            "hours_ago": "' . v2raysocks_traffic_lang('hours_ago') . '",
+            "days_ago": "' . v2raysocks_traffic_lang('days_ago') . '",
+            "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
+            "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
+            "showing_records": "' . v2raysocks_traffic_lang('showing_records') . '",
+            "page_info": "' . v2raysocks_traffic_lang('page_info') . '",
+            "upload_traffic_unit": "' . v2raysocks_traffic_lang('upload_traffic_unit') . '",
+            "download_traffic_unit": "' . v2raysocks_traffic_lang('download_traffic_unit') . '",
+            "total_traffic_unit": "' . v2raysocks_traffic_lang('total_traffic_unit') . '",
+            "cumulative_upload_unit": "' . v2raysocks_traffic_lang('cumulative_upload_unit') . '",
+            "cumulative_download_unit": "' . v2raysocks_traffic_lang('cumulative_download_unit') . '",
+            "total_cumulative_traffic_unit": "' . v2raysocks_traffic_lang('total_cumulative_traffic_unit') . '",
+            "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
+            "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
+            "node_today_usage_trends": "' . v2raysocks_traffic_lang('node_today_usage_trends') . '",
+            "no_node_selected": "' . v2raysocks_traffic_lang('no_node_selected') . '",
+            "select_start_end_times": "' . v2raysocks_traffic_lang('select_start_end_times') . '"
+        };
+        
+        function t(key, replacements = {}) {
+            let text = translations[key] || key;
+            for (const [placeholder, value] of Object.entries(replacements)) {
+                text = text.replace(new RegExp(`{${placeholder}}`, "g"), value);
+            }
+            return text;
+        }
+    </script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Bar -->
+        ' . v2raysocks_traffic_getNavigationHTML('node_stats') . '
+
+        <h1>' . v2raysocks_traffic_lang('node_rankings_title_today') . '</h1>
+        
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+            <div class="controls-row">
+                <div class="control-group">
+                    <label for="sort-by">' . v2raysocks_traffic_lang('sort_by') . ':</label>
+                    <select id="sort-by">
+                        <option value="traffic_desc" selected>' . v2raysocks_traffic_lang('traffic_usage_high_to_low') . '</option>
+                        <option value="traffic_asc">' . v2raysocks_traffic_lang('traffic_usage_low_to_high') . '</option>
+                        <option value="remaining_desc">' . v2raysocks_traffic_lang('remaining_traffic_high_to_low') . '</option>
+                        <option value="remaining_asc">' . v2raysocks_traffic_lang('remaining_traffic_low_to_high') . '</option>
+                        <option value="users_desc">' . v2raysocks_traffic_lang('used_users_count') . '</option>
+                        <option value="name_asc">' . v2raysocks_traffic_lang('node_name') . '</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="show-offline">' . v2raysocks_traffic_lang('show_offline_nodes') . ':</label>
+                    <select id="show-offline">
+                        <option value="true" selected>' . v2raysocks_traffic_lang('yes') . '</option>
+                        <option value="false">' . v2raysocks_traffic_lang('no') . '</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-primary" onclick="loadNodeRankings()">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rankings Container -->
+        <div class="rankings-container">
+            <div class="rankings-header">
+                <h3 class="rankings-title">' . v2raysocks_traffic_lang('node_rankings_table_title_today') . '</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 60px;">' . v2raysocks_traffic_lang('ranking') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('node_id') . '</th>
+                            <th style="min-width: 160px;">' . v2raysocks_traffic_lang('node_name') . '</th>
+                            <th style="min-width: 200px;">' . v2raysocks_traffic_lang('address') . '</th>
+                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic_limit') . '</th>
+                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '</th>
+                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('today_traffic') . '</th>
+                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('traffic_usage_rate') . '</th>
+                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_5min_traffic') . '</th>
+                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_1hour_traffic') . '</th>
+                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_4hour_traffic') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('online_status') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('user_count') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '</th>
+                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_online') . '</th>
+                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('country') . '</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankings-tbody">
+                        <tr>
+                            <td colspan="16" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Node Details Modal -->
+    <div id="node-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">' . v2raysocks_traffic_lang('node_details_title') . '</h3>
+                <span class="close" onclick="closeNodeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="node-info" class="node-info">
+                    <div class="loading">' . v2raysocks_traffic_lang('node_info_loading') . '</div>
+                </div>
+                
+                <!-- Chart Controls Panel -->
+                <div class="chart-controls-panel" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                        <div class="control-group">
+                            <label for="chart-unit" style="font-weight: bold; margin-right: 8px;">' . v2raysocks_traffic_lang('chart_unit') . ':</label>
+                            <select id="chart-unit" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="auto" selected>Auto</option>
+                                <option value="MB">MB</option>
+                                <option value="GB">GB</option>
+                                <option value="TB">TB</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="chart-mode" style="font-weight: bold; margin-right: 8px;">' . v2raysocks_traffic_lang('display_mode') . ':</label>
+                            <select id="chart-mode" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="separate" selected>' . v2raysocks_traffic_lang('upload_download') . '</option>
+                                <option value="total">' . v2raysocks_traffic_lang('total_traffic') . '</option>
+                                <option value="cumulative">' . v2raysocks_traffic_lang('cumulative_traffic') . '</option>
+                                <option value="total_cumulative">' . v2raysocks_traffic_lang('total_cumulative_traffic') . '</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="node-traffic-chart"></canvas>
+                </div>
+                
+                <!-- Traffic History Data Container -->
+                <div class="usage-records-section" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;">
+                    <!-- Search Area moved inside container -->
+                    <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+                            <div style="flex: 0 0 180px; min-width: 150px;">
+                                <label for="node-search-type" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_type_label') . '</label>
+                                <select id="node-search-type" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                    <option value="uuid">UUID</option>
+                                    <option value="user_id">' . v2raysocks_traffic_lang('user_id') . '</option>
+                                </select>
+                            </div>
+                            <div style="flex: 0 0 200px; min-width: 150px;">
+                                <label for="node-search-value" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_value_label') . '</label>
+                                <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                            </div>
+                            <div style="flex: 0 0 180px; min-width: 150px;">
+                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_filter_label') . '</label>
+                                <select id="node-time-filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                    <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
+                                    <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
+                                    <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
+                                    <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
+                                    <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
+                                    <option value="custom_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="search-node-records" class="btn btn-primary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('search') . '</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Time Range Options -->
+                        <div id="node-custom-time-range" style="margin-top: 15px; display: none;">
+                            <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+                                <div style="flex: 0 0 140px;">
+                                    <label for="node-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                                    <input type="time" id="node-start-time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                </div>
+                                <div style="flex: 0 0 140px;">
+                                    <label for="node-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                                    <input type="time" id="node-end-time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="usage-records-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">' . v2raysocks_traffic_lang('traffic_history') . '</h4>
+                            <button class="btn btn-success" onclick="exportNodeUsageRecords()" style="padding: 6px 12px;">' . v2raysocks_traffic_lang('export_data') . '</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>' . v2raysocks_traffic_lang('time_column') . '</th>
+                                    <th>' . v2raysocks_traffic_lang('user_id') . '</th>
+                                    <th>UUID</th>
+                                    <th>' . v2raysocks_traffic_lang('upload') . '</th>
+                                    <th>' . v2raysocks_traffic_lang('download') . '</th>
+                                    <th>' . v2raysocks_traffic_lang('total') . '</th>
+                                    <th>' . v2raysocks_traffic_lang('rate_column') . '</th>
+                                </tr>
+                            </thead>
+                            <tbody id="node-records-tbody">
+                                <tr>
+                                    <td colspan="7" class="loading">' . v2raysocks_traffic_lang('loading_usage_records') . '</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- Pagination for usage records -->
+                        <div id="node-usage-pagination" style="margin-top: 15px; display: none;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span id="node-pagination-info">' . v2raysocks_traffic_lang('showing_records') . ' 0 ' . v2raysocks_traffic_lang('to') . ' 0' . v2raysocks_traffic_lang('of') . ' 0 ' . v2raysocks_traffic_lang('records') . '</span>
+                                </div>
+                                <div>
+                                    <label for="node-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                                    <select id="node-records-per-page" style="margin-right: 15px; padding: 5px;">
+                                        <option value="25">25</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                        <option value="200">200</option>
+                                    </select>
+                                    
+                                    <button id="node-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
+                                    <button id="node-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
+                                    <span id="node-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page') . ' 1 ' . v2raysocks_traffic_lang('of_pages') . ' 1 ' . v2raysocks_traffic_lang('pages') . '</span>
+                                    <button id="node-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
+                                    <button id="node-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentNodeChart = null;
+        let currentNodeId = null;
+        let currentNodeName = null;
+        let allNodeUsageRecords = [];
+        let currentNodeUsagePage = 1;
+        let nodeUsageRecordsPerPage = 50;
+        let totalNodeUsagePages = 1;
+        
+        // Load node rankings on page load
+        $(document).ready(function() {
+            loadNodeRankings();
+        });
+        
+        function loadNodeRankings() {
+            const sortBy = document.getElementById("sort-by").value;
+            const showOffline = document.getElementById("show-offline").value === "true";
+            
+            const tbody = document.getElementById("rankings-tbody");
+            tbody.innerHTML = `<tr><td colspan="16" class="loading">${t("loading_node_rankings")}</td></tr>`;
+            
+            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        let nodes = data.data;
+                        
+                        // Filter offline nodes if needed
+                        if (!showOffline) {
+                            nodes = nodes.filter(node => node.is_online);
+                        }
+                        
+                        displayNodeRankings(nodes);
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node rankings:", error);
+                    tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("network_error_retry")}</td></tr>`;
+                });
+        }
+        
+        function displayNodeRankings(nodes) {
+            const tbody = document.getElementById("rankings-tbody");
+            
+            if (!nodes || nodes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("no_data")}</td></tr>`;
+                return;
+            }
+            
+            let html = "";
+            nodes.forEach((node, index) => {
+                const rank = index + 1;
+                const rankClass = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
+                
+                const utilizationPercent = Math.min(100, node.traffic_utilization || 0);
+                const statusClass = node.is_online ? "status-online" : "status-offline";
+                const statusText = node.is_online ? t("online") : t("offline");
+                
+                const lastSeenText = node.is_online ? t("online") : 
+                    (node.last_seen_minutes < 60 ? `${node.last_seen_minutes}${t("minutes_ago")}` :
+                     node.last_seen_minutes < 1440 ? `${Math.floor(node.last_seen_minutes / 60)}${t("hours_ago")}` :
+                     `${Math.floor(node.last_seen_minutes / 1440)}${t("days_ago")}`);
+                
+                html += `
+                    <tr onclick="showNodeDetails(${node.id})">
+                        <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+                        <td>${node.id}</td>
+                        <td title="${node.name}">${node.name}</td>
+                        <td title="${node.address}">${node.address ? (node.address.length > 40 ? node.address.substring(0, 40) + "..." : node.address) : "N/A"}</td>
+                        <td>${formatBytes(node.max_traffic * 1000000000)}</td>
+                        <td>${formatBytes(node.remaining_traffic)}</td>
+                        <td>${formatBytes(node.total_traffic)}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${utilizationPercent}%"></div>
+                                <div class="progress-text">${utilizationPercent.toFixed(1)}%</div>
+                            </div>
+                        </td>
+                        <td class="numeric-cell">${formatBytes(node.traffic_5min || 0)}</td>
+                        <td class="numeric-cell">${formatBytes(node.traffic_1hour || 0)}</td>
+                        <td class="numeric-cell">${formatBytes(node.traffic_4hour || 0)}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${node.unique_users}</td>
+                        <td>${node.usage_records}</td>
+                        <td>${lastSeenText}</td>
+                        <td>${node.country || "N/A"}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function showNodeDetails(nodeId) {
+            currentNodeId = nodeId;
+            const modal = document.getElementById("node-modal");
+            const nodeInfo = document.getElementById("node-info");
+            const recordsTbody = document.getElementById("node-records-tbody");
+            
+            modal.style.display = "block";
+            nodeInfo.innerHTML = `<div class="loading">${t("loading")}</div>`;
+            recordsTbody.innerHTML = `<tr><td colspan="7" class="loading">${t("loading_usage_records")}</td></tr>`;
+            
+            // Reset pagination
+            currentNodeUsagePage = 1;
+            allNodeUsageRecords = [];
+            document.getElementById("node-usage-pagination").style.display = "none";
+            
+            // Add event listeners for chart controls
+            document.getElementById("chart-unit").addEventListener("change", updateNodeChart);
+            document.getElementById("chart-mode").addEventListener("change", updateNodeChart);
+            
+            // Load node chart data (today only) and node ranking data for short-term stats
+            loadNodeChartData();
+            loadNodeShortTermStats();
+            
+            // Load usage records (today only)
+            loadNodeUsageRecords();
+        }
+        
+        function loadNodeChartData() {
+            fetch(`addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === "success" && data.data) {
+                        displayNodeChart(data.data);
+                        
+                        // Calculate totals for display
+                        const totalUpload = data.data.upload ? data.data.upload.reduce((sum, val) => sum + val, 0) : 0;
+                        const totalDownload = data.data.download ? data.data.download.reduce((sum, val) => sum + val, 0) : 0;
+                        const totalTraffic = data.data.total ? data.data.total.reduce((sum, val) => sum + val, 0) : 0;
+                        
+                        // Display chart first
+                        displayNodeChart(data.data);
+                        
+                        // Node info will be updated by loadNodeShortTermStats function
+                        // This ensures we get both chart data and short-term traffic stats
+                    } else {
+                        console.log("API returned error or no data:", data);
+                        const nodeInfo = document.getElementById("node-info");
+                        nodeInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${data.message || t("no_traffic_records_period")}</div>`;
+                        
+                        // Still try to display empty chart
+                        displayNodeChart({
+                            labels: [],
+                            upload: [],
+                            download: [],
+                            total: [],
+                            node_id: currentNodeId
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node chart:", error);
+                    const nodeInfo = document.getElementById("node-info");
+                    nodeInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
+                    
+                    // Display empty chart on error
+                    displayNodeChart({
+                        labels: [],
+                        upload: [],
+                        download: [],
+                        total: [],
+                        node_id: currentNodeId
+                    });
+                });
+        }
+        
+        function loadNodeShortTermStats() {
+            const sortBy = document.getElementById("sort-by").value;
+            const showOffline = document.getElementById("show-offline").value === "true";
+            
+            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        let nodes = data.data;
+                        
+                        // Filter offline nodes if needed (same as main ranking)
+                        if (!showOffline) {
+                            nodes = nodes.filter(node => node.is_online);
+                        }
+                        
+                        // Find the current node in the rankings data
+                        const currentNode = nodes.find(node => node.id == currentNodeId);
+                        if (currentNode) {
+                            updateNodeInfoWithShortTermStats(currentNode);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node short-term stats:", error);
+                });
+        }
+        
+        function updateNodeInfoWithShortTermStats(nodeData) {
+            const nodeInfo = document.getElementById("node-info");
+            
+            // Store the current node name for use in chart title
+            currentNodeName = nodeData.name;
+            
+            // Get chart totals if available
+            let totalUpload = 0, totalDownload = 0, totalTraffic = 0;
+            try {
+                if (currentNodeChart && currentNodeChart.data && currentNodeChart.data.datasets) {
+                    const uploadData = currentNodeChart.data.datasets.find(d => d.label.includes("上传"));
+                    const downloadData = currentNodeChart.data.datasets.find(d => d.label.includes("下载"));
+                    
+                    if (uploadData && uploadData.data) {
+                        totalUpload = uploadData.data.reduce((sum, val) => sum + val, 0);
+                    }
+                    if (downloadData && downloadData.data) {
+                        totalDownload = downloadData.data.reduce((sum, val) => sum + val, 0);
+                    }
+                    totalTraffic = totalUpload + totalDownload;
+                }
+            } catch (e) {
+                console.log("Chart data not available yet, using total traffic from rankings");
+                totalUpload = nodeData.total_upload || 0;
+                totalDownload = nodeData.total_download || 0;
+                totalTraffic = nodeData.total_traffic || 0;
+            }
+            
+            nodeInfo.innerHTML = `
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">${t("node_name_label")}</div>
+                        <div class="info-value">${currentNodeName || (t("node_prefix") + " " + currentNodeId)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("time_range_label")}</div>
+                        <div class="info-value">${t("today_range")}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("upload_traffic")}</div>
+                        <div class="info-value text-success">${formatBytes(totalUpload * 1000000000)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("download_traffic")}</div>
+                        <div class="info-value text-info">${formatBytes(totalDownload * 1000000000)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("total_traffic_label")}</div>
+                        <div class="info-value text-primary">${formatBytes(totalTraffic * 1000000000)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("recent_5min_traffic_label")}</div>
+                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_5min || 0)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("recent_1hour_traffic_label")}</div>
+                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_1hour || 0)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("recent_4hour_traffic_label")}</div>
+                        <div class="info-value text-warning">${formatBytes(nodeData.traffic_4hour || 0)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function loadNodeUsageRecords() {
+            // Get search parameters from new structure
+            const searchType = document.getElementById("node-search-type").value;
+            const searchValue = document.getElementById("node-search-value").value.trim();
+            const timeFilter = document.getElementById("node-time-filter").value;
+            const startTime = document.getElementById("node-start-time").value;
+            const endTime = document.getElementById("node-end-time").value;
+            
+            // Build query parameters
+            let queryParams = `node_id=${currentNodeId}&limit=1000`;
+            
+            // Add search value based on selected type
+            if (searchValue) {
+                if (searchType === "uuid") {
+                    queryParams += `&uuid=${encodeURIComponent(searchValue)}`;
+                } else if (searchType === "user_id") {
+                    queryParams += `&user_id=${encodeURIComponent(searchValue)}`;
+                }
+            }
+            
+            // Handle time filtering
+            if (timeFilter === "custom_range" && startTime && endTime) {
+                // Convert time values to current date + time for timestamp calculation
+                const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+                const startDateTime = today + "T" + startTime;
+                const endDateTime = today + "T" + endTime;
+                const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                queryParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
+            } else if (timeFilter !== "today") {
+                queryParams += `&time_range=${timeFilter}`;
+            } else {
+                queryParams += `&time_range=today`;
+            }
+            
+            fetch(`addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&${queryParams}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        allNodeUsageRecords = data.data || [];
+                        updateNodeUsagePagination();
+                    } else {
+                        const recordsTbody = document.getElementById("node-records-tbody");
+                        recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading usage records:", error);
+                    const recordsTbody = document.getElementById("node-records-tbody");
+                    recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("network_error_retry")}</td></tr>`;
+                });
+        }
+        
+        function updateNodeChart() {
+            // Reload chart data with current settings
+            loadNodeChartData();
+        }
+        
+        function updateNodeUsagePagination() {
+            const tbody = document.getElementById("node-records-tbody");
+            const paginationDiv = document.getElementById("node-usage-pagination");
+            
+            if (!allNodeUsageRecords || allNodeUsageRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("no_usage_records")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Calculate pagination
+            nodeUsageRecordsPerPage = parseInt(document.getElementById("node-records-per-page").value);
+            totalNodeUsagePages = Math.ceil(allNodeUsageRecords.length / nodeUsageRecordsPerPage);
+            const startIndex = (currentNodeUsagePage - 1) * nodeUsageRecordsPerPage;
+            const endIndex = Math.min(startIndex + nodeUsageRecordsPerPage, allNodeUsageRecords.length);
+            const pageData = allNodeUsageRecords.slice(startIndex, endIndex);
+            
+            // Generate table rows
+            let html = "";
+            pageData.forEach(record => {
+                html += `
+                    <tr>
+                        <td>${record.formatted_time}</td>
+                        <td>${record.user_id}</td>
+                        <td class="uuid-column" title="${record.uuid || "N/A"}">${record.uuid || "N/A"}</td>
+                        <td>${record.formatted_upload}</td>
+                        <td>${record.formatted_download}</td>
+                        <td>${record.formatted_total}</td>
+                        <td>${record.count_rate}x</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination info
+            document.getElementById("node-pagination-info").textContent = t("showing_records", {
+                start: startIndex + 1,
+                end: endIndex,
+                total: allNodeUsageRecords.length
+            });
+            document.getElementById("node-page-info").textContent = t("page_info", {
+                current: currentNodeUsagePage,
+                total: totalNodeUsagePages
+            });
+            
+            // Enable/disable pagination buttons
+            document.getElementById("node-first-page").disabled = currentNodeUsagePage === 1;
+            document.getElementById("node-prev-page").disabled = currentNodeUsagePage === 1;
+            document.getElementById("node-next-page").disabled = currentNodeUsagePage === totalNodeUsagePages;
+            document.getElementById("node-last-page").disabled = currentNodeUsagePage === totalNodeUsagePages;
+            
+            paginationDiv.style.display = "block";
+        }
+        
+        // Generate default time labels for empty charts
+        function generateDefaultTimeLabels(timeRange = "today", points = 10) {
+            const now = new Date();
+            const labels = [];
+            
+            let start, interval;
+            switch (timeRange) {
+                case "5min":
+                    start = new Date(now.getTime() - 5 * 60 * 1000);
+                    interval = (5 * 60 * 1000) / (points - 1);
+                    break;
+                case "10min":
+                    start = new Date(now.getTime() - 10 * 60 * 1000);
+                    interval = (10 * 60 * 1000) / (points - 1);
+                    break;
+                case "30min":
+                    start = new Date(now.getTime() - 30 * 60 * 1000);
+                    interval = (30 * 60 * 1000) / (points - 1);
+                    break;
+                case "1hour":
+                    start = new Date(now.getTime() - 60 * 60 * 1000);
+                    interval = (60 * 60 * 1000) / (points - 1);
+                    break;
+                case "today":
+                default:
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    break;
+            }
+            
+            for (let i = 0; i < points; i++) {
+                const timestamp = new Date(start.getTime() + (i * interval));
+                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
+                    labels.push(timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+                } else {
+                    labels.push(timestamp.toLocaleDateString([], { month: "2-digit", day: "2-digit" }));
+                }
+            }
+            
+            return labels;
+        }
+
+        function displayNodeChart(chartData) {
+            const ctx = document.getElementById("node-traffic-chart").getContext("2d");
+            
+            if (currentNodeChart) {
+                currentNodeChart.destroy();
+            }
+            
+            // Handle empty data case - use proper time labels instead of placeholder
+            if (!chartData.labels || chartData.labels.length === 0) {
+                const defaultLabels = generateDefaultTimeLabels("today", 8);
+                chartData = {
+                    labels: defaultLabels,
+                    upload: new Array(defaultLabels.length).fill(0),
+                    download: new Array(defaultLabels.length).fill(0), 
+                    total: new Array(defaultLabels.length).fill(0),
+                    node_id: chartData.node_id || "Unknown"
+                };
+            }
+            
+            // Get current unit and mode settings
+            const unit = document.getElementById("chart-unit").value;
+            const mode = document.getElementById("chart-mode").value;
+            
+            // Convert data based on unit - handle auto unit
+            let unitMultiplier, unitLabel;
+            if (unit === "auto") {
+                // For auto, determine best fit based on data size
+                const maxValue = Math.max(
+                    ...chartData.upload,
+                    ...chartData.download,
+                    ...chartData.total
+                ) * 1000000000; // Convert from GB to bytes
+                
+                if (maxValue >= 1000000000000) {
+                    unitMultiplier = 1000000000000;
+                    unitLabel = "TB";
+                } else if (maxValue >= 1000000000) {
+                    unitMultiplier = 1000000000;
+                    unitLabel = "GB";
+                } else {
+                    unitMultiplier = 1000000;
+                    unitLabel = "MB";
+                }
+            } else {
+                unitMultiplier = getUnitMultiplier(unit);
+                unitLabel = unit;
+            }
+            
+            // Prepare datasets based on mode
+            let datasets = [];
+            let processedData = {};
+            
+            switch (mode) {
+                case "separate":
+                    // Show upload and download separately
+                    datasets = [
+                        {
+                            label: t("upload_traffic_unit", {unit: unitLabel}),
+                            data: chartData.upload.map(val => val * 1000000000 / unitMultiplier),
+                            borderColor: CHART_COLORS.upload,
+                            backgroundColor: CHART_COLORS.upload + "20",
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: t("download_traffic_unit", {unit: unitLabel}),
+                            data: chartData.download.map(val => val * 1000000000 / unitMultiplier),
+                            borderColor: CHART_COLORS.download,
+                            backgroundColor: CHART_COLORS.download + "20",
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }
+                    ];
+                    break;
+                case "total":
+                    // Show total traffic only
+                    datasets = [
+                        {
+                            label: t("total_traffic_unit", {unit: unitLabel}),
+                            data: chartData.total.map(val => val * 1000000000 / unitMultiplier),
+                            borderColor: CHART_COLORS.total,
+                            backgroundColor: CHART_COLORS.total + "20",
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }
+                    ];
+                    break;
+                case "cumulative":
+                    // Show cumulative upload and download
+                    let cumulativeUpload = [];
+                    let cumulativeDownload = [];
+                    let uploadSum = 0;
+                    let downloadSum = 0;
+                    
+                    chartData.upload.forEach((val, index) => {
+                        uploadSum += val;
+                        downloadSum += chartData.download[index];
+                        cumulativeUpload.push(uploadSum * 1000000000 / unitMultiplier);
+                        cumulativeDownload.push(downloadSum * 1000000000 / unitMultiplier);
+                    });
+                    
+                    datasets = [
+                        {
+                            label: t("cumulative_upload_unit", {unit: unitLabel}),
+                            data: cumulativeUpload,
+                            borderColor: CHART_COLORS.upload,
+                            backgroundColor: CHART_COLORS.upload + "20",
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: t("cumulative_download_unit", {unit: unitLabel}),
+                            data: cumulativeDownload,
+                            borderColor: CHART_COLORS.download,
+                            backgroundColor: CHART_COLORS.download + "20",
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }
+                    ];
+                    break;
+                case "total_cumulative":
+                    // Show total cumulative traffic
+                    let cumulativeTotal = [];
+                    let totalSum = 0;
+                    
+                    chartData.total.forEach(val => {
+                        totalSum += val;
+                        cumulativeTotal.push(totalSum * 1000000000 / unitMultiplier);
+                    });
+                    
+                    datasets = [
+                        {
+                            label: t("total_cumulative_traffic_unit", {unit: unitLabel}),
+                            data: cumulativeTotal,
+                            borderColor: CHART_COLORS.total,
+                            backgroundColor: CHART_COLORS.total + "20",
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }
+                    ];
+                    break;
+            }
+            
+            currentNodeChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: chartData.labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: t("node_today_usage_trends", {node_name: currentNodeName || (t("node_prefix") + " " + chartData.node_id)}),
+                            font: {
+                                size: 16,
+                                weight: "bold"
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: "top"
+                        },
+                        tooltip: {
+                            mode: "nearest",
+                            intersect: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    const formattedValue = Number(value.toFixed(2)) + " " + unitLabel;
+                                    return context.dataset.label + ": " + formattedValue;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: t("traffic_unit", {unit: unitLabel})
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return Number(value.toFixed(2)) + " " + unitLabel;
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: t("time_axis")
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: "nearest",
+                        axis: "x",
+                        intersect: true
+                    }
+                }
+            });
+        }
+        
+        function getUnitMultiplier(unit) {
+            switch (unit) {
+                case "auto":
+                case "MB": return 1000000;
+                case "GB": return 1000000000;
+                case "TB": return 1000000000000;
+                default: return 1000000000; // Default to GB
+            }
+        }
+        
+        function exportNodeUsageRecords() {
+            if (!currentNodeId) {
+                alert(t("no_node_selected"));
+                return;
+            }
+            
+            // Update export modal with current search conditions
+            document.getElementById("export-node-id").textContent = currentNodeId;
+            
+            const searchType = document.getElementById("node-search-type").value;
+            const searchValue = document.getElementById("node-search-value").value.trim();
+            
+            if (searchValue) {
+                if (searchType === "uuid") {
+                    document.getElementById("export-uuid").textContent = searchValue;
+                    document.getElementById("export-user-id").textContent = "-";
+                } else if (searchType === "user_id") {
+                    document.getElementById("export-uuid").textContent = "-";
+                    document.getElementById("export-user-id").textContent = searchValue;
+                }
+            } else {
+                document.getElementById("export-uuid").textContent = "-";
+                document.getElementById("export-user-id").textContent = "-";
+            }
+            
+            const timeFilter = document.getElementById("node-time-filter").value;
+            const timeFilterText = {
+                "today": t("today_range"),
+                "last_1_hour": t("last_1_hour"),
+                "last_3_hours": t("last_3_hours"), 
+                "last_6_hours": t("last_6_hours"),
+                "last_12_hours": t("last_12_hours"),
+                "custom_range": t("custom_time_range")
+            };
+            document.getElementById("export-time-filter").textContent = timeFilterText[timeFilter] || timeFilter;
+            
+            // Show export confirmation dialog
+            document.getElementById("node-export-usage-modal").style.display = "block";
+        }
+        
+        function closeNodeModal() {
+            document.getElementById("node-modal").style.display = "none";
+            if (currentNodeChart) {
+                currentNodeChart.destroy();
+                currentNodeChart = null;
+            }
+            currentNodeId = null;
+            currentNodeName = null;
+            allNodeUsageRecords = [];
+        }
+        
+        function exportNodeRankings() {
+            // Show export confirmation dialog instead of direct export
+            document.getElementById("node-export-modal").style.display = "block";
+        }
+        
+        // Utility functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return "0&nbsp;B";
+            const k = 1000;
+            const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + "&nbsp;" + sizes[i];
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById("node-modal");
+            if (event.target === modal) {
+                closeNodeModal();
+            }
+        }
+        
+        // Export modal functions
+        function closeNodeExportModal() {
+            document.getElementById("node-export-modal").style.display = "none";
+        }
+        
+        function closeNodeExportUsageModal() {
+            document.getElementById("node-export-usage-modal").style.display = "none";
+        }
+        
+        // Export type change handlers for node modal
+        $(document).ready(function() {
+            $("input[name=\'node_export_type\']").on("change", function() {
+                const type = $(this).val();
+                $("#node-limit-options").toggle(type === "limited");
+                $("#node-date-range-options").toggle(type === "date_range");
+            });
+            
+            $("input[name=\'node_usage_export_type\']").on("change", function() {
+                const type = $(this).val();
+                $("#node-usage-limit-options").toggle(type === "limited");
+                $("#node-usage-time-range-options").toggle(type === "time_range");
+            });
+            
+            // Time filter change handler for custom range
+            $("#node-time-filter").on("change", function() {
+                const isCustomRange = $(this).val() === "custom_range";
+                $("#node-custom-time-range").toggle(isCustomRange);
+                
+                // Set default time range for custom selection
+                if (isCustomRange) {
+                    const now = new Date();
+                    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                    
+                    if (!$("#node-start-time").val()) {
+                        $("#node-start-time").val("00:00:00");
+                    }
+                    if (!$("#node-end-time").val()) {
+                        $("#node-end-time").val(currentTime);
+                    }
+                }
+            });
+            
+            // Search handlers for new structure
+            $("#search-node-records").on("click", function() {
+                currentNodeUsagePage = 1;
+                loadNodeUsageRecords();
+            });
+            
+            // Pagination event listeners for node usage records
+            $("#node-records-per-page").on("change", function() {
+                currentNodeUsagePage = 1;
+                updateNodeUsagePagination();
+            });
+            
+            $("#node-first-page").on("click", function() {
+                currentNodeUsagePage = 1;
+                updateNodeUsagePagination();
+            });
+            
+            $("#node-prev-page").on("click", function() {
+                if (currentNodeUsagePage > 1) {
+                    currentNodeUsagePage--;
+                    updateNodeUsagePagination();
+                }
+            });
+            
+            $("#node-next-page").on("click", function() {
+                if (currentNodeUsagePage < totalNodeUsagePages) {
+                    currentNodeUsagePage++;
+                    updateNodeUsagePagination();
+                }
+            });
+            
+            $("#node-last-page").on("click", function() {
+                currentNodeUsagePage = totalNodeUsagePages;
+                updateNodeUsagePagination();
+            });
+            
+            // Export form submission for nodes
+            $("#node-export-form").on("submit", function(e) {
+                e.preventDefault();
+                
+                const sortBy = document.getElementById("sort-by").value;
+                const showOffline = document.getElementById("show-offline").value;
+                const exportType = $("input[name=\'node_export_type\']:checked").val();
+                const format = $("#node_export_format").val();
+                
+                let exportParams = `export_type=node_rankings&sort_by=${sortBy}&only_today=true&show_offline=${showOffline}&format=${format}`;
+                
+                // Add specific export options
+                if (exportType === "limited") {
+                    const limitCount = $("#node_limit_count").val();
+                    exportParams += "&limit_count=" + limitCount;
+                } else if (exportType === "date_range") {
+                    const startDate = $("#node_export_start_date").val();
+                    const endDate = $("#node_export_end_date").val();
+                    
+                    if (startDate) {
+                        exportParams += "&export_start_date=" + startDate;
+                    }
+                    if (endDate) {
+                        exportParams += "&export_end_date=" + endDate;
+                    }
+                }
+                
+                // Trigger download
+                window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + exportParams);
+                
+                // Hide modal
+                closeNodeExportModal();
+            });
+            
+            // Export form submission for usage records
+            $("#node-usage-export-form").on("submit", function(e) {
+                e.preventDefault();
+                
+                if (!currentNodeId) {
+                    alert(t("no_node_selected"));
+                    return;
+                }
+                
+                const exportType = $("input[name=\'node_usage_export_type\']:checked").val();
+                const format = $("#node_usage_export_format").val();
+                
+                // Get current search parameters from new structure
+                const searchType = document.getElementById("node-search-type").value;
+                const searchValue = document.getElementById("node-search-value").value.trim();
+                const timeFilter = document.getElementById("node-time-filter").value;
+                const startTime = document.getElementById("node-start-time").value;
+                const endTime = document.getElementById("node-end-time").value;
+                
+                let exportParams = `export_type=usage_records&node_id=${currentNodeId}&format=${format}`;
+                
+                // Add search filters based on selected type
+                if (searchValue) {
+                    if (searchType === "uuid") {
+                        exportParams += "&uuid=" + encodeURIComponent(searchValue);
+                    } else if (searchType === "user_id") {
+                        exportParams += "&user_id=" + encodeURIComponent(searchValue);
+                    }
+                }
+                
+                // Handle time filtering
+                if (timeFilter === "custom_range" && startTime && endTime) {
+                    // Convert time values to current date + time for timestamp calculation
+                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+                    const startDateTime = today + "T" + startTime;
+                    const endDateTime = today + "T" + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    exportParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
+                } else if (timeFilter !== "today") {
+                    exportParams += `&time_range=${timeFilter}`;
+                } else {
+                    exportParams += `&time_range=today`;
+                }
+                
+                // Add specific export options
+                if (exportType === "limited") {
+                    const limitCount = $("#node_usage_limit_count").val();
+                    exportParams += "&limit_count=" + limitCount;
+                } else if (exportType === "time_range") {
+                    const startTime = $("#node_usage_export_start_time").val();
+                    const endTime = $("#node_usage_export_end_time").val();
+                    
+                    if (startTime && endTime) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                        const startDateTime = today + " " + startTime;
+                        const endDateTime = today + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                    } else {
+                        alert(t("select_start_end_times"));
+                        return;
+                    }
+                }
+                
+                // Trigger download
+                window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + exportParams);
+                
+                // Hide modal
+                closeNodeExportUsageModal();
+            });
+        });
+    </script>
+
+    <!-- Node Export Confirmation Modal -->
+    <div id="node-export-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; min-width: 400px;">
+            <h4>' . v2raysocks_traffic_lang('export_data') . '</h4>
+                <form id="node-export-form">
+                    <div style="margin-bottom: 15px;">
+                        <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range_option') . '</label>
+                    </div>
+                    
+                    <div id="node-limit-options" style="margin-bottom: 15px; display: none;">
+                        <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <input type="number" id="node_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                    </div>
+                    
+                    <div id="node-date-range-options" style="margin-bottom: 15px; display: none;">
+                        <label for="node_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . '</label>
+                        <input type="date" id="node_export_start_date" name="export_start_date"><br><br>
+                        <label for="node_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
+                        <input type="date" id="node_export_end_date" name="export_end_date">
+                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">选择自定义日期范围进行导出</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="node_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <select id="node_export_format" name="format">
+                            <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
+                            <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
+                            <option value="json">' . v2raysocks_traffic_lang('json') . '</option>
+                        </select>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button type="button" onclick="closeNodeExportModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel_button') . '</button>
+                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('confirm_export') . '</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    
+    <!-- Node Usage Records Export Modal -->
+    <div id="node-export-usage-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; min-width: 400px;">
+            <h4>' . v2raysocks_traffic_lang('export_usage_records') . '</h4>
+                <form id="node-usage-export-form">
+                    <div style="margin-bottom: 15px;">
+                        <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range_option') . '</label>
+                    </div>
+                    
+                    <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">
+                        <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <input type="number" id="node_usage_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                    </div>
+                    
+                    <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">
+                        <label for="node_usage_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                        <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
+                        <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                        <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="node_usage_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <select id="node_usage_export_format" name="format">
+                            <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
+                            <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
+                            <option value="json">' . v2raysocks_traffic_lang('json') . '</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                        <small style="color: #6c757d;">
+                            <strong>' . v2raysocks_traffic_lang('current_search_conditions') . '</strong><br>
+                            • ' . v2raysocks_traffic_lang('node_id_label') . ' <span id="export-node-id">-</span><br>
+                            • ' . v2raysocks_traffic_lang('uuid_search_label') . ' <span id="export-uuid">-</span><br>
+                            • ' . v2raysocks_traffic_lang('user_id') . ': <span id="export-user-id">-</span><br>
+                            • ' . v2raysocks_traffic_lang('time_filter_label_colon') . ' <span id="export-time-filter">-</span>
+                        </small>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button type="button" onclick="closeNodeExportUsageModal()" class="btn" style="margin-right: 10px;">' . v2raysocks_traffic_lang('cancel_button') . '</button>
+                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('confirm_export') . '</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+</body>
+</html>';
+
+return $nodeStatsHtml;
