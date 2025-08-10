@@ -176,49 +176,6 @@ $serviceSearchHtml = '
     <script>
         // Include standardized chart colors
         ' . file_get_contents(__DIR__ . '/chart_colors.js') . '
-        
-        // Function to get main page time range for export validation
-        function getMainPageTimeRange() {
-            const timeRange = document.getElementById("time_range").value;
-            const today = new Date();
-            let startDate, endDate;
-            
-            switch(timeRange) {
-                case "today":
-                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "week":
-                    startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "halfmonth":
-                    startDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "month_including_today":
-                    startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "custom":
-                    const startDateInput = document.getElementById("start_date").value;
-                    const endDateInput = document.getElementById("end_date").value;
-                    if (startDateInput && endDateInput) {
-                        startDate = new Date(startDateInput);
-                        endDate = new Date(endDateInput + " 23:59:59");
-                    } else {
-                        return null; // Invalid custom range
-                    }
-                    break;
-                default:
-                    return null;
-            }
-            
-            return { start: startDate, end: endDate };
-        }
     </script>
 </head>
 <body>
