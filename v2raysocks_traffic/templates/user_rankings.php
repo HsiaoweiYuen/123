@@ -360,6 +360,7 @@ $userRankingsHtml = '
             "total_cumulative_traffic_unit": "' . v2raysocks_traffic_lang('total_cumulative_traffic_unit') . '",
             "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
             "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
+            "user_traffic_usage_trends": "' . v2raysocks_traffic_lang('user_traffic_usage_trends') . '",
             "no_user_selected": "' . v2raysocks_traffic_lang('no_user_selected') . '",
             "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
             "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
