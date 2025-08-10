@@ -874,9 +874,12 @@ $nodeStatsHtml = '
             // Handle time filtering
             if (timeFilter === "custom_range" && startTime && endTime) {
                 // Convert time values to current date + time for timestamp calculation
-                const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-                const startDateTime = today + "T" + startTime;
-                const endDateTime = today + "T" + endTime;
+                const today = new Date();
+                const todayStr = today.getFullYear() + "-" + 
+                                (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                today.getDate().toString().padStart(2, "0");
+                const startDateTime = todayStr + " " + startTime;
+                const endDateTime = todayStr + " " + endTime;
                 const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                 const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                 queryParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
@@ -1460,9 +1463,12 @@ $nodeStatsHtml = '
                 // Handle time filtering
                 if (timeFilter === "custom_range" && startTime && endTime) {
                     // Convert time values to current date + time for timestamp calculation
-                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-                    const startDateTime = today + "T" + startTime;
-                    const endDateTime = today + "T" + endTime;
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     exportParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
@@ -1481,10 +1487,19 @@ $nodeStatsHtml = '
                     const endTime = $("#node_usage_export_end_time").val();
                     
                     if (startTime && endTime) {
+                        // Export modal time range overrides search filter time range
+                        // Remove any existing time parameters first
+                        exportParams = exportParams.replace(/&time_range=[^&]*/g, "");
+                        exportParams = exportParams.replace(/&export_start_timestamp=[^&]*/g, "");
+                        exportParams = exportParams.replace(/&export_end_timestamp=[^&]*/g, "");
+                        
                         // Convert time to todays date + time for timestamp calculation
-                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        const startDateTime = todayStr + " " + startTime;
+                        const endDateTime = todayStr + " " + endTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
