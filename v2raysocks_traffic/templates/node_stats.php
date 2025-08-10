@@ -713,7 +713,7 @@ $nodeStatsHtml = '
                 } else {
                     console.log("Chart API returned error:", chartResponse);
                     const nodeInfo = document.getElementById("node-info");
-                    nodeInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
+                    nodeInfo.innerHTML = `<div class="no-data">No usage records found for the specified criteria.</div>`;
                     
                     // Display empty chart
                     displayNodeChart({
@@ -731,7 +731,7 @@ $nodeStatsHtml = '
                     updateNodeUsagePagination();
                 } else {
                     const recordsTbody = document.getElementById("node-records-tbody");
-                    recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
+                    recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 }
             })
             .catch(error => {
@@ -882,7 +882,7 @@ $nodeStatsHtml = '
                         updateNodeUsagePagination();
                     } else {
                         const recordsTbody = document.getElementById("node-records-tbody");
-                        recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
+                        recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                     }
                 })
                 .catch(error => {
@@ -902,7 +902,7 @@ $nodeStatsHtml = '
             const paginationDiv = document.getElementById("node-usage-pagination");
             
             if (!allNodeUsageRecords || allNodeUsageRecords.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("no_usage_records")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 paginationDiv.style.display = "none";
                 return;
             }
