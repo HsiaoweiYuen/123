@@ -382,7 +382,8 @@ $serviceSearchHtml = '
                         <label>' . v2raysocks_traffic_lang('export_type') . '</label><br>
                         <label><input type="radio" name="service_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                         <label><input type="radio" name="service_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
-                        <label><input type="radio" name="service_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
+                        <label><input type="radio" name="service_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label><br>
+                        <label><input type="radio" name="service_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="service-limit-options" style="margin-bottom: 15px; display: none;">
@@ -395,6 +396,15 @@ $serviceSearchHtml = '
                         <input type="date" id="service_export_start_date" name="export_start_date"><br><br>
                         <label for="service_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
                         <input type="date" id="service_export_end_date" name="export_end_date">
+                    </div>
+                    
+                    <div id="service-time-range-options" style="margin-bottom: 15px; display: none;">
+                        <label for="service_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                        <input type="time" id="service_export_start_time" name="export_start_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <span style="margin: 0 10px;">' . v2raysocks_traffic_lang('to') . '</span>
+                        <label for="service_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                        <input type="time" id="service_export_end_time" name="export_end_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
@@ -524,6 +534,7 @@ $serviceSearchHtml = '
                 const type = $(this).val();
                 $("#service-limit-options").toggle(type === "limited");
                 $("#service-date-range-options").toggle(type === "date_range");
+                $("#service-time-range-options").toggle(type === "time_range");
             });
             
             // Export form submission
@@ -558,6 +569,22 @@ $serviceSearchHtml = '
                     
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
+                } else if (exportType === "time_range") {
+                    const startTime = $("#service_export_start_time").val();
+                    const endTime = $("#service_export_end_time").val();
+                    
+                    // For time range, use today's date with custom times
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                   String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                   String(today.getDate()).padStart(2, "0");
+                    
+                    // Override to use custom time range with today's date
+                    exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
+                    exportParams += "&start_date=" + todayStr + "&end_date=" + todayStr;
+                    
+                    if (startTime) exportParams += "&export_start_time=" + startTime;
+                    if (endTime) exportParams += "&export_end_time=" + endTime;
                 }
                 
                 // Trigger download
