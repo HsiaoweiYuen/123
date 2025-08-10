@@ -187,65 +187,6 @@ $trafficDashboardHtml = '
     <script>
         // Include standardized chart colors
         ' . file_get_contents(__DIR__ . '/chart_colors.js') . '
-        
-        // Function to get main page time range for export validation
-        function getMainPageTimeRange() {
-            const timeRange = document.getElementById("time-range").value;
-            const today = new Date();
-            let startDate, endDate;
-            
-            switch(timeRange) {
-                case "today":
-                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "week":
-                    startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "halfmonth":
-                    startDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "month_including_today":
-                    startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                    break;
-                case "custom":
-                    const startDateInput = document.getElementById("start-date").value;
-                    const endDateInput = document.getElementById("end-date").value;
-                    if (startDateInput && endDateInput) {
-                        startDate = new Date(startDateInput);
-                        endDate = new Date(endDateInput + " 23:59:59");
-                    } else {
-                        return null; // Invalid custom range
-                    }
-                    break;
-                default:
-                    return null;
-            }
-            
-            return { start: startDate, end: endDate };
-        }
-        
-        // Function to validate export time range against main page bounds
-        function validateExportTimeRange(exportStartDate, exportEndDate) {
-            const mainRange = getMainPageTimeRange();
-            if (!mainRange) {
-                alert("Please set a valid time range on the main page before exporting.");
-                return false;
-            }
-            
-            if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                alert("No usage records found for the specified criteria.");
-                return false;
-            }
-            
-            return true;
-        }
     </script>
 </head>
 <body>
@@ -630,16 +571,6 @@ $trafficDashboardHtml = '
                     const startDate = $("#export_start_date").val();
                     const endDate = $("#export_end_date").val();
                     
-                    // Validate export date range against main page search range
-                    if (startDate && endDate) {
-                        const exportStart = new Date(startDate);
-                        const exportEnd = new Date(endDate);
-                        
-                        if (!validateExportTimeRange(exportStart, exportEnd)) {
-                            return; // Stop submission if validation fails
-                        }
-                    }
-                    
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
                 } else if (exportType === "time_range") {
@@ -653,13 +584,6 @@ $trafficDashboardHtml = '
                         const endDateTime = today + " " + endTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
-                        
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
-                            return;
-                        }
                         
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
                     } else {
