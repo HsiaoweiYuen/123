@@ -61,7 +61,7 @@ function v2raysocks_traffic_lang($key)
 /**
  * Generate consistent HTML error page for export functions when no data is found
  */
-function v2raysocks_traffic_generateNoDataHTML($message = "No usage records found for the specified criteria.") {
+function v2raysocks_traffic_generateNoDataHTML($message = "No usage records found for the specified criteria.", $setHeaders = true) {
     $html = '<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -131,8 +131,10 @@ function v2raysocks_traffic_generateNoDataHTML($message = "No usage records foun
 </body>
 </html>';
     
-    // Set appropriate headers
-    header('Content-Type: text/html; charset=utf-8');
+    // Set appropriate headers only if requested (not during testing)
+    if ($setHeaders && !headers_sent()) {
+        header('Content-Type: text/html; charset=utf-8');
+    }
     
     return $html;
 }
