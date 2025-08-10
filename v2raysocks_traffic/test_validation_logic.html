@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Empty Data Validation Logic</title>
+    <style>
+        .test-section { 
+            border: 1px solid #ccc; 
+            margin: 10px; 
+            padding: 10px; 
+            background: #f9f9f9;
+        }
+        .test-result { 
+            padding: 5px; 
+            margin: 5px 0; 
+            border-radius: 3px;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Empty Data Validation Logic Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Empty Array Validation</h2>
+        <p>Tests that empty arrays trigger no-data message</p>
+        <button onclick="testEmptyArray()">Run Test</button>
+        <div id="empty-array-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Null/Undefined Data Validation</h2>
+        <p>Tests that null or undefined data triggers no-data message</p>
+        <button onclick="testNullData()">Run Test</button>
+        <div id="null-data-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Valid Data Display</h2>
+        <p>Tests that valid data does NOT trigger no-data message</p>
+        <button onclick="testValidData()">Run Test</button>
+        <div id="valid-data-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Filtered Data Validation</h2>
+        <p>Tests that filtered data correctly shows no-data when filters result in empty set</p>
+        <button onclick="testFilteredData()">Run Test</button>
+        <div id="filtered-data-result"></div>
+    </div>
+
+    <script>
+        const STANDARD_MESSAGE = "No usage records found for the specified criteria.";
+        
+        // Simulate the validation logic used in the templates
+        function simulateValidation(data) {
+            if (!data || data.length === 0) {
+                return STANDARD_MESSAGE;
+            }
+            return "Data displayed normally";
+        }
+        
+        function simulateFilteredValidation(allData, filterTerm) {
+            let filteredData = allData;
+            
+            if (filterTerm) {
+                filteredData = allData.filter(item => 
+                    item.name && item.name.toLowerCase().includes(filterTerm.toLowerCase())
+                );
+            }
+            
+            return simulateValidation(filteredData);
+        }
+        
+        // Test functions
+        function testEmptyArray() {
+            const resultDiv = document.getElementById('empty-array-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            const result = simulateValidation([]);
+            
+            if (result === STANDARD_MESSAGE) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Empty array correctly triggers no-data message</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Empty array should trigger no-data message</div>';
+            }
+        }
+        
+        function testNullData() {
+            const resultDiv = document.getElementById('null-data-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            const nullResult = simulateValidation(null);
+            const undefinedResult = simulateValidation(undefined);
+            
+            if (nullResult === STANDARD_MESSAGE && undefinedResult === STANDARD_MESSAGE) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Null and undefined data correctly trigger no-data message</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Null/undefined data should trigger no-data message</div>';
+            }
+        }
+        
+        function testValidData() {
+            const resultDiv = document.getElementById('valid-data-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            const validData = [
+                { id: 1, name: 'test', value: 100 },
+                { id: 2, name: 'test2', value: 200 }
+            ];
+            
+            const result = simulateValidation(validData);
+            
+            if (result === "Data displayed normally") {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Valid data does NOT trigger no-data message</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Valid data should not trigger no-data message</div>';
+            }
+        }
+        
+        function testFilteredData() {
+            const resultDiv = document.getElementById('filtered-data-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            const allData = [
+                { id: 1, name: 'node1', value: 100 },
+                { id: 2, name: 'node2', value: 200 }
+            ];
+            
+            // Test with matching filter
+            const matchingResult = simulateFilteredValidation(allData, 'node1');
+            
+            // Test with non-matching filter
+            const nonMatchingResult = simulateFilteredValidation(allData, 'nonexistent');
+            
+            if (matchingResult === "Data displayed normally" && nonMatchingResult === STANDARD_MESSAGE) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Filtered data validation works correctly</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Filtered data validation not working properly</div>';
+            }
+        }
+        
+        // Auto-run all tests
+        window.onload = function() {
+            setTimeout(() => {
+                testEmptyArray();
+                testNullData();
+                testValidData();
+                testFilteredData();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

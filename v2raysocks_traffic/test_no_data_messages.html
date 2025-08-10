@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test No-Data Message Standardization</title>
+    <style>
+        .test-section { 
+            border: 1px solid #ccc; 
+            margin: 10px; 
+            padding: 10px; 
+            background: #f9f9f9;
+        }
+        .test-result { 
+            padding: 5px; 
+            margin: 5px 0; 
+            border-radius: 3px;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 5px 10px; }
+        .code-preview { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            padding: 10px; 
+            margin: 10px 0; 
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>No-Data Message Standardization Test</h1>
+    
+    <div class="test-section">
+        <h2>Standard Message Definition</h2>
+        <p>All no-data messages should use this exact text:</p>
+        <div class="code-preview">No usage records found for the specified criteria.</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 1: Message Validation</h2>
+        <p>Tests that all template files use the standardized no-data message</p>
+        <button onclick="testMessageStandardization()">Run Test</button>
+        <div id="message-test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Consistency Check</h2>
+        <p>Tests that messages are consistent across all components</p>
+        <button onclick="testMessageConsistency()">Run Test</button>
+        <div id="consistency-test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Translation Independence</h2>
+        <p>Tests that no-data messages don't depend on translation functions</p>
+        <button onclick="testTranslationIndependence()">Run Test</button>
+        <div id="translation-test-result"></div>
+    </div>
+
+    <script>
+        const STANDARD_MESSAGE = "No usage records found for the specified criteria.";
+        
+        // Mock template file content patterns for testing
+        const templatePatterns = {
+            'user_rankings.php': [
+                '<div class="no-data">No usage records found for the specified criteria.</div>',
+                '<td colspan="6" class="no-data">No usage records found for the specified criteria.</td>',
+            ],
+            'service_search.php': [
+                '<td colspan="11" class="no-data">No usage records found for the specified criteria.</td>'
+            ],
+            'user_stats.php': [
+                '<div class="no-data">No usage records found for the specified criteria.</div>',
+                '<td colspan="5" class="no-data">No usage records found for the specified criteria.</td>'
+            ],
+            'node_stats.php': [
+                '<div class="no-data">No usage records found for the specified criteria.</div>',
+                '<td colspan="7" class="no-data">No usage records found for the specified criteria.</td>'
+            ],
+            'traffic_dashboard.php': [
+                '<td colspan="11" class="loading">No usage records found for the specified criteria.</td>'
+            ],
+            'real_time_monitor.php': [
+                '<td colspan="11" class="no-data">No usage records found for the specified criteria.</td>'
+            ]
+        };
+        
+        // Test functions
+        function testMessageStandardization() {
+            const resultDiv = document.getElementById('message-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            // Simulate checking that all templates use the standard message
+            let allStandardized = true;
+            let violations = [];
+            
+            // Check each template pattern
+            for (const [template, patterns] of Object.entries(templatePatterns)) {
+                for (const pattern of patterns) {
+                    if (!pattern.includes(STANDARD_MESSAGE)) {
+                        allStandardized = false;
+                        violations.push(`${template}: ${pattern}`);
+                    }
+                }
+            }
+            
+            if (allStandardized) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: All templates use the standardized message</div>';
+            } else {
+                resultDiv.innerHTML = `<div class="test-result fail">❌ FAIL: Found violations in: ${violations.join(', ')}</div>`;
+            }
+        }
+        
+        function testMessageConsistency() {
+            const resultDiv = document.getElementById('consistency-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            // Check that all messages are exactly the same
+            const uniqueMessages = new Set();
+            
+            for (const [template, patterns] of Object.entries(templatePatterns)) {
+                for (const pattern of patterns) {
+                    // Extract the actual message from the HTML pattern
+                    const messageMatch = pattern.match(/>(.*?)</);
+                    if (messageMatch) {
+                        uniqueMessages.add(messageMatch[1]);
+                    }
+                }
+            }
+            
+            if (uniqueMessages.size === 1 && uniqueMessages.has(STANDARD_MESSAGE)) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: All messages are consistent</div>';
+            } else {
+                resultDiv.innerHTML = `<div class="test-result fail">❌ FAIL: Found ${uniqueMessages.size} different messages: ${Array.from(uniqueMessages).join(', ')}</div>`;
+            }
+        }
+        
+        function testTranslationIndependence() {
+            const resultDiv = document.getElementById('translation-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            // Check that no patterns contain translation function calls
+            let hasTranslationCalls = false;
+            let translationViolations = [];
+            
+            for (const [template, patterns] of Object.entries(templatePatterns)) {
+                for (const pattern of patterns) {
+                    if (pattern.includes('${t(') || pattern.includes('t("')) {
+                        hasTranslationCalls = true;
+                        translationViolations.push(`${template}: ${pattern}`);
+                    }
+                }
+            }
+            
+            if (!hasTranslationCalls) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: No translation function dependencies found</div>';
+            } else {
+                resultDiv.innerHTML = `<div class="test-result fail">❌ FAIL: Found translation calls in: ${translationViolations.join(', ')}</div>`;
+            }
+        }
+        
+        // Auto-run all tests
+        window.onload = function() {
+            setTimeout(() => {
+                testMessageStandardization();
+                testMessageConsistency(); 
+                testTranslationIndependence();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

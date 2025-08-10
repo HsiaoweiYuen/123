@@ -364,7 +364,7 @@ $userStatsHtml = '
         </div>
         
         <div id="no-results" style="display: none;">
-            <div class="no-data">No user found with the provided search criteria.</div>
+            <div class="no-data">No usage records found for the specified criteria.</div>
         </div>
     </div>
 
@@ -441,7 +441,7 @@ $userStatsHtml = '
             let html = "";
             
             if (data.length === 0) {
-                html = "<tr><td colspan=\\"5\\" class=\\"no-data\\">No traffic history found</td></tr>";
+                html = "<tr><td colspan=\\"5\\" class=\\"no-data\\">No usage records found for the specified criteria.</td></tr>";
             } else {
                 data.forEach(function(row) {
                     html += `<tr>

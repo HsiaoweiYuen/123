@@ -681,7 +681,7 @@ $userRankingsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!users || users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 return;
             }
             
@@ -799,7 +799,7 @@ $userRankingsHtml = '
                 } else {
                     console.log("Chart API returned error:", chartResponse);
                     const userInfo = document.getElementById("user-info");
-                    userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
+                    userInfo.innerHTML = `<div class="no-data">No usage records found for the specified criteria.</div>`;
                     
                     // Display empty chart
                     displayUserChart({
@@ -817,7 +817,7 @@ $userRankingsHtml = '
                     filterAndUpdateUserUsageRecords();
                 } else {
                     const recordsTbody = document.getElementById("user-records-tbody");
-                    recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
+                    recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 }
             })
             .catch(error => {
@@ -958,7 +958,7 @@ $userRankingsHtml = '
                         filterAndUpdateUserUsageRecords();
                     } else {
                         const recordsTbody = document.getElementById("user-records-tbody");
-                        recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
+                        recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                     }
                 })
                 .catch(error => {
@@ -999,7 +999,7 @@ $userRankingsHtml = '
             const paginationDiv = document.getElementById("user-usage-pagination");
             
             if (!records || records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("no_usage_records")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="no-data">No usage records found for the specified criteria.</td></tr>`;
                 paginationDiv.style.display = "none";
                 return;
             }
