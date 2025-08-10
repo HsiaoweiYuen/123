@@ -215,6 +215,7 @@ function v2raysocks_traffic_output($vars)
                 'end_date' => $_GET['end_date'] ?? null,
                 'time_range' => $_GET['time_range'] ?? null,
                 'uuid' => $_GET['uuid'] ?? null,
+                'node_search' => $_GET['node_search'] ?? null,
                 'export_type' => $exportType,
                 'sort_by' => $_GET['sort_by'] ?? 'traffic_desc',
                 'only_today' => $_GET['only_today'] ?? 'true',
