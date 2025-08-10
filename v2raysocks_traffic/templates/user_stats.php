@@ -382,7 +382,25 @@ $userStatsHtml = '
                 e.preventDefault();
                 if (Object.keys(currentUserData).length > 0) {
                     const params = $("#user-search-form").serialize();
-                    window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + params);
+                    // Trigger download with error handling
+                    fetch("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + params)
+                        .then(response => {
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('text/plain')) {
+                                // Error message returned
+                                return response.text().then(errorMessage => {
+                                    alert(errorMessage);
+                                    throw new Error(errorMessage);
+                                });
+                            } else {
+                                // Successful export - trigger download
+                                window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + params);
+                            }
+                        })
+                        .catch(error => {
+                            // Error already handled above
+                            console.error('Export error:', error);
+                        });
                 }
             });
         });
