@@ -1556,6 +1556,67 @@ $userRankingsHtml = '
                 }
             });
             
+            // Helper function to get main page time range bounds
+            function getMainPageTimeRange() {
+                const timeRange = document.getElementById("time-range").value;
+                const today = new Date();
+                let startDate, endDate;
+                
+                switch(timeRange) {
+                    case "today":
+                        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                        break;
+                    case "week":
+                        startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                        break;
+                    case "15days":
+                        startDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                        break;
+                    case "month":
+                        startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                        break;
+                    case "custom":
+                        const startDateInput = document.getElementById("start-date").value;
+                        const endDateInput = document.getElementById("end-date").value;
+                        if (startDateInput && endDateInput) {
+                            startDate = new Date(startDateInput);
+                            endDate = new Date(endDateInput + " 23:59:59");
+                        } else {
+                            return null; // Invalid custom range
+                        }
+                        break;
+                    default:
+                        return null;
+                }
+                
+                return { start: startDate, end: endDate };
+            }
+            
+            // Function to validate export time range against main page bounds
+            function validateExportTimeRange(exportStartDate, exportEndDate) {
+                const mainRange = getMainPageTimeRange();
+                if (!mainRange) {
+                    alert("Please set a valid time range on the main page before exporting.");
+                    return false;
+                }
+                
+                if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
+                    const mainStartStr = mainRange.start.toLocaleDateString();
+                    const mainEndStr = mainRange.end.toLocaleDateString();
+                    alert("Export time range must be within the main page search range (" + mainStartStr + " to " + mainEndStr + ").");
+                    return false;
+                }
+                
+                return true;
+            }
+            
             // Export form submission for users
             $("#user-export-form").on("submit", function(e) {
                 e.preventDefault();
@@ -1613,10 +1674,15 @@ $userRankingsHtml = '
                     
                     if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
                         const start = new Date(startDate);
-                        const end = new Date(endDate);
+                        const end = new Date(endDate + " 23:59:59");
                         
                         // Only add dates if they are valid and start <= end  
                         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                            // Validate against main page time range
+                            if (!validateExportTimeRange(start, end)) {
+                                return;
+                            }
+                            
                             // Override timeRange to custom and use standard date parameters
                             exportParams = exportParams.replace(/time_range=[^&]*/, "time_range=custom");
                             exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
@@ -1639,6 +1705,14 @@ $userRankingsHtml = '
                         const endDateTime = today + " " + endTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        
+                        // Validate time range against main page bounds
+                        const exportStartDate = new Date(startDateTime);
+                        const exportEndDate = new Date(endDateTime);
+                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                            return;
+                        }
+                        
                         exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
                     } else {
                         alert("Please select both start and end times");
