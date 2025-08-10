@@ -572,6 +572,8 @@ $nodeStatsHtml = '
         let currentNodeChart = null;
         let currentNodeId = null;
         let currentNodeName = null;
+        let currentNodeData = null; // Store full node data for short-term stats
+        let allNodesData = []; // Store all nodes data for easy access
         let allNodeUsageRecords = [];
         let currentNodeUsagePage = 1;
         let nodeUsageRecordsPerPage = 50;
@@ -619,6 +621,9 @@ $nodeStatsHtml = '
                 return;
             }
             
+            // Store nodes data globally for modal access
+            allNodesData = nodes;
+            
             let html = "";
             nodes.forEach((node, index) => {
                 const rank = index + 1;
@@ -634,7 +639,7 @@ $nodeStatsHtml = '
                      `${Math.floor(node.last_seen_minutes / 1440)}${t("days_ago")}`);
                 
                 html += `
-                    <tr onclick="showNodeDetails(${node.id})">
+                    <tr onclick="showNodeDetails(${node.id}, ${index})">
                         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
                         <td>${node.id}</td>
                         <td title="${node.name}">${node.name}</td>
@@ -663,8 +668,13 @@ $nodeStatsHtml = '
             tbody.innerHTML = html;
         }
         
-        function showNodeDetails(nodeId) {
+        function showNodeDetails(nodeId, nodeIndex) {
             currentNodeId = nodeId;
+            
+            // Get node data from stored array using the index
+            currentNodeData = (nodeIndex !== undefined && allNodesData[nodeIndex]) ? allNodesData[nodeIndex] : null;
+            currentNodeName = currentNodeData ? currentNodeData.name : null;
+            
             const modal = document.getElementById("node-modal");
             const nodeInfo = document.getElementById("node-info");
             const recordsTbody = document.getElementById("node-records-tbody");
@@ -690,7 +700,7 @@ $nodeStatsHtml = '
             const chartUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`;
             const usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&time_range=today&limit=1000`;
             
-            // Load chart data and usage records atomically using Promise.all
+            // Load chart data, usage records, and short-term stats atomically using Promise.all
             Promise.all([
                 fetch(chartUrlParams).then(response => {
                     if (!response.ok) {
@@ -703,13 +713,25 @@ $nodeStatsHtml = '
                         throw new Error(`Usage API HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
-                })
+                }),
+                loadNodeShortTermStats()
             ])
-            .then(([chartResponse, usageResponse]) => {
+            .then(([chartResponse, usageResponse, shortTermResponse]) => {
                 // Process chart data
                 if (chartResponse.status === "success" && chartResponse.data) {
                     displayNodeChart(chartResponse.data);
-                    updateNodeInfoWithChartData(chartResponse.data);
+                    
+                    // Update node info with both chart data and short-term stats
+                    if (shortTermResponse.status === "success") {
+                        updateNodeInfoWithShortTermStats(chartResponse.data, shortTermResponse.data);
+                    } else {
+                        // Fallback to original function with empty short-term stats
+                        updateNodeInfoWithShortTermStats(chartResponse.data, {
+                            traffic_5min: 0,
+                            traffic_1hour: 0,
+                            traffic_4hour: 0
+                        });
+                    }
                 } else {
                     console.log("Chart API returned error:", chartResponse);
                     const nodeInfo = document.getElementById("node-info");
@@ -753,7 +775,56 @@ $nodeStatsHtml = '
             });
         }
         
-        function updateNodeInfoWithChartData(chartData) {
+        function loadNodeShortTermStats() {
+            // If we have current node data from rankings, use it
+            if (currentNodeData && currentNodeData.traffic_5min !== undefined) {
+                return Promise.resolve({
+                    status: "success",
+                    data: {
+                        traffic_5min: currentNodeData.traffic_5min || 0,
+                        traffic_1hour: currentNodeData.traffic_1hour || 0,
+                        traffic_4hour: currentNodeData.traffic_4hour || 0
+                    }
+                });
+            }
+            
+            // Otherwise, fetch from API by requesting specific node data
+            return fetch(`addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=traffic_desc&only_today=true`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === "success" && data.data) {
+                        // Find the current node in the rankings data
+                        const nodeData = data.data.find(node => node.id === currentNodeId);
+                        if (nodeData) {
+                            return {
+                                status: "success",
+                                data: {
+                                    traffic_5min: nodeData.traffic_5min || 0,
+                                    traffic_1hour: nodeData.traffic_1hour || 0,
+                                    traffic_4hour: nodeData.traffic_4hour || 0
+                                }
+                            };
+                        }
+                    }
+                    
+                    // Return zeros if no data found
+                    return {
+                        status: "success",
+                        data: {
+                            traffic_5min: 0,
+                            traffic_1hour: 0,
+                            traffic_4hour: 0
+                        }
+                    };
+                });
+        }
+        
+        function updateNodeInfoWithShortTermStats(chartData, shortTermStats) {
             const nodeInfo = document.getElementById("node-info");
             
             // Calculate totals from chart data (already in GB from API)
@@ -765,6 +836,11 @@ $nodeStatsHtml = '
             const totalUploadBytes = totalUpload * 1000000000;
             const totalDownloadBytes = totalDownload * 1000000000;
             const totalTrafficBytes = totalTraffic * 1000000000;
+            
+            // Format short-term traffic values
+            const traffic5minFormatted = formatBytes(shortTermStats.traffic_5min || 0);
+            const traffic1hourFormatted = formatBytes(shortTermStats.traffic_1hour || 0);
+            const traffic4hourFormatted = formatBytes(shortTermStats.traffic_4hour || 0);
             
             nodeInfo.innerHTML = `
                 <div class="info-grid">
@@ -790,15 +866,15 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning">${traffic5minFormatted}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_1hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning">${traffic1hourFormatted}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning">${traffic4hourFormatted}</div>
                     </div>
                 </div>
             `;
@@ -1244,6 +1320,7 @@ $nodeStatsHtml = '
             }
             currentNodeId = null;
             currentNodeName = null;
+            currentNodeData = null;
             allNodeUsageRecords = [];
         }
         
