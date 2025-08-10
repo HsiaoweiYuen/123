@@ -58,6 +58,87 @@ function v2raysocks_traffic_lang($key)
     return isset($lang[$key]) ? $lang[$key] : $key;
 }
 
+/**
+ * Generate consistent HTML error page for export functions when no data is found
+ */
+function v2raysocks_traffic_generateNoDataHTML($message = "No usage records found for the specified criteria.", $setHeaders = true) {
+    $html = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Results</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .icon { 
+            font-size: 64px; 
+            color: #6c757d; 
+            margin-bottom: 20px; 
+        }
+        .message { 
+            font-size: 18px; 
+            color: #6c757d; 
+            margin-bottom: 30px;
+        }
+        .info {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #495057;
+            margin-top: 20px;
+        }
+        .back-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .back-btn:hover {
+            background: #0056b3;
+            text-decoration: none;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📊</div>
+        <h1>Export Results</h1>
+        <div class="message">' . htmlspecialchars($message) . '</div>
+        <div class="info">
+            <strong>Tip:</strong> Try adjusting your search criteria or date range to find data for export.
+        </div>
+        <a href="javascript:history.back()" class="back-btn">Go Back</a>
+    </div>
+</body>
+</html>';
+    
+    // Set appropriate headers only if requested (not during testing)
+    if ($setHeaders && !headers_sent()) {
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    
+    return $html;
+}
+
 function v2raysocks_traffic_serverInfo()
 {
     $v2raysocksServerId = Capsule::table('tbladdonmodules')->where('module', 'v2raysocks_traffic')->where('setting', 'v2raysocks_server')->value('value');
@@ -1246,6 +1327,12 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
         
         // Get traffic data with applied filters
         $data = v2raysocks_traffic_getTrafficData($filters);
+        
+        // Check if we have any data to export
+        if (empty($data)) {
+            echo v2raysocks_traffic_generateNoDataHTML();
+            return;
+        }
         
         // Apply limit if specified
         if ($limit && is_numeric($limit) && $limit > 0) {
@@ -2913,6 +3000,12 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
         
         $data = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $onlyToday);
         
+        // Check if we have any data to export
+        if (empty($data)) {
+            echo v2raysocks_traffic_generateNoDataHTML();
+            return;
+        }
+        
         // Apply limit if specified
         if ($limit && is_numeric($limit) && $limit > 0) {
             $data = array_slice($data, 0, intval($limit));
@@ -3027,6 +3120,12 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
         $limitNum = $limit ?: intval($filters['limit'] ?? 100);
         
         $data = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limitNum);
+        
+        // Check if we have any data to export
+        if (empty($data)) {
+            echo v2raysocks_traffic_generateNoDataHTML();
+            return;
+        }
         
         $filename = 'user_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
@@ -3161,7 +3260,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         }
         
         if (empty($records)) {
-            echo "No usage records found for the specified criteria.";
+            echo v2raysocks_traffic_generateNoDataHTML();
             return;
         }
         
