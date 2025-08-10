@@ -790,18 +790,50 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="node-recent-5min-traffic">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_1hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="node-recent-1hour-traffic">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="node-recent-4hour-traffic">-</div>
                     </div>
                 </div>
             `;
+            
+            // Then fetch and update recent traffic data
+            fetchNodeRecentTrafficData();
+        }
+        
+        function fetchNodeRecentTrafficData() {
+            // Fetch node ranking data to get recent traffic information
+            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=traffic_desc&only_today=true`;
+            
+            fetch(rankingsUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Node rankings API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(rankingsResponse => {
+                    if (rankingsResponse.status === "success" && rankingsResponse.data) {
+                        // Find the current node in the rankings data
+                        const nodeData = rankingsResponse.data.find(node => node.id == currentNodeId);
+                        if (nodeData) {
+                            // Update recent traffic data with actual values
+                            document.getElementById("node-recent-5min-traffic").textContent = formatBytes(nodeData.traffic_5min);
+                            document.getElementById("node-recent-1hour-traffic").textContent = formatBytes(nodeData.traffic_1hour);
+                            document.getElementById("node-recent-4hour-traffic").textContent = formatBytes(nodeData.traffic_4hour);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node recent traffic data:", error);
+                    // Keep "-" values on error
+                });
         }
         
         function loadNodeUsageRecords() {

@@ -856,6 +856,7 @@ $userRankingsHtml = '
             // Get the display text for time range
             const timeRangeDisplayText = getTimeRangeDisplayText(timeRange);
             
+            // First, render the basic info
             userInfo.innerHTML = `
                 <div class="info-grid">
                     <div class="info-item">
@@ -880,18 +881,50 @@ $userRankingsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_5min_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="recent-5min-traffic">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_1hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="recent-1hour-traffic">-</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
-                        <div class="info-value text-warning">-</div>
+                        <div class="info-value text-warning" id="recent-4hour-traffic">-</div>
                     </div>
                 </div>
             `;
+            
+            // Then fetch and update recent traffic data
+            fetchUserRecentTrafficData();
+        }
+        
+        function fetchUserRecentTrafficData() {
+            // Fetch user ranking data to get recent traffic information
+            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            
+            fetch(rankingsUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Rankings API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(rankingsResponse => {
+                    if (rankingsResponse.status === "success" && rankingsResponse.data) {
+                        // Find the current user in the rankings data
+                        const userData = rankingsResponse.data.find(user => user.user_id == currentUserId);
+                        if (userData) {
+                            // Update recent traffic data with actual values
+                            document.getElementById("recent-5min-traffic").textContent = formatBytes(userData.traffic_5min);
+                            document.getElementById("recent-1hour-traffic").textContent = formatBytes(userData.traffic_1hour);
+                            document.getElementById("recent-4hour-traffic").textContent = formatBytes(userData.traffic_4hour);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading user recent traffic data:", error);
+                    // Keep "-" values on error
+                });
         }
         
         function loadUserUsageRecords() {
