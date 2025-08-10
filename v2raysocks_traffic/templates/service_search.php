@@ -229,13 +229,7 @@ $serviceSearchHtml = '
             }
             
             if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                const mainStartStr = mainRange.start.getFullYear() + "/" + 
-                                   String(mainRange.start.getMonth() + 1).padStart(2, "0") + "/" + 
-                                   String(mainRange.start.getDate()).padStart(2, "0");
-                const mainEndStr = mainRange.end.getFullYear() + "/" + 
-                                 String(mainRange.end.getMonth() + 1).padStart(2, "0") + "/" + 
-                                 String(mainRange.end.getDate()).padStart(2, "0");
-                alert("Export time range must be within the main page search range (" + mainStartStr + " to " + mainEndStr + ").");
+                alert("No usage records found for the specified criteria.");
                 return false;
             }
             

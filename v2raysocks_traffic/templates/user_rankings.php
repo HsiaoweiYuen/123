@@ -1585,9 +1585,7 @@ $userRankingsHtml = '
                 }
                 
                 if (exportStartDate < mainRange.start || exportEndDate > mainRange.end) {
-                    const mainStartStr = mainRange.start.toLocaleDateString();
-                    const mainEndStr = mainRange.end.toLocaleDateString();
-                    alert("Export time range must be within the main page search range (" + mainStartStr + " to " + mainEndStr + ").");
+                    alert("No usage records found for the specified criteria.");
                     return false;
                 }
                 
