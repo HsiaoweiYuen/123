@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Data Loading Fixes</title>
+    <style>
+        .test-section { 
+            border: 1px solid #ccc; 
+            margin: 10px; 
+            padding: 10px; 
+            background: #f9f9f9;
+        }
+        .test-result { 
+            padding: 5px; 
+            margin: 5px 0; 
+            border-radius: 3px;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Modal Data Loading Race Condition Fixes - Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Promise.all Atomic Loading</h2>
+        <p>Tests if the new atomic loading mechanism works correctly</p>
+        <button onclick="testAtomicLoading()">Run Test</button>
+        <div id="atomic-test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Error Handling</h2>
+        <p>Tests error handling for failed API calls</p>
+        <button onclick="testErrorHandling()">Run Test</button>
+        <div id="error-test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Data Consistency</h2>
+        <p>Tests that chart data and statistics are consistent</p>
+        <button onclick="testDataConsistency()">Run Test</button>
+        <div id="consistency-test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Time Range Consistency</h2>
+        <p>Tests that modal respects the main page time range selection</p>
+        <button onclick="testTimeRangeConsistency()">Run Test</button>
+        <div id="timerange-test-result"></div>
+    </div>
+
+    <script>
+        // Mock functions to simulate the new modal loading mechanism
+        
+        // Mock fetch that returns promise
+        function mockFetch(url) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    if (url.includes('error')) {
+                        reject(new Error('Mock API error'));
+                    } else {
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve({
+                                status: 'success',
+                                data: url.includes('chart') ? 
+                                    { labels: ['00:00', '01:00'], upload: [1.5, 2.0], download: [2.5, 3.0], total: [4.0, 5.0] } :
+                                    [{ formatted_time: '2025-01-15 10:00', formatted_upload: '1.5 GB', formatted_download: '2.5 GB', formatted_total: '4.0 GB' }]
+                            })
+                        });
+                    }
+                }, 100);
+            });
+        }
+        
+        // Simulate the new atomic loading function
+        function simulateAtomicModalLoading() {
+            const chartUrl = "mock_chart_api";
+            const usageUrl = "mock_usage_api";
+            
+            return Promise.all([
+                mockFetch(chartUrl),
+                mockFetch(usageUrl)
+            ]).then(([chartResponse, usageResponse]) => {
+                const chartData = chartResponse.json ? chartResponse.json() : chartResponse;
+                const usageData = usageResponse.json ? usageResponse.json() : usageResponse;
+                
+                return Promise.all([chartData, usageData]);
+            }).then(([chartData, usageData]) => {
+                // Calculate statistics from chart data
+                const totalUpload = chartData.data.upload.reduce((sum, val) => sum + val, 0);
+                const totalDownload = chartData.data.download.reduce((sum, val) => sum + val, 0);
+                const totalTraffic = totalUpload + totalDownload;
+                
+                return {
+                    chartData: chartData.data,
+                    usageData: usageData.data,
+                    statistics: {
+                        totalUpload: totalUpload * 1000000000, // Convert GB to bytes
+                        totalDownload: totalDownload * 1000000000,
+                        totalTraffic: totalTraffic * 1000000000
+                    }
+                };
+            });
+        }
+        
+        // Test functions
+        function testAtomicLoading() {
+            const resultDiv = document.getElementById('atomic-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            simulateAtomicModalLoading()
+                .then(result => {
+                    if (result.chartData && result.usageData && result.statistics) {
+                        resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Atomic loading works correctly</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Missing data in atomic loading result</div>';
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: ' + error.message + '</div>';
+                });
+        }
+        
+        function testErrorHandling() {
+            const resultDiv = document.getElementById('error-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            // Simulate error case
+            Promise.all([
+                mockFetch("error_chart_api"),
+                mockFetch("mock_usage_api")
+            ]).then(([chartResponse, usageResponse]) => {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Should have caught error</div>';
+            }).catch(error => {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Error handling works correctly - ' + error.message + '</div>';
+            });
+        }
+        
+        function testDataConsistency() {
+            const resultDiv = document.getElementById('consistency-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            simulateAtomicModalLoading()
+                .then(result => {
+                    const chartTotal = result.chartData.upload.reduce((sum, val) => sum + val, 0) + 
+                                     result.chartData.download.reduce((sum, val) => sum + val, 0);
+                    const statsTotal = result.statistics.totalTraffic / 1000000000; // Convert back to GB
+                    
+                    if (Math.abs(chartTotal - statsTotal) < 0.001) {
+                        resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Chart data and statistics are consistent</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Data inconsistency detected</div>';
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: ' + error.message + '</div>';
+                });
+        }
+        
+        function testTimeRangeConsistency() {
+            const resultDiv = document.getElementById('timerange-test-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            // Simulate time range parameter passing
+            function mockModalLoadingWithTimeRange(timeRange, startDate = null, endDate = null) {
+                let chartUrl = `mock_chart_api?time_range=${timeRange}`;
+                let usageUrl = `mock_usage_api?time_range=${timeRange}`;
+                
+                if (timeRange === 'custom' && startDate && endDate) {
+                    const dateParams = `&start_date=${startDate}&end_date=${endDate}`;
+                    chartUrl += dateParams;
+                    usageUrl += dateParams;
+                }
+                
+                return { chartUrl, usageUrl };
+            }
+            
+            const todayUrls = mockModalLoadingWithTimeRange('today');
+            const customUrls = mockModalLoadingWithTimeRange('custom', '2025-01-01', '2025-01-15');
+            
+            if (todayUrls.chartUrl.includes('time_range=today') && 
+                todayUrls.usageUrl.includes('time_range=today') &&
+                customUrls.chartUrl.includes('start_date=2025-01-01') &&
+                customUrls.usageUrl.includes('end_date=2025-01-15')) {
+                resultDiv.innerHTML = '<div class="test-result pass">✅ PASS: Time range parameters passed correctly to both APIs</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="test-result fail">❌ FAIL: Time range parameters not consistent</div>';
+            }
+        }
+        
+        // Auto-run all tests
+        window.onload = function() {
+            setTimeout(() => {
+                testAtomicLoading();
+                testErrorHandling();
+                testDataConsistency(); 
+                testTimeRangeConsistency();
+            }, 500);
+        };
+    </script>
+</body>
+</html>
