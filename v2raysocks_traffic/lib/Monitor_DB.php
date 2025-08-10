@@ -2246,6 +2246,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
 
         // Calculate time range
         switch ($timeRange) {
+            case '24hours':
+                // Last 24 hours from current time
+                $startTime = time() - 86400; // 24 hours ago
+                $endTime = time();
+                break;
             case 'today':
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;
@@ -2575,6 +2580,12 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 
         // Calculate time range
         switch ($timeRange) {
+            case '24hours':
+                // Last 24 hours from current time
+                $startTime = time() - 86400; // 24 hours ago
+                $endTime = time();
+                $interval = 3600; // 1 hour intervals
+                break;
             case 'today':
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;
@@ -2742,6 +2753,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
 
         // Calculate time range
         switch ($timeRange) {
+            case '24hours':
+                // Last 24 hours from current time
+                $startTime = time() - 86400; // 24 hours ago
+                $endTime = time();
+                break;
             case 'today':
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;

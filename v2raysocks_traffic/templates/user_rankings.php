@@ -400,7 +400,8 @@ $userRankingsHtml = '
                     <div class="control-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="time-range" name="time_range">
-                            <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
+                            <option value="24hours" selected>' . v2raysocks_traffic_lang('last_24_hours') . '</option>
+                            <option value="today">' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="week">' . v2raysocks_traffic_lang('near_7_days') . '</option>
                             <option value="15days">' . v2raysocks_traffic_lang('15_days') . '</option>
                             <option value="month">' . v2raysocks_traffic_lang('last_30_days') . '</option>

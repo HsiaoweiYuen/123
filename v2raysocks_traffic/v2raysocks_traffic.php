@@ -511,7 +511,7 @@ function v2raysocks_traffic_output($vars)
         case 'get_user_traffic_rankings':
             try {
                 $sortBy = $_GET['sort_by'] ?? 'traffic_desc';
-                $timeRange = $_GET['time_range'] ?? 'today';
+                $timeRange = $_GET['time_range'] ?? '24hours';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
                 $limitValue = $_GET['limit'] ?? '100';
@@ -544,7 +544,7 @@ function v2raysocks_traffic_output($vars)
         case 'get_node_traffic_chart':
             try {
                 $nodeId = $_GET['node_id'] ?? null;
-                $timeRange = $_GET['time_range'] ?? 'today';
+                $timeRange = $_GET['time_range'] ?? '24hours';
                 if (!$nodeId) {
                     throw new Exception('Node ID is required');
                 }
@@ -568,7 +568,7 @@ function v2raysocks_traffic_output($vars)
         case 'get_user_traffic_chart':
             try {
                 $userId = $_GET['user_id'] ?? null;
-                $timeRange = $_GET['time_range'] ?? 'today';
+                $timeRange = $_GET['time_range'] ?? '24hours';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
                 
@@ -598,7 +598,7 @@ function v2raysocks_traffic_output($vars)
                 $nodeId = $_GET['node_id'] ?? null;
                 $userId = $_GET['user_id'] ?? null;
                 $uuid = $_GET['uuid'] ?? null;
-                $timeRange = $_GET['time_range'] ?? 'today';
+                $timeRange = $_GET['time_range'] ?? '24hours';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['export_start_timestamp'] ?? null;

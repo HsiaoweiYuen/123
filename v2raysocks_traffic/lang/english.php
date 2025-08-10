@@ -94,6 +94,7 @@ $_LANG = [
     'custom_range_option' => 'Custom range',
     '15_days' => '15 days',
     'near_7_days' => 'Last 7 days',
+    'last_24_hours' => 'Last 24 Hours',
     
     // Common Table Headers
     'timestamp' => 'Timestamp',
@@ -268,7 +269,7 @@ $_LANG = [
     'remaining_traffic_low_to_high' => 'Remaining traffic (low to high)',
     'used_nodes_count' => 'Used nodes count',
     'recent_activity' => 'Recent activity',
-    'used_traffic' => 'Used Traffic',
+    'used_traffic' => 'Time Range Total Traffic',
     'remaining_traffic' => 'Remaining Traffic',
     'traffic_usage_rate' => 'Traffic Usage Rate',
     'used_nodes' => 'Used Nodes',

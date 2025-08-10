@@ -94,6 +94,7 @@ $_LANG = [
     'custom_range_option' => '自定義範圍',
     '15_days' => '15天',
     'near_7_days' => '近七天',
+    'last_24_hours' => '最近24小時',
     
     // Common Table Headers
     'timestamp' => '時間戳',
@@ -267,7 +268,7 @@ $_LANG = [
     'remaining_traffic_low_to_high' => '剩餘流量 (少到多)',
     'used_nodes_count' => '使用節點數',
     'recent_activity' => '最近活躍',
-    'used_traffic' => '使用流量',
+    'used_traffic' => '時間範圍總流量',
     'remaining_traffic' => '剩餘流量',
     'traffic_usage_rate' => '流量使用率',
     'used_nodes' => '使用節點',
