@@ -219,7 +219,10 @@ function v2raysocks_traffic_output($vars)
                 'sort_by' => $_GET['sort_by'] ?? 'traffic_desc',
                 'only_today' => $_GET['only_today'] ?? 'true',
                 'show_offline' => $_GET['show_offline'] ?? 'true',
-                'limit' => $_GET['limit'] ?? 100
+                'limit' => $_GET['limit'] ?? 100,
+                // Add timestamp parameters for time range filtering
+                'start_timestamp' => !empty($_GET['export_start_timestamp']) ? intval($_GET['export_start_timestamp']) : null,
+                'end_timestamp' => !empty($_GET['export_end_timestamp']) ? intval($_GET['export_end_timestamp']) : null
             ];
             
             // Apply export options for regular traffic data
