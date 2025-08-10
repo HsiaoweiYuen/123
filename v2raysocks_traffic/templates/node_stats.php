@@ -824,9 +824,9 @@ $nodeStatsHtml = '
                         const nodeData = rankingsResponse.data.find(node => node.id == currentNodeId);
                         if (nodeData) {
                             // Update recent traffic data with actual values
-                            document.getElementById("node-recent-5min-traffic").textContent = formatBytes(nodeData.traffic_5min);
-                            document.getElementById("node-recent-1hour-traffic").textContent = formatBytes(nodeData.traffic_1hour);
-                            document.getElementById("node-recent-4hour-traffic").textContent = formatBytes(nodeData.traffic_4hour);
+                            document.getElementById("node-recent-5min-traffic").innerHTML = formatBytes(nodeData.traffic_5min);
+                            document.getElementById("node-recent-1hour-traffic").innerHTML = formatBytes(nodeData.traffic_1hour);
+                            document.getElementById("node-recent-4hour-traffic").innerHTML = formatBytes(nodeData.traffic_4hour);
                         }
                     }
                 })
