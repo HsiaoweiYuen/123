@@ -593,18 +593,24 @@ function v2raysocks_traffic_output($vars)
             try {
                 $nodeId = $_GET['node_id'] ?? null;
                 $userId = $_GET['user_id'] ?? null;
+                $uuid = $_GET['uuid'] ?? null;
                 $timeRange = $_GET['time_range'] ?? 'today';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
+                $startTimestamp = $_GET['export_start_timestamp'] ?? null;
+                $endTimestamp = $_GET['export_end_timestamp'] ?? null;
                 $limit = intval($_GET['limit'] ?? 100);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate);
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
                 $result = [
                     'status' => 'success',
                     'data' => $records,
                     'node_id' => $nodeId,
                     'user_id' => $userId,
+                    'uuid' => $uuid,
                     'time_range' => $timeRange,
+                    'start_timestamp' => $startTimestamp,
+                    'end_timestamp' => $endTimestamp,
                     'limit' => $limit
                 ];
             } catch (\Exception $e) {
