@@ -2589,7 +2589,7 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 $interval = 3600;
         }
 
-        // Get traffic data using actual timestamps (PR#37 pattern)
+        // Get traffic data grouped by time intervals
         // First, get the node name to handle both ID and name matching
         $nodeStmt = $pdo->prepare('SELECT name FROM node WHERE id = :node_id');
         $nodeStmt->execute([':node_id' => $nodeId]);
@@ -2598,14 +2598,15 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
         
         $sql = '
             SELECT 
-                t,
-                u as upload,
-                d as download,
-                (u + d) as total,
-                user_id
+                FLOOR(t / :interval) * :interval as time_bucket,
+                SUM(u) as upload,
+                SUM(d) as download,
+                SUM(u + d) as total,
+                COUNT(DISTINCT user_id) as users
             FROM user_usage 
             WHERE (node = :node_id OR node = :node_name) AND t >= :start_time AND t <= :end_time
-            ORDER BY t ASC
+            GROUP BY time_bucket
+            ORDER BY time_bucket ASC
         ';
 
         $stmt = $pdo->prepare($sql);
@@ -2613,54 +2614,54 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             ':node_id' => $nodeId,
             ':node_name' => $nodeName,
             ':start_time' => $startTime,
-            ':end_time' => $endTime
+            ':end_time' => $endTime,
+            ':interval' => $interval
         ]);
         
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Group data by time periods using actual timestamps (server local time, not UTC)
-        $timeData = [];
-        
+        // Create a lookup array for existing data
+        $dataLookup = [];
         foreach ($results as $row) {
-            // Use actual data timestamp like traffic dashboard
-            $timestamp = intval($row['t']);
-            $date = new DateTime();
-            $date->setTimestamp($timestamp);
-            
-            // Time grouping using server local time (not UTC) - consistent with PR#37 pattern
-            if ($timeRange === 'today') {
-                // For today, group by hour with proper time display
-                $timeKey = $date->format('H:i');
-            } else {
-                // For weekly/monthly ranges, group by day using local time  
-                $timeKey = $date->format('m/d');
-            }
-            
-            if (!isset($timeData[$timeKey])) {
-                $timeData[$timeKey] = ['upload' => 0, 'download' => 0, 'users' => []];
-            }
-            
-            $timeData[$timeKey]['upload'] += floatval($row['upload']);
-            $timeData[$timeKey]['download'] += floatval($row['download']);
-            $timeData[$timeKey]['users'][] = $row['user_id'];
+            $dataLookup[intval($row['time_bucket'])] = $row;
         }
         
-        // Sort time keys properly
-        ksort($timeData);
-        
-        // Prepare chart data arrays
+        // Prepare chart data with complete time series
         $labels = [];
         $uploadData = [];
         $downloadData = [];
         $totalData = [];
         $userCounts = [];
         
-        foreach ($timeData as $timeKey => $data) {
-            $labels[] = $timeKey;
-            $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
-            $downloadData[] = $data['download'] / 1000000000; // Convert to GB
-            $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
-            $userCounts[] = count(array_unique($data['users']));
+        // Generate complete time series from start to end
+        for ($currentTime = $startTime; $currentTime <= $endTime; $currentTime += $interval) {
+            // Ensure we don't go beyond the current time for today's data
+            if ($timeRange === 'today' && $currentTime > time()) {
+                break;
+            }
+            
+            $bucket = floor($currentTime / $interval) * $interval;
+            
+            if ($timeRange === 'today') {
+                $labels[] = date('H:i', $bucket);
+            } else {
+                $labels[] = date('m/d', $bucket);
+            }
+            
+            // Use existing data if available, otherwise use zeros
+            if (isset($dataLookup[$bucket])) {
+                $row = $dataLookup[$bucket];
+                $uploadData[] = floatval($row['upload']) / 1000000000; // Convert to GB
+                $downloadData[] = floatval($row['download']) / 1000000000; // Convert to GB
+                $totalData[] = floatval($row['total']) / 1000000000; // Convert to GB
+                $userCounts[] = intval($row['users']);
+            } else {
+                // Fill missing time periods with zero values
+                $uploadData[] = 0;
+                $downloadData[] = 0;
+                $totalData[] = 0;
+                $userCounts[] = 0;
+            }
         }
         
         $chartData = [
