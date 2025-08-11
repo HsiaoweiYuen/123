@@ -1,0 +1,14 @@
+# Ignore layout test screenshots
+desktop-layout.png
+tablet-layout.png
+mobile-layout.png
+mobile-layout-with-dates.png
+
+# Ignore test files
+test_mobile_layout.html
+
+# Ignore temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db

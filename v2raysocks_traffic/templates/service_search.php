@@ -26,13 +26,19 @@ $serviceSearchHtml = '
         .form-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             align-items: end;
             margin-bottom: 15px;
         }
         .form-group { 
             flex: 1;
-            min-width: 150px;
+            min-width: 120px;
+        }
+        /* Compact layout for time inputs and search button */
+        .form-group#custom-dates,
+        .form-group#custom-dates-end {
+            flex: 0 0 120px;
+            min-width: 120px;
         }
         .form-group label { 
             display: block; 
@@ -126,12 +132,30 @@ $serviceSearchHtml = '
                 padding: 15px;
             }
             .form-row {
-                flex-direction: column;
-                gap: 10px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start;
             }
             .form-group {
                 min-width: auto;
-                width: 100%;
+                width: auto;
+                flex: 0 0 auto;
+            }
+            /* Optimize form layout for mobile - make inputs more compact */
+            .form-group:not(#custom-dates):not(#custom-dates-end) {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
+            }
+            .form-group#custom-dates,
+            .form-group#custom-dates-end {
+                flex: 0 0 120px;
+                min-width: 120px;
+            }
+            /* Search button should be full width on mobile */
+            .form-group:last-child {
+                flex: 1 1 100%;
+                margin-top: 5px;
             }
             .table-responsive {
                 font-size: 0.9em;
@@ -152,6 +176,24 @@ $serviceSearchHtml = '
             }
             .search-form, .filter-panel, .navigation-bar {
                 padding: 10px;
+            }
+            /* Stack form elements vertically on very small screens */
+            .form-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .form-group {
+                width: 100%;
+                flex: 1 1 auto;
+            }
+            .form-group#custom-dates,
+            .form-group#custom-dates-end {
+                flex: 1 1 auto;
+                min-width: auto;
+            }
+            .form-group#custom-dates input,
+            .form-group#custom-dates-end input {
+                width: 100%;
             }
             .table th, .table td {
                 padding: 6px 2px;
