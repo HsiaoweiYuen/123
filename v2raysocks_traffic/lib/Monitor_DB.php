@@ -3455,7 +3455,7 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                 
                 // CSV headers - updated to include time labels
                 fputcsv($output, [
-                    'Rank', 'User ID', 'UUID', 'Service ID', 'Enable Status',
+                    'Rank', 'User ID', 'Service ID', 'UUID', 'Enable Status',
                     'Period Upload (Formatted)', 'Period Download (Formatted)', 'Period Total (Formatted)',
                     'Total Upload (Formatted)', 'Total Download (Formatted)', 'Transfer Enable (Formatted)',
                     'Remaining Quota (Formatted)', 'Quota Utilization (%)',
@@ -3470,8 +3470,8 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                     fputcsv($output, [
                         $rank,
                         $user['user_id'],
-                        $user['uuid'],
                         $user['sid'],
+                        $user['uuid'],
                         $user['enable'] ? 'Enabled' : 'Disabled',
                         v2raysocks_traffic_formatBytesConfigurable($user['period_upload']),
                         v2raysocks_traffic_formatBytesConfigurable($user['period_download']),
