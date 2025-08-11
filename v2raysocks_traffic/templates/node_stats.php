@@ -410,11 +410,11 @@ $nodeStatsHtml = '
                             <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_5min_traffic') . '</th>
                             <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_1hour_traffic') . '</th>
                             <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_4hour_traffic') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('online_status') . '</th>
                             <th style="min-width: 80px;">' . v2raysocks_traffic_lang('user_count') . '</th>
                             <th style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '</th>
-                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_online') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('country') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('online_status') . '</th>
+                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_online') . '</th>
                         </tr>
                     </thead>
                     <tbody id="rankings-tbody">
@@ -653,11 +653,11 @@ $nodeStatsHtml = '
                         <td class="numeric-cell">${formatBytes(node.traffic_5min || 0)}</td>
                         <td class="numeric-cell">${formatBytes(node.traffic_1hour || 0)}</td>
                         <td class="numeric-cell">${formatBytes(node.traffic_4hour || 0)}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${node.unique_users}</td>
                         <td>${node.usage_records}</td>
-                        <td>${lastSeenText}</td>
                         <td>${node.country || "N/A"}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${lastSeenText}</td>
                     </tr>
                 `;
             });
