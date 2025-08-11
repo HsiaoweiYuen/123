@@ -899,13 +899,16 @@ $serviceSearchHtml = '
             let allDataPoints = [];
             
             data.forEach(function(row) {
+                // Use proper timezone handling like the data table does
                 const date = new Date(row.t * 1000);
                 let timeKey;
                 
                 // Group by different time periods based on range - use consistent formatting
+                // The Date object automatically handles timezone conversion to browser's local time
                 const timeRange = $("#time_range").val();
                 if (timeRange === "today") {
-                    timeKey = date.getHours() + ":00";
+                    // Use consistent hour formatting with zero-padding
+                    timeKey = String(date.getHours()).padStart(2, "0") + ":00";
                 } else {
                     // Format as MM/DD for consistency with default labels
                     const month = String(date.getMonth() + 1).padStart(2, "0");
