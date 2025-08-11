@@ -451,9 +451,9 @@ $userRankingsHtml = '
                     <thead>
                         <tr>
                             <th style="min-width: 60px;">' . v2raysocks_traffic_lang('ranking') . '</th>
+                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('service_id') . '</th>
                             <th style="min-width: 80px;">' . v2raysocks_traffic_lang('user_id') . '</th>
                             <th style="min-width: 160px;">' . v2raysocks_traffic_lang('uuid') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('service_id') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('used_traffic') . '</th>
@@ -700,9 +700,9 @@ $userRankingsHtml = '
                 html += `
                     <tr onclick="showUserDetails(${user.user_id})">
                         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+                        <td class="numeric-cell">${user.sid || "N/A"}</td>
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
-                        <td class="numeric-cell">${user.sid || "N/A"}</td>
                         <td>${formatBytes(user.transfer_enable)}</td>
                         <td>${formatBytes(user.remaining_quota)}</td>
                         <td>${formatBytes(user.period_traffic)}</td>
