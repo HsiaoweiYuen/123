@@ -1047,111 +1047,7 @@ $userRankingsHtml = '
             
             paginationDiv.style.display = "block";
         }
-        
-        // Generate default time labels for empty charts
-        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            const now = new Date();
-            const labels = [];
-            
-            let start, interval;
-            switch (timeRange) {
-                case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
-                    break;
-                case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
-                    break;
-                case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
-                    break;
-                case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
-                    break;
-                case "week":
-                case "7days":
-                    // Align with backend: start of 7 days ago (6 days back from today) to end of today
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0); // Start of today
-                    start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000); // 6 days back = 7 days total
-                    const endOfToday = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1); // End of today
-                    interval = (endOfToday.getTime() - start.getTime()) / (points - 1);
-                    break;
-                case "15days":
-                    // Align with backend: start of 15 days ago (14 days back from today) to end of today
-                    const today15 = new Date();
-                    today15.setHours(0, 0, 0, 0); // Start of today
-                    start = new Date(today15.getTime() - 14 * 24 * 60 * 60 * 1000); // 14 days back = 15 days total
-                    const endOfToday15 = new Date(today15.getTime() + 24 * 60 * 60 * 1000 - 1); // End of today
-                    interval = (endOfToday15.getTime() - start.getTime()) / (points - 1);
-                    break;
-                case "month":
-                case "30days":
-                    // Align with backend: start of 30 days ago (29 days back from today) to end of today  
-                    const today30 = new Date();
-                    today30.setHours(0, 0, 0, 0); // Start of today
-                    start = new Date(today30.getTime() - 29 * 24 * 60 * 60 * 1000); // 29 days back = 30 days total
-                    const endOfToday30 = new Date(today30.getTime() + 24 * 60 * 60 * 1000 - 1); // End of today
-                    interval = (endOfToday30.getTime() - start.getTime()) / (points - 1);
-                    break;
-                case "custom":
-                    // Handle custom date range by reading form inputs with proper validation
-                    const startDateInput = document.getElementById("start-date");
-                    const endDateInput = document.getElementById("end-date");
-                    
-                    if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
-                        // Validate date format
-                        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                        if (dateRegex.test(startDateInput.value) && dateRegex.test(endDateInput.value)) {
-                            const startDate = new Date(startDateInput.value + "T00:00:00");
-                            const endDate = new Date(endDateInput.value + "T23:59:59");
-                            
-                            // Validate dates are valid and in correct order
-                            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && startDate <= endDate) {
-                                start = startDate;
-                                const totalMs = endDate.getTime() - startDate.getTime();
-                                interval = totalMs / (points - 1);
-                            } else {
-                                // Fallback to today if dates are invalid
-                                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                                interval = (24 * 60 * 60 * 1000) / (points - 1);
-                            }
-                        } else {
-                            // Fallback to today if date format is invalid
-                            start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                            interval = (24 * 60 * 60 * 1000) / (points - 1);
-                        }
-                    } else {
-                        // Fallback to today if no valid custom dates
-                        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        interval = (24 * 60 * 60 * 1000) / (points - 1);
-                    }
-                    break;
-                case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
-                    break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
-                } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
-            }
-            
-            return labels;
-        }
+
 
         function displayUserChart(chartData) {
             const ctx = document.getElementById("user-traffic-chart").getContext("2d");
@@ -1160,15 +1056,16 @@ $userRankingsHtml = '
                 currentUserChart.destroy();
             }
             
-            // Handle empty data case - use proper time labels instead of placeholder
+            // Handle empty data case - use actual time-based labels consistent with traffic dashboard
             if (!chartData.labels || chartData.labels.length === 0) {
-                const timeRange = document.getElementById("time-range").value;
-                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
+                // For empty data, create a minimal chart with empty labels
+                // This fixes the time display issue by using backend-provided labels instead of calculated intervals
+                // Backend already provides proper time labels using server local time (not UTC) via date('m/d', $bucket) or date('H:i', $bucket)
                 chartData = {
-                    labels: defaultLabels,
-                    upload: new Array(defaultLabels.length).fill(0),
-                    download: new Array(defaultLabels.length).fill(0), 
-                    total: new Array(defaultLabels.length).fill(0),
+                    labels: [], // Use empty labels for no data case - backend will provide proper time labels when data exists
+                    upload: [],
+                    download: [],
+                    total: [],
                     user_id: chartData.user_id || "Unknown"
                 };
             }
