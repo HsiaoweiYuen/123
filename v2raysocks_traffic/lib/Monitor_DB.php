@@ -226,7 +226,7 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Group data by date using actual timestamps (PR#37 pattern)
+        // Group data by date using actual timestamps
         $dayData = [];
         
         foreach ($results as $row) {
@@ -234,7 +234,7 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
             $date = new DateTime();
             $date->setTimestamp($timestamp);
             
-            // Group by date using server local time - consistent with PR#37 pattern
+            // Group by date using server local time 
             $dateKey = $date->format('Y-m-d');
             
             if (!isset($dayData[$dateKey])) {
@@ -1148,7 +1148,7 @@ function v2raysocks_traffic_getUserDetails($userID)
             return null;
         }
         
-        // Get user's traffic history (last 30 days) using PR#37 pattern
+        // Get user's traffic history (last 30 days) 
         $stmt = $pdo->prepare('
             SELECT 
                 t,
@@ -1164,7 +1164,7 @@ function v2raysocks_traffic_getUserDetails($userID)
         ]);
         $rawTrafficHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Group by date using actual timestamps (PR#37 pattern)
+        // Group by date using actual timestamps 
         $trafficHistory = [];
         $dailyData = [];
         
@@ -1173,7 +1173,7 @@ function v2raysocks_traffic_getUserDetails($userID)
             $date = new DateTime();
             $date->setTimestamp($timestamp);
             
-            // Group by date using server local time - consistent with PR#37 pattern
+            // Group by date using server local time 
             $dateKey = $date->format('Y-m-d');
             
             if (!isset($dailyData[$dateKey])) {
@@ -1252,7 +1252,7 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
             return null;
         }
         
-        // Get node's traffic stats (last 30 days) using PR#37 pattern
+        // Get node's traffic stats (last 30 days) 
         $trafficStats = [];
         try {
             // Handle both node ID and node name in user_usage.node field
@@ -1273,7 +1273,7 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
             ]);
             $rawTrafficStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Group by date using actual timestamps (PR#37 pattern)
+            // Group by date using actual timestamps 
             $dailyStats = [];
             
             foreach ($rawTrafficStats as $row) {
@@ -1281,7 +1281,7 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
                 $date = new DateTime();
                 $date->setTimestamp($timestamp);
                 
-                // Group by date using server local time - consistent with PR#37 pattern
+                // Group by date using server local time 
                 $dateKey = $date->format('Y-m-d');
                 
                 if (!isset($dailyStats[$dateKey])) {
@@ -1489,19 +1489,19 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                     $exportRow = [
                         'timestamp' => $row['t'],
                         'formatted_time' => (function($timestamp) {
-                            // Use PR#37 time handling pattern - server local time
+                            // Use server local time for time handling
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($row['t']),
                         'time_label' => (function($timestamp) {
-                            // PR#37 pattern: consistent time labels matching chart displays
+                            // consistent time labels matching chart displays
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($row['t']),
                         'hour_label' => (function($timestamp) {
-                            // PR#37 pattern: hour labels matching chart displays  
+                            // hour labels matching chart displays  
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -1542,14 +1542,14 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                 
                 $output = fopen('php://output', 'w');
                 
-                // CSV headers - updated to include PR#37 time labels
+                // CSV headers - updated to include time labels
                 fputcsv($output, [
                     'Timestamp', 'Date Label (m/d)', 'Hour Label (H:i)', 'User ID', 'Service ID', 'UUID', 'Node Name', 
                     'Upload (Formatted)', 'Download (Formatted)', 'Total (Formatted)',
                     'SS Speed Limit', 'V2Ray Speed Limit', 'Violation Count'
                 ]);
                 
-                // Data rows - updated with PR#37 time labels
+                // Data rows - updated with time labels
                 foreach ($data as $row) {
                     $upload = $row['u'] ?? 0;
                     $download = $row['d'] ?? 0;
@@ -1557,19 +1557,19 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                     
                     fputcsv($output, [
                         (function($timestamp) {
-                            // PR#37 pattern: use actual data timestamp with server local time
+                            // use actual data timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($row['t']),
                         (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($row['t']),
                         (function($timestamp) {
-                            // PR#37 pattern: hour label matching chart displays (H:i format)
+                            // hour label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -1826,7 +1826,7 @@ function v2raysocks_traffic_getTodayTrafficData()
             ];
         }
         
-        // Query traffic data using real timestamps (PR#37 pattern)
+        // Query traffic data using real timestamps 
         try {
             $sql = 'SELECT 
                         t,
@@ -1850,7 +1850,7 @@ function v2raysocks_traffic_getTodayTrafficData()
                 $date = new DateTime();
                 $date->setTimestamp($timestamp);
                 
-                // Group by hour using server local time - consistent with PR#37 pattern
+                // Group by hour using server local time 
                 $hour = $date->format('H');
                 
                 if (!isset($hourlyStats[$hour])) {
@@ -3164,7 +3164,7 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
             $record['total_traffic'] = $record['u'] + $record['d'];
             $record['formatted_time'] = (function($timestamp) {
-                // PR#37 pattern: use actual data timestamp with server local time
+                // use actual data timestamp with server local time
                 $date = new DateTime();
                 $date->setTimestamp($timestamp);
                 return $date->format('Y-m-d H:i:s');
@@ -3242,19 +3242,19 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         'usage_records' => $node['usage_records'],
                         'is_online' => $node['is_online'],
                         'formatted_last_online' => (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($node['last_online']),
                         'last_online_date_label' => (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($node['last_online']),
                         'last_online_time_label' => (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -3286,7 +3286,7 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                 
                 $output = fopen('php://output', 'w');
                 
-                // CSV headers - updated to include PR#37 time labels
+                // CSV headers - updated to include time labels
                 fputcsv($output, [
                     'Rank', 'Node ID', 'Node Name', 'Address', 'Country', 'Type',
                     'Total Upload (Formatted)', 'Total Download (Formatted)', 'Total Traffic (Formatted)',
@@ -3296,7 +3296,7 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                     'Average Traffic Per User (Formatted)'
                 ]);
                 
-                // Data rows - updated with PR#37 time labels
+                // Data rows - updated with time labels
                 foreach ($data as $index => $node) {
                     $rank = $index + 1;
                     fputcsv($output, [
@@ -3316,19 +3316,19 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         $node['usage_records'],
                         $node['is_online'] ? 'Online' : 'Offline',
                         (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($node['last_online']),
                         (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($node['last_online']),
                         (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -3386,37 +3386,37 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                         'nodes_used' => $user['nodes_used'],
                         'usage_records' => $user['usage_records'],
                         'formatted_first_usage' => $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($user['first_usage']) : '',
                         'first_usage_date_label' => $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($user['first_usage']) : '',
                         'first_usage_time_label' => $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
                         })($user['first_usage']) : '',
                         'formatted_last_usage' => $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($user['last_usage']) : '',
                         'last_usage_date_label' => $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($user['last_usage']) : '',
                         'last_usage_time_label' => $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -3450,7 +3450,7 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                 
                 $output = fopen('php://output', 'w');
                 
-                // CSV headers - updated to include PR#37 time labels
+                // CSV headers - updated to include time labels
                 fputcsv($output, [
                     'Rank', 'User ID', 'UUID', 'Service ID', 'Enable Status',
                     'Period Upload (Formatted)', 'Period Download (Formatted)', 'Period Total (Formatted)',
@@ -3461,7 +3461,7 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                     'Average Traffic Per Node (Formatted)', 'Remark'
                 ]);
                 
-                // Data rows - updated with PR#37 time labels
+                // Data rows - updated with time labels
                 foreach ($data as $index => $user) {
                     $rank = $index + 1;
                     fputcsv($output, [
@@ -3481,37 +3481,37 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                         $user['nodes_used'],
                         $user['usage_records'],
                         $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($user['first_usage']) : '',
                         $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($user['first_usage']) : '',
                         $user['first_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
                         })($user['first_usage']) : '',
                         $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: use actual timestamp with server local time
+                            // use actual timestamp with server local time
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('Y-m-d H:i:s');
                         })($user['last_usage']) : '',
                         $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: date label matching chart displays (m/d format)
+                            // date label matching chart displays (m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('m/d');
                         })($user['last_usage']) : '',
                         $user['last_usage'] ? (function($timestamp) {
-                            // PR#37 pattern: time label matching chart displays (H:i format)
+                            // time label matching chart displays (H:i format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
                             return $date->format('H:i');
@@ -3591,7 +3591,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                     return [
                         'formatted_time' => $record['formatted_time'] ?? '',
                         'time_date_label' => isset($record['formatted_time']) ? (function($formattedTime) {
-                            // PR#37 pattern: extract date and format as m/d from Y-m-d H:i:s
+                            // extract date and format as m/d from Y-m-d H:i:s
                             $timestamp = strtotime($formattedTime);
                             if ($timestamp !== false) {
                                 $date = new DateTime();
@@ -3601,7 +3601,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                             return '';
                         })($record['formatted_time']) : '',
                         'time_hour_label' => isset($record['formatted_time']) ? (function($formattedTime) {
-                            // PR#37 pattern: extract time and format as H:i from Y-m-d H:i:s
+                            // extract time and format as H:i from Y-m-d H:i:s
                             $timestamp = strtotime($formattedTime);
                             if ($timestamp !== false) {
                                 $date = new DateTime();
@@ -3646,7 +3646,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                 
                 $output = fopen('php://output', 'w');
                 
-                // CSV Headers - updated to include PR#37 time labels
+                // CSV Headers - updated to include time labels
                 fputcsv($output, [
                     'Formatted Time',
                     'Date Label (m/d)',
@@ -3664,9 +3664,9 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                     'Node Country'
                 ]);
                 
-                // CSV Data - updated with PR#37 time labels
+                // CSV Data - updated with time labels
                 foreach ($records as $record) {
-                    // Extract date and time labels using PR#37 pattern
+                    // Extract date and time labels 
                     $dateLabel = '';
                     $timeLabel = '';
                     if (!empty($record['formatted_time'])) {
@@ -3674,8 +3674,8 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                         if ($timestamp !== false) {
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            $dateLabel = $date->format('m/d');  // PR#37 pattern: m/d format
-                            $timeLabel = $date->format('H:i');  // PR#37 pattern: H:i format
+                            $dateLabel = $date->format('m/d');
+                            $timeLabel = $date->format('H:i');
                         }
                     }
                     

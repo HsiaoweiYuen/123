@@ -618,7 +618,7 @@ $todayTrafficChartHtml = '
         }
         
         function exportChart() {
-            // PR#37 pattern: export chart preserves the time formatting already displayed  
+            // export chart preserves the time formatting already displayed  
             const link = document.createElement("a");
             link.download = "today_traffic_chart_" + new Date().toISOString().slice(0, 10) + ".png";
             link.href = todayChart.toBase64Image();
