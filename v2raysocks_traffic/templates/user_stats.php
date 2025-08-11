@@ -458,16 +458,18 @@ $userStatsHtml = '
         }
         
         function updateUserTrafficChart(data) {
-            // Group data by time for chart
+            // Group data by time for chart using actual timestamps (server local time, not UTC)
             const timeData = {};
             
             data.forEach(function(row) {
-                const date = new Date(row.t * 1000);
-                // Use consistent date formatting to avoid timezone variations
-                const month = String(date.getMonth() + 1).padStart(2, "0");
-                const day = String(date.getDate()).padStart(2, "0");
-                const year = date.getFullYear();
-                const timeKey = month + "/" + day + "/" + year;
+                // Use actual data timestamp like traffic dashboard
+                const timestamp = parseInt(row.t);
+                const date = new Date(timestamp * 1000);
+                
+                // Time grouping using server local time (not UTC) - consistent with traffic_dashboard.php
+                const timeKey = date.getFullYear() + "-" + 
+                               String(date.getMonth() + 1).padStart(2, "0") + "-" + 
+                               String(date.getDate()).padStart(2, "0");
                 
                 if (!timeData[timeKey]) {
                     timeData[timeKey] = { upload: 0, download: 0 };
@@ -476,37 +478,8 @@ $userStatsHtml = '
                 timeData[timeKey].download += (row.d || 0);
             });
             
-            // Sort labels chronologically instead of alphabetically
-            const labels = Object.keys(timeData).sort((a, b) => {
-                if (a.includes(":") && !a.includes("/")) {
-                    // Time format sorting (HH:MM)
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format sorting (YYYY-MM-DD)
-                    return new Date(a) - new Date(b);
-                } else {
-                    return a.localeCompare(b);
-                }
-            });
+            // Sort time keys properly using date comparison
+            const labels = Object.keys(timeData).sort((a, b) => new Date(a) - new Date(b));
             const uploadData = labels.map(time => (timeData[time].upload / (1000 * 1000 * 1000)).toFixed(2));
             const downloadData = labels.map(time => (timeData[time].download / (1000 * 1000 * 1000)).toFixed(2));
             

@@ -606,15 +606,14 @@ $realTimeMonitorHtml = '
             });
         }
         
-        // Generate default time labels for empty charts
-        function generateDefaultHourlyLabels(points = 8) {
-            const now = new Date();
+        // Generate simple fallback labels for empty charts
+        function generateSimpleHourLabels(points = 8) {
             const labels = [];
             const hours = [];
             
-            for (let i = points - 1; i >= 0; i--) {
-                const time = new Date(now.getTime() - (i * 3 * 60 * 60 * 1000)); // 3-hour intervals
-                const hour = time.getHours().toString().padStart(2, "0");
+            // Generate simple hour sequence
+            for (let i = 0; i < Math.min(points, 24); i++) {
+                const hour = String(i).padStart(2, "0");
                 labels.push(hour + ":00");
                 hours.push(hour);
             }
@@ -662,9 +661,9 @@ $realTimeMonitorHtml = '
             
             let labels, limitedHours;
             
-            // Handle empty data case - generate default time labels
+            // Handle empty data case with simple fallback labels
             if (hours.length === 0) {
-                const defaultTime = generateDefaultHourlyLabels(8);
+                const defaultTime = generateSimpleHourLabels(8);
                 labels = defaultTime.labels;
                 limitedHours = defaultTime.hours;
             } else {

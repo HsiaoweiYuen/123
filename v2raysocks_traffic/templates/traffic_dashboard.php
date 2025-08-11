@@ -859,47 +859,35 @@ $trafficDashboardHtml = '
             $("#traffic-data").html(html);
         }
         
-        // Generate default time labels for empty charts
-        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            const now = new Date();
+        // Generate simple fallback labels for empty charts
+        function generateFallbackLabels(timeRange = "today", points = 8) {
             const labels = [];
             
-            let start, interval;
             switch (timeRange) {
-                case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
-                    break;
-                case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
-                    break;
-                case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
-                    break;
-                case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
-                    break;
                 case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
                     break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
-                } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
+                case "week":
+                case "halfmonth":
+                case "month_including_today":
+                    // Generate date labels for multi-day ranges
+                    const today = new Date();
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
+                    break;
+                default:
+                    // Simple numeric labels for fallback
+                    for (let i = 1; i <= points; i++) {
+                        labels.push(String(i));
+                    }
+                    break;
             }
             
             return labels;
@@ -918,14 +906,14 @@ $trafficDashboardHtml = '
             // Validate input data
             if (!data || !Array.isArray(data) || data.length === 0) {
                 console.log("No traffic data available for chart");
-                // Generate default time labels for proper time axis
+                // Use simple fallback labels for empty charts
                 const timeRange = $("#time-range").val() || "today";
-                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
+                const fallbackLabels = generateFallbackLabels(timeRange, 8);
                 
-                trafficChart.data.labels = defaultLabels;
+                trafficChart.data.labels = fallbackLabels;
                 trafficChart.data.datasets = [
-                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0)),
-                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0))
+                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(fallbackLabels.length).fill(0)),
+                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(fallbackLabels.length).fill(0))
                 ];
                 trafficChart.update();
                 hideCustomTimeRangeSummary();

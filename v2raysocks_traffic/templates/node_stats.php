@@ -952,47 +952,23 @@ $nodeStatsHtml = '
             paginationDiv.style.display = "block";
         }
         
-        // Generate default time labels for empty charts
-        function generateDefaultTimeLabels(timeRange = "today", points = 10) {
-            const now = new Date();
+        // Generate simple fallback labels for empty charts 
+        function generateSimpleFallbackLabels(timeRange = "today", points = 10) {
             const labels = [];
             
-            let start, interval;
             switch (timeRange) {
-                case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
-                    break;
-                case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
-                    break;
-                case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
-                    break;
-                case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
-                    break;
                 case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
                     break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
-                } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
+                default:
+                    // Simple numeric labels for fallback
+                    for (let i = 1; i <= points; i++) {
+                        labels.push(String(i));
+                    }
+                    break;
             }
             
             return labels;
@@ -1005,14 +981,14 @@ $nodeStatsHtml = '
                 currentNodeChart.destroy();
             }
             
-            // Handle empty data case - use proper time labels instead of placeholder
+            // Handle empty data case with simple fallback labels
             if (!chartData.labels || chartData.labels.length === 0) {
-                const defaultLabels = generateDefaultTimeLabels("today", 8);
+                const fallbackLabels = generateSimpleFallbackLabels("today", 8);
                 chartData = {
-                    labels: defaultLabels,
-                    upload: new Array(defaultLabels.length).fill(0),
-                    download: new Array(defaultLabels.length).fill(0), 
-                    total: new Array(defaultLabels.length).fill(0),
+                    labels: fallbackLabels,
+                    upload: new Array(fallbackLabels.length).fill(0),
+                    download: new Array(fallbackLabels.length).fill(0), 
+                    total: new Array(fallbackLabels.length).fill(0),
                     node_id: chartData.node_id || "Unknown"
                 };
             }
