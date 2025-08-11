@@ -859,47 +859,32 @@ $trafficDashboardHtml = '
             $("#traffic-data").html(html);
         }
         
-        // Generate default time labels for empty charts
+        // Generate default time labels for empty charts - using server local time (not UTC)
         function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            const now = new Date();
+            // For empty charts, create minimal consistent placeholder labels
             const labels = [];
             
-            let start, interval;
             switch (timeRange) {
                 case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
-                    break;
                 case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
-                    break;
                 case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
-                    break;
                 case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
-                    break;
                 case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate hour labels for today and short ranges
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
                     break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
-                } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
+                default:
+                    // Generate date labels for multi-day ranges
+                    const today = new Date();
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
+                    break;
             }
             
             return labels;
