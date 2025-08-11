@@ -756,42 +756,37 @@ $serviceSearchHtml = '
             $("#service-traffic-data").html(html);
         }
         
-        // Generate default time labels for empty charts
+        // Generate default time labels for empty charts - using server local time (not UTC)
         function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            const now = new Date();
+            // For empty charts, create minimal consistent placeholder labels
             const labels = [];
             
-            let start, interval;
             switch (timeRange) {
                 case "today":
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
                     break;
                 case "week":
                 case "halfmonth":
                 case "month_including_today":
-                    const days = timeRange === "week" ? 7 : timeRange === "halfmonth" ? 15 : 30;
-                    start = new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
-                    interval = (days * 24 * 60 * 60 * 1000) / (points - 1);
-                    break;
                 case "custom":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate date labels for multi-day ranges
+                    const today = new Date();
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
                     break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today") {
-                    // Format as HH:00 for consistency with data processing
-                    labels.push(timestamp.getHours() + ":00");
-                } else {
-                    // Format as MM/DD for consistency with data processing
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
+                default:
+                    // Fallback: simple numeric labels
+                    for (let i = 1; i <= points; i++) {
+                        labels.push(String(i));
+                    }
+                    break;
             }
             
             return labels;
@@ -902,12 +897,13 @@ $serviceSearchHtml = '
                 const date = new Date(row.t * 1000);
                 let timeKey;
                 
-                // Group by different time periods based on range - use consistent formatting
+                // Group by different time periods based on range - consistent with user_rankings.php  
                 const timeRange = $("#time_range").val();
                 if (timeRange === "today") {
-                    timeKey = date.getHours() + ":00";
+                    // For today, group by hour with proper time display
+                    timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                 } else {
-                    // Format as MM/DD for consistency with default labels
+                    // For multi-day ranges, group by day using local time - format as MM/DD for consistency with default labels
                     const month = String(date.getMonth() + 1).padStart(2, "0");
                     const day = String(date.getDate()).padStart(2, "0");
                     timeKey = month + "/" + day;
