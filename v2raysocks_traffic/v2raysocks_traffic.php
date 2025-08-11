@@ -7,6 +7,7 @@ if (!defined("WHMCS")) {
 use WHMCS\Database\Capsule;
 
 require_once(__DIR__ . '/lib/Monitor_DB.php');
+require_once(__DIR__ . '/lib/Monitor_Redis.php');
 
 function v2raysocks_traffic_config()
 {
