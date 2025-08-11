@@ -1,0 +1,34 @@
+{
+    "schema": "1.0",
+    "type": "whmcs-addons",
+    "name": "v2raysocks_traffic",
+    "license": "HelloBlock",
+    "category": "digitalservices",
+    "description": {
+        "name": "Traffic Analysis",
+        "tagline": "Real-time traffic analysis and analytics.",
+        "long": "V2RaySocks Traffic Analysis provides comprehensive real-time traffic monitoring, analytics, and reporting for V2RaySocks nodes and users.",
+        "features": [
+            "Real-time traffic statistics",
+            "User and node analytics",
+            "Traffic usage charts and graphs",
+            "Data export functionality",
+            "Redis caching for performance"
+        ]
+    },
+    "logo": {
+        "filename": "logo.png"
+    },
+    "support": {
+        "homepage": "https://helloblock.net/",
+        "support_url": "https://helloblock.net.com/", 
+        "email": "hsiaoweiyuen@gmail.com",
+        "docs_url": "https://helloblock.net.com/"
+    },
+    "authors": [
+        {
+            "name": "HelloBlock",
+            "homepage": "https://helloblock.net.com/"
+        }
+    ]
+}
