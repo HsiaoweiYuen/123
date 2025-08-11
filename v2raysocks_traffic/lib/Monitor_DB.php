@@ -2399,10 +2399,10 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 $sql .= ' ORDER BY total_traffic ASC';
                 break;
             case 'remaining_desc':
-                $sql .= ' ORDER BY (n.max_traffic * 1000000000 - COALESCE(SUM(uu.u + uu.d), 0)) DESC';
+                $sql .= ' ORDER BY (n.max_traffic * 1000000000 - n.statistics) DESC';
                 break;
             case 'remaining_asc':
-                $sql .= ' ORDER BY (n.max_traffic * 1000000000 - COALESCE(SUM(uu.u + uu.d), 0)) ASC';
+                $sql .= ' ORDER BY (n.max_traffic * 1000000000 - n.statistics) ASC';
                 break;
             case 'users_desc':
                 $sql .= ' ORDER BY unique_users DESC';
@@ -2441,10 +2441,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $node['statistics'] = floatval($node['statistics']);
             $node['last_online'] = intval($node['last_online']);
             
-            // Calculate remaining traffic
+            // Calculate remaining traffic using database statistics field (actual cumulative usage)
             $maxTrafficBytes = $node['max_traffic'] * 1000000000; // Convert GB to bytes
-            $node['remaining_traffic'] = max(0, $maxTrafficBytes - $node['total_traffic']);
-            $node['traffic_utilization'] = $maxTrafficBytes > 0 ? ($node['total_traffic'] / $maxTrafficBytes) * 100 : 0;
+            $statisticsBytes = $node['statistics']; // statistics field is already in bytes
+            $node['remaining_traffic'] = max(0, $maxTrafficBytes - $statisticsBytes);
+            $node['traffic_utilization'] = $maxTrafficBytes > 0 ? ($statisticsBytes / $maxTrafficBytes) * 100 : 0;
             
             // Online status (within last 10 minutes)
             $node['is_online'] = ($currentTime - $node['last_online']) < 600;
@@ -3235,6 +3236,7 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         'formatted_total_download' => v2raysocks_traffic_formatBytesConfigurable($node['total_download']),
                         'formatted_total_traffic' => v2raysocks_traffic_formatBytesConfigurable($node['total_traffic']),
                         'max_traffic' => $node['max_traffic'],
+                        'formatted_used_traffic_statistics' => v2raysocks_traffic_formatBytesConfigurable($node['statistics']),
                         'formatted_remaining_traffic' => v2raysocks_traffic_formatBytesConfigurable($node['remaining_traffic']),
                         'traffic_utilization' => round($node['traffic_utilization'], 2),
                         'formatted_avg_traffic_per_user' => v2raysocks_traffic_formatBytesConfigurable($node['avg_traffic_per_user']),
@@ -3290,7 +3292,7 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                 fputcsv($output, [
                     'Rank', 'Node ID', 'Node Name', 'Address', 'Country', 'Type',
                     'Total Upload (Formatted)', 'Total Download (Formatted)', 'Total Traffic (Formatted)',
-                    'Max Traffic (GB)', 'Remaining Traffic (Formatted)', 'Traffic Utilization (%)',
+                    'Max Traffic (GB)', 'Used Traffic Statistics (Formatted)', 'Remaining Traffic (Formatted)', 'Traffic Utilization (%)',
                     'Unique Users', 'Usage Records', 'Online Status', 'Last Online',
                     'Last Online Date (m/d)', 'Last Online Time (H:i)',
                     'Average Traffic Per User (Formatted)'
@@ -3310,6 +3312,7 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         v2raysocks_traffic_formatBytesConfigurable($node['total_download']),
                         v2raysocks_traffic_formatBytesConfigurable($node['total_traffic']),
                         $node['max_traffic'],
+                        v2raysocks_traffic_formatBytesConfigurable($node['statistics']),
                         v2raysocks_traffic_formatBytesConfigurable($node['remaining_traffic']),
                         round($node['traffic_utilization'], 2),
                         $node['unique_users'],

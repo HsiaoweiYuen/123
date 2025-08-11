@@ -403,6 +403,7 @@ $nodeStatsHtml = '
                             <th style="min-width: 160px;">' . v2raysocks_traffic_lang('node_name') . '</th>
                             <th style="min-width: 200px;">' . v2raysocks_traffic_lang('address') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic_limit') . '</th>
+                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('used_traffic_statistics') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '</th>
                             <th style="min-width: 100px;">' . v2raysocks_traffic_lang('today_traffic') . '</th>
                             <th style="min-width: 120px;">' . v2raysocks_traffic_lang('traffic_usage_rate') . '</th>
@@ -418,7 +419,7 @@ $nodeStatsHtml = '
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="16" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
+                            <td colspan="17" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -587,7 +588,7 @@ $nodeStatsHtml = '
             const showOffline = document.getElementById("show-offline").value === "true";
             
             const tbody = document.getElementById("rankings-tbody");
-            tbody.innerHTML = `<tr><td colspan="16" class="loading">${t("loading_node_rankings")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="17" class="loading">${t("loading_node_rankings")}</td></tr>`;
             
             fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
                 .then(response => response.json())
@@ -602,12 +603,12 @@ $nodeStatsHtml = '
                         
                         displayNodeRankings(nodes);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading node rankings:", error);
-                    tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("network_error_retry")}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
         }
         
@@ -615,7 +616,7 @@ $nodeStatsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!nodes || nodes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
@@ -640,6 +641,7 @@ $nodeStatsHtml = '
                         <td title="${node.name}">${node.name}</td>
                         <td title="${node.address}">${node.address ? (node.address.length > 40 ? node.address.substring(0, 40) + "..." : node.address) : "N/A"}</td>
                         <td>${formatBytes(node.max_traffic * 1000000000)}</td>
+                        <td>${formatBytes(node.statistics)}</td>
                         <td>${formatBytes(node.remaining_traffic)}</td>
                         <td>${formatBytes(node.total_traffic)}</td>
                         <td>
