@@ -58,11 +58,17 @@ $trafficDashboardHtml = '
         .filter-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             align-items: end;
         }
         .filter-group {
             flex: 0 0 auto;
+            min-width: 120px;
+        }
+        /* Compact layout for time inputs */
+        .filter-group#custom-dates,
+        .filter-group#custom-dates-end {
+            flex: 0 0 120px;
             min-width: 120px;
         }
         .filter-group label {
@@ -138,12 +144,30 @@ $trafficDashboardHtml = '
                 margin: 0;
             }
             .filter-row {
-                flex-direction: column;
-                gap: 10px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start;
             }
             .filter-group {
                 min-width: auto;
-                width: 100%;
+                width: auto;
+                flex: 0 0 auto;
+            }
+            /* Optimize filter layout for mobile - make inputs more compact */
+            .filter-group:not(#custom-dates):not(#custom-dates-end) {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 120px;
+            }
+            .filter-group#custom-dates,
+            .filter-group#custom-dates-end {
+                flex: 0 0 120px;
+                min-width: 120px;
+            }
+            /* Filter button should be full width on mobile */
+            .filter-group:last-child {
+                flex: 1 1 100%;
+                margin-top: 5px;
             }
             .table-responsive {
                 font-size: 0.9em;
@@ -167,6 +191,24 @@ $trafficDashboardHtml = '
             }
             .filter-panel, .navigation-bar {
                 padding: 10px;
+            }
+            /* Stack filter elements vertically on very small screens */
+            .filter-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .filter-group {
+                width: 100%;
+                flex: 1 1 auto;
+            }
+            .filter-group#custom-dates,
+            .filter-group#custom-dates-end {
+                flex: 1 1 auto;
+                min-width: auto;
+            }
+            .filter-group#custom-dates input,
+            .filter-group#custom-dates-end input {
+                width: 100%;
             }
             .table th, .table td {
                 padding: 6px 2px;
