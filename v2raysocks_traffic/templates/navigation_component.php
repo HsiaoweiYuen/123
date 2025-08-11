@@ -242,6 +242,10 @@ function v2raysocks_traffic_getUnifiedStyles() {
             /* Adjust UUID column for mobile */
             .uuid-column {
                 max-width: 240px; /* 缩小手机版UUID列宽度但保持可读性 */
+                white-space: nowrap; /* 禁止换行 */
+                overflow: hidden; /* 隐藏超出内容 */
+                text-overflow: ellipsis; /* 显示省略号 */
+                font-family: monospace; /* 等宽字体便于查看 */
             }
         }
         
@@ -257,6 +261,10 @@ function v2raysocks_traffic_getUnifiedStyles() {
             /* Further adjust UUID column for very small devices */
             .uuid-column {
                 max-width: 200px; /* 超小屏幕进一步缩小UUID列宽度 */
+                white-space: nowrap; /* 禁止换行 */
+                overflow: hidden; /* 隐藏超出内容 */
+                text-overflow: ellipsis; /* 显示省略号 */
+                font-family: monospace; /* 等宽字体便于查看 */
             }
         }
     ';
