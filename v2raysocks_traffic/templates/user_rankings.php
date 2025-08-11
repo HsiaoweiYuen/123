@@ -1549,17 +1549,17 @@ $userRankingsHtml = '
                         endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                         break;
                     case "week":
-                        startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
                         startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
                         endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                         break;
                     case "15days":
-                        startDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
                         startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
                         endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                         break;
                     case "month":
-                        startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        startDate = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
                         startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
                         endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                         break;
