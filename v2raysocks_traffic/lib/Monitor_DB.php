@@ -112,7 +112,7 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
             return [];
         }
 
-        $sql = 'SELECT DATE(FROM_UNIXTIME(t)) as date, sid, SUM(u) as upload, SUM(d) as download FROM user_usage WHERE 1=1';
+        $sql = 'SELECT t, sid, u as upload, d as download FROM user_usage WHERE 1=1';
         $params = [];
 
         if (!empty($filters['sid'])) {
@@ -149,12 +149,52 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
             }
         }
 
-        $sql .= ' GROUP BY DATE(FROM_UNIXTIME(t)), sid ORDER BY date DESC';
+        $sql .= ' ORDER BY t DESC';
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Group data by date using actual timestamps (PR#37 pattern)
+        $dayData = [];
+        
+        foreach ($results as $row) {
+            $timestamp = intval($row['t']);
+            $date = new DateTime();
+            $date->setTimestamp($timestamp);
+            
+            // Group by date using server local time - consistent with PR#37 pattern
+            $dateKey = $date->format('Y-m-d');
+            
+            if (!isset($dayData[$dateKey])) {
+                $dayData[$dateKey] = [];
+            }
+            if (!isset($dayData[$dateKey][$row['sid']])) {
+                $dayData[$dateKey][$row['sid']] = [
+                    'date' => $dateKey,
+                    'sid' => $row['sid'],
+                    'upload' => 0,
+                    'download' => 0
+                ];
+            }
+            
+            $dayData[$dateKey][$row['sid']]['upload'] += floatval($row['upload']);
+            $dayData[$dateKey][$row['sid']]['download'] += floatval($row['download']);
+        }
+        
+        // Flatten the array and sort by date descending
+        $results = [];
+        foreach ($dayData as $dateKey => $sids) {
+            foreach ($sids as $data) {
+                $results[] = $data;
+            }
+        }
+        
+        // Sort by date descending
+        usort($results, function($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
         
         // Validate and clean the traffic data to prevent extreme values
         v2raysocks_traffic_validateTrafficData($results);
@@ -1038,22 +1078,54 @@ function v2raysocks_traffic_getUserDetails($userID)
             return null;
         }
         
-        // Get user's traffic history (last 30 days)
+        // Get user's traffic history (last 30 days) using PR#37 pattern
         $stmt = $pdo->prepare('
             SELECT 
-                DATE(FROM_UNIXTIME(t)) as date,
-                SUM(u) as daily_upload,
-                SUM(d) as daily_download
+                t,
+                u as daily_upload,
+                d as daily_download
             FROM user_usage 
             WHERE user_id = :user_id AND t >= :thirty_days_ago
-            GROUP BY DATE(FROM_UNIXTIME(t))
-            ORDER BY date DESC
+            ORDER BY t ASC
         ');
         $stmt->execute([
             ':user_id' => $userID,
             ':thirty_days_ago' => strtotime('-29 days', strtotime('today'))
         ]);
-        $trafficHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rawTrafficHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Group by date using actual timestamps (PR#37 pattern)
+        $trafficHistory = [];
+        $dailyData = [];
+        
+        foreach ($rawTrafficHistory as $row) {
+            $timestamp = intval($row['t']);
+            $date = new DateTime();
+            $date->setTimestamp($timestamp);
+            
+            // Group by date using server local time - consistent with PR#37 pattern
+            $dateKey = $date->format('Y-m-d');
+            
+            if (!isset($dailyData[$dateKey])) {
+                $dailyData[$dateKey] = [
+                    'date' => $dateKey,
+                    'daily_upload' => 0,
+                    'daily_download' => 0
+                ];
+            }
+            
+            $dailyData[$dateKey]['daily_upload'] += floatval($row['daily_upload']);
+            $dailyData[$dateKey]['daily_download'] += floatval($row['daily_download']);
+        }
+        
+        // Convert to array and sort by date descending
+        foreach ($dailyData as $data) {
+            $trafficHistory[] = $data;
+        }
+        
+        usort($trafficHistory, function($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
         
         $details = [
             'user' => $user,
@@ -1110,27 +1182,65 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
             return null;
         }
         
-        // Get node's traffic stats (last 30 days)
+        // Get node's traffic stats (last 30 days) using PR#37 pattern
         $trafficStats = [];
         try {
             // Handle both node ID and node name in user_usage.node field
             $stmt = $pdo->prepare('
                 SELECT 
-                    DATE(FROM_UNIXTIME(t)) as date,
-                    COUNT(DISTINCT user_id) as unique_users,
-                    SUM(u) as daily_upload,
-                    SUM(d) as daily_download
+                    t,
+                    user_id,
+                    u as daily_upload,
+                    d as daily_download
                 FROM user_usage 
                 WHERE (node = :node_id OR node = :node_name) AND t >= :thirty_days_ago
-                GROUP BY DATE(FROM_UNIXTIME(t))
-                ORDER BY date DESC
+                ORDER BY t ASC
             ');
             $stmt->execute([
                 ':node_id' => $nodeID,
                 ':node_name' => $node['name'],
                 ':thirty_days_ago' => strtotime('-29 days', strtotime('today'))
             ]);
-            $trafficStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rawTrafficStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Group by date using actual timestamps (PR#37 pattern)
+            $dailyStats = [];
+            
+            foreach ($rawTrafficStats as $row) {
+                $timestamp = intval($row['t']);
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                
+                // Group by date using server local time - consistent with PR#37 pattern
+                $dateKey = $date->format('Y-m-d');
+                
+                if (!isset($dailyStats[$dateKey])) {
+                    $dailyStats[$dateKey] = [
+                        'date' => $dateKey,
+                        'unique_users' => [],
+                        'daily_upload' => 0,
+                        'daily_download' => 0
+                    ];
+                }
+                
+                $dailyStats[$dateKey]['unique_users'][$row['user_id']] = true;
+                $dailyStats[$dateKey]['daily_upload'] += floatval($row['daily_upload']);
+                $dailyStats[$dateKey]['daily_download'] += floatval($row['daily_download']);
+            }
+            
+            // Convert to final format and sort by date descending
+            foreach ($dailyStats as $data) {
+                $trafficStats[] = [
+                    'date' => $data['date'],
+                    'unique_users' => count($data['unique_users']),
+                    'daily_upload' => $data['daily_upload'],
+                    'daily_download' => $data['daily_download']
+                ];
+            }
+            
+            usort($trafficStats, function($a, $b) {
+                return strcmp($b['date'], $a['date']);
+            });
         } catch (\Exception $e) {
             logActivity("V2RaySocks Traffic Monitor: Error retrieving traffic stats for node $nodeID: " . $e->getMessage(), 0);
             // Continue with empty traffic stats rather than failing completely
@@ -1278,7 +1388,11 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                     // Only keep formatted data, remove raw bytes
                     $exportRow = [
                         'timestamp' => $row['t'],
-                        'formatted_time' => date('Y-m-d H:i:s', $row['t']),
+                        'formatted_time' => (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($row['t']),
                         'user_id' => $row['user_id'] ?? '',
                         'service_id' => $row['service_id'] ?? '',
                         'uuid' => $row['uuid'] ?? '',
@@ -1329,7 +1443,11 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                     $total = $upload + $download;
                     
                     fputcsv($output, [
-                        date('Y-m-d H:i:s', $row['t']),
+                        (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($row['t']),
                         $row['user_id'] ?? '',
                         $row['service_id'] ?? '',
                         $row['uuid'] ?? '',
@@ -1582,16 +1700,15 @@ function v2raysocks_traffic_getTodayTrafficData()
             ];
         }
         
-        // Query traffic data grouped by hour
+        // Query traffic data using real timestamps (PR#37 pattern)
         try {
             $sql = 'SELECT 
-                        HOUR(FROM_UNIXTIME(t)) as hour,
-                        SUM(u) as total_upload,
-                        SUM(d) as total_download
+                        t,
+                        u as upload,
+                        d as download
                     FROM user_usage 
                     WHERE t >= :today_start AND t < :today_end
-                    GROUP BY HOUR(FROM_UNIXTIME(t))
-                    ORDER BY hour';
+                    ORDER BY t ASC';
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -1601,12 +1718,21 @@ function v2raysocks_traffic_getTodayTrafficData()
             
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
+            // Group data by hour using actual timestamps (server local time, not UTC)
             foreach ($results as $row) {
-                $hour = sprintf('%02d', intval($row['hour']));
-                $hourlyStats[$hour] = [
-                    'upload' => floatval($row['total_upload'] ?? 0),
-                    'download' => floatval($row['total_download'] ?? 0)
-                ];
+                $timestamp = intval($row['t']);
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                
+                // Group by hour using server local time - consistent with PR#37 pattern
+                $hour = $date->format('H');
+                
+                if (!isset($hourlyStats[$hour])) {
+                    $hourlyStats[$hour] = ['upload' => 0, 'download' => 0];
+                }
+                
+                $hourlyStats[$hour]['upload'] += floatval($row['upload']);
+                $hourlyStats[$hour]['download'] += floatval($row['download']);
             }
             
         } catch (\Exception $e) {
@@ -1707,8 +1833,16 @@ function v2raysocks_traffic_getTotalTrafficSinceLaunch()
             'total_traffic' => $totalTraffic,
             'avg_upload' => $avgUpload,
             'avg_download' => $avgDownload,
-            'first_record' => $result['first_record'] ? date('Y-m-d H:i:s', $result['first_record']) : null,
-            'last_record' => $result['last_record'] ? date('Y-m-d H:i:s', $result['last_record']) : null,
+            'first_record' => $result['first_record'] ? (function($timestamp) {
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                return $date->format('Y-m-d H:i:s');
+            })($result['first_record']) : null,
+            'last_record' => $result['last_record'] ? (function($timestamp) {
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                return $date->format('Y-m-d H:i:s');
+            })($result['last_record']) : null,
             'total_records' => intval($result['total_records'] ?? 0),
             'days_active' => $result['first_record'] ? ceil((time() - $result['first_record']) / 86400) : 0,
             'last_updated' => time()
@@ -2870,7 +3004,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['node'] = intval($record['node']);
             $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
             $record['total_traffic'] = $record['u'] + $record['d'];
-            $record['formatted_time'] = date('Y-m-d H:i:s', $record['t']);
+            $record['formatted_time'] = (function($timestamp) {
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                return $date->format('Y-m-d H:i:s');
+            })($record['t']);
             $record['formatted_upload'] = v2raysocks_traffic_formatBytesConfigurable($record['u']);
             $record['formatted_download'] = v2raysocks_traffic_formatBytesConfigurable($record['d']);
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
@@ -2943,7 +3081,11 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         'unique_users' => $node['unique_users'],
                         'usage_records' => $node['usage_records'],
                         'is_online' => $node['is_online'],
-                        'formatted_last_online' => date('Y-m-d H:i:s', $node['last_online'])
+                        'formatted_last_online' => (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($node['last_online'])
                     ];
                     
                     return $exportNode;
@@ -2999,7 +3141,11 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                         $node['unique_users'],
                         $node['usage_records'],
                         $node['is_online'] ? 'Online' : 'Offline',
-                        date('Y-m-d H:i:s', $node['last_online']),
+                        (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($node['last_online']),
                         v2raysocks_traffic_formatBytesConfigurable($node['avg_traffic_per_user'])
                     ]);
                 }
@@ -3052,8 +3198,16 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                         'formatted_avg_traffic_per_node' => v2raysocks_traffic_formatBytesConfigurable($user['avg_traffic_per_node']),
                         'nodes_used' => $user['nodes_used'],
                         'usage_records' => $user['usage_records'],
-                        'formatted_first_usage' => $user['first_usage'] ? date('Y-m-d H:i:s', $user['first_usage']) : '',
-                        'formatted_last_usage' => $user['last_usage'] ? date('Y-m-d H:i:s', $user['last_usage']) : '',
+                        'formatted_first_usage' => $user['first_usage'] ? (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($user['first_usage']) : '',
+                        'formatted_last_usage' => $user['last_usage'] ? (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($user['last_usage']) : '',
                         'remark' => $user['remark']
                     ];
                     
@@ -3112,8 +3266,16 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                         round($user['quota_utilization'], 2),
                         $user['nodes_used'],
                         $user['usage_records'],
-                        $user['first_usage'] ? date('Y-m-d H:i:s', $user['first_usage']) : '',
-                        $user['last_usage'] ? date('Y-m-d H:i:s', $user['last_usage']) : '',
+                        $user['first_usage'] ? (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($user['first_usage']) : '',
+                        $user['last_usage'] ? (function($timestamp) {
+                            $date = new DateTime();
+                            $date->setTimestamp($timestamp);
+                            return $date->format('Y-m-d H:i:s');
+                        })($user['last_usage']) : '',
                         v2raysocks_traffic_formatBytesConfigurable($user['avg_traffic_per_node']),
                         $user['remark']
                     ]);
