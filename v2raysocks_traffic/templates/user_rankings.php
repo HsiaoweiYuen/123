@@ -465,12 +465,11 @@ $userRankingsHtml = '
                             <th style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '</th>
                             <th style="min-width: 80px;">' . v2raysocks_traffic_lang('status') . '</th>
                             <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_active') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('user_details') . '</th>
                         </tr>
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="16" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
+                            <td colspan="15" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -660,7 +659,7 @@ $userRankingsHtml = '
             const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData;
             
             const tbody = document.getElementById("rankings-tbody");
-            tbody.innerHTML = `<tr><td colspan="16" class="loading">${t("loading_user_rankings")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="15" class="loading">${t("loading_user_rankings")}</td></tr>`;
             
             fetch(url)
                 .then(response => response.json())
@@ -668,12 +667,12 @@ $userRankingsHtml = '
                     if (data.status === "success") {
                         displayUserRankings(data.data);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading user rankings:", error);
-                    tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("network_error_retry")}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
         }
         
@@ -681,7 +680,7 @@ $userRankingsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!users || users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
@@ -719,7 +718,6 @@ $userRankingsHtml = '
                         <td>${user.usage_records}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastUsageText}</td>
-                        <td>${user.remark || ""}</td>
                     </tr>
                 `;
             });
