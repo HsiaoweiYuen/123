@@ -767,7 +767,7 @@ $serviceSearchHtml = '
                 
                 // Generate table rows for current page
                 pageData.forEach(function(row) {
-                    // Use consistent local timezone formatting for display
+                    // PR#37 pattern: use actual data timestamp for consistent local timezone formatting
                     const displayTime = new Date(row.t * 1000).toLocaleString();
                     html += `<tr>
                         <td>${displayTime}</td>
@@ -935,6 +935,7 @@ $serviceSearchHtml = '
             let allDataPoints = [];
             
             data.forEach(function(row) {
+                // PR#37 pattern: use actual data timestamp for time grouping
                 const date = new Date(row.t * 1000);
                 let timeKey;
                 

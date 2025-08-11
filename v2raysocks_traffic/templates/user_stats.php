@@ -443,6 +443,7 @@ $userStatsHtml = '
             if (data.length === 0) {
                 html = "<tr><td colspan=\\"5\\" class=\\"no-data\\">No traffic history found</td></tr>";
             } else {
+                // PR#37 pattern: use actual data timestamps for display consistency
                 data.forEach(function(row) {
                     html += `<tr>
                         <td>${new Date(row.t * 1000).toLocaleString()}</td>
@@ -462,6 +463,7 @@ $userStatsHtml = '
             const timeData = {};
             
             data.forEach(function(row) {
+                // PR#37 pattern: use actual data timestamp for time grouping
                 const date = new Date(row.t * 1000);
                 // Use consistent date formatting to avoid timezone variations
                 const month = String(date.getMonth() + 1).padStart(2, "0");
