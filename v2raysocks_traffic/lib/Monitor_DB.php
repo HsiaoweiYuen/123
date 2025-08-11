@@ -21,6 +21,24 @@ function v2raysocks_traffic_loadLanguage()
     }
     
     try {
+        $cacheKey = 'language_config';
+        
+        // Try to get from cache first
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    $lang = $decodedData;
+                    $langLoaded = true;
+                    return $lang;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for language config: " . $e->getMessage(), 0);
+        }
+        
         $settings = Capsule::table('tbladdonmodules')
             ->where('module', 'v2raysocks_traffic')
             ->where('setting', 'language')
@@ -39,6 +57,21 @@ function v2raysocks_traffic_loadLanguage()
         }
         
         $langLoaded = true;
+        
+        // Try to cache the language data for 10 minutes (configuration data)
+        if (!empty($lang)) {
+            try {
+                v2raysocks_traffic_redisOperate('set', [
+                    'key' => $cacheKey,
+                    'value' => json_encode($lang),
+                    'ttl' => 600 // 10 minutes for language configuration
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for language config: " . $e->getMessage(), 0);
+            }
+        }
+        
         return $lang;
     } catch (\Exception $e) {
         // Fallback to English on error
@@ -60,9 +93,46 @@ function v2raysocks_traffic_lang($key)
 
 function v2raysocks_traffic_serverInfo()
 {
-    $v2raysocksServerId = Capsule::table('tbladdonmodules')->where('module', 'v2raysocks_traffic')->where('setting', 'v2raysocks_server')->value('value');
-    $v2raysocksServer = Capsule::table('tblservers')->where('type', 'V2RaySocks')->where('id', $v2raysocksServerId)->first();
-    return $v2raysocksServer;
+    try {
+        $cacheKey = 'server_info_config';
+        
+        // Try to get from cache first
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    // Convert back to object to maintain compatibility
+                    return (object) $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for server info: " . $e->getMessage(), 0);
+        }
+        
+        $v2raysocksServerId = Capsule::table('tbladdonmodules')->where('module', 'v2raysocks_traffic')->where('setting', 'v2raysocks_server')->value('value');
+        $v2raysocksServer = Capsule::table('tblservers')->where('type', 'V2RaySocks')->where('id', $v2raysocksServerId)->first();
+        
+        // Try to cache the result for 10 minutes (configuration data)
+        if ($v2raysocksServer) {
+            try {
+                v2raysocks_traffic_redisOperate('set', [
+                    'key' => $cacheKey,
+                    'value' => json_encode($v2raysocksServer),
+                    'ttl' => 600 // 10 minutes for configuration data
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for server info: " . $e->getMessage(), 0);
+            }
+        }
+        
+        return $v2raysocksServer;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor serverInfo error: " . $e->getMessage(), 0);
+        return null;
+    }
 }
 
 function v2raysocks_traffic_createPDO()
@@ -1273,6 +1343,22 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
 function v2raysocks_traffic_serverOptions()
 {
     try {
+        $cacheKey = 'server_options_list';
+        
+        // Try to get from cache first
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    return $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for server options: " . $e->getMessage(), 0);
+        }
+        
         $servers = Capsule::table('tblservers')
             ->where('type', 'V2RaySocks')
             ->get();
@@ -1284,6 +1370,20 @@ function v2raysocks_traffic_serverOptions()
         // If no servers found, provide helpful message
         if (empty($options)) {
             $options[''] = 'No V2RaySocks servers configured - Please add a server first';
+        }
+        
+        // Try to cache server options for 10 minutes (configuration data)
+        if (!empty($options)) {
+            try {
+                v2raysocks_traffic_redisOperate('set', [
+                    'key' => $cacheKey,
+                    'value' => json_encode($options),
+                    'ttl' => 600 // 10 minutes for server configuration
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for server options: " . $e->getMessage(), 0);
+            }
         }
         
         return $options;
@@ -2704,6 +2804,21 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
 function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $startDate = null, $endDate = null)
 {
     try {
+        // Try cache first, but don't fail if cache is unavailable
+        $cacheKey = 'user_traffic_chart_' . md5($userId . '_' . $timeRange . '_' . ($startDate ?: '') . '_' . ($endDate ?: ''));
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    return $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for user chart: " . $e->getMessage(), 0);
+        }
+        
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
             return ['labels' => [], 'data' => []];
@@ -2831,7 +2946,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             $nodeCounts[] = count(array_unique($data['nodes']));
         }
         
-        return [
+        $chartData = [
             'labels' => $labels,
             'upload' => $uploadData,
             'download' => $downloadData,
@@ -2840,6 +2955,22 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             'user_id' => $userId,
             'time_range' => $timeRange
         ];
+        
+        // Try to cache with optimized TTL for chart data
+        try {
+            // Use shorter TTL for chart data as it's frequently updated and viewed
+            $cacheTTL = ($timeRange === 'today') ? 120 : 300; // 2 min for today, 5 min for historical
+            v2raysocks_traffic_redisOperate('set', [
+                'key' => $cacheKey,
+                'value' => json_encode($chartData),
+                'ttl' => $cacheTTL
+            ]);
+        } catch (\Exception $e) {
+            // Cache write failed, but we can still return the data
+            logActivity("V2RaySocks Traffic Monitor: Cache write failed for user chart: " . $e->getMessage(), 0);
+        }
+        
+        return $chartData;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficChart error: " . $e->getMessage(), 0);
