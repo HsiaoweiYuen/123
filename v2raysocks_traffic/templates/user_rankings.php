@@ -262,6 +262,36 @@ $userRankingsHtml = '
                 padding-right: 4px !important;
             }
             
+            /* Mobile-specific UUID column styling */
+            .table th:nth-child(3), .table td:nth-child(3) {
+                min-width: 120px !important;
+                max-width: 140px;
+                word-break: break-all;
+                overflow-wrap: break-word;
+                font-size: 0.85em;
+                line-height: 1.3;
+            }
+            
+            /* Enhanced mobile table responsiveness */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Mobile table header adjustments */
+            .table th {
+                padding: 8px 4px !important;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+            
+            /* Mobile table cell adjustments */
+            .table td {
+                padding: 8px 4px !important;
+                font-size: 0.85em;
+                vertical-align: middle;
+            }
+            
             /* Custom date range styling for mobile */
             #custom-date-range {
                 flex-direction: column !important;
