@@ -334,6 +334,7 @@ $_LANG = [
     'show_offline_nodes' => '显示离线节点',
     'used_users_count' => '使用用户数',
     'total_traffic_limit' => '总流量限制',
+    'used_traffic_statistics' => '已用流量',
     'online_status' => '在线状态',
     'user_count' => '用户数',
     'last_online' => '最后在线',
