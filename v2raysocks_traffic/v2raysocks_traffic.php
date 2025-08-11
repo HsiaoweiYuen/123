@@ -57,6 +57,24 @@ function v2raysocks_traffic_config()
                 'Default' => '',
                 'Description' => isset($lang['redis_password_description']) ? $lang['redis_password_description'] : 'Redis in-memory database password, leave blank for no password',
             ],
+            'redis_ssl' => [
+                'FriendlyName' => isset($lang['redis_ssl']) ? $lang['redis_ssl'] : 'Redis SSL/TLS',
+                'Type' => 'yesno',
+                'Default' => '0',
+                'Description' => isset($lang['redis_ssl_description']) ? $lang['redis_ssl_description'] : 'Enable SSL/TLS encryption for Redis connections',
+            ],
+            'redis_cluster' => [
+                'FriendlyName' => isset($lang['redis_cluster']) ? $lang['redis_cluster'] : 'Redis Cluster Mode',
+                'Type' => 'yesno',
+                'Default' => '0',
+                'Description' => isset($lang['redis_cluster_description']) ? $lang['redis_cluster_description'] : 'Enable Redis Cluster mode (IP field should contain comma-separated cluster nodes)',
+            ],
+            'redis_sentinel' => [
+                'FriendlyName' => isset($lang['redis_sentinel']) ? $lang['redis_sentinel'] : 'Redis Sentinel',
+                'Type' => 'yesno',
+                'Default' => '0',
+                'Description' => isset($lang['redis_sentinel_description']) ? $lang['redis_sentinel_description'] : 'Enable Redis Sentinel for high availability (IP field should contain comma-separated sentinel nodes)',
+            ],
             'refresh_interval' => [
                 'FriendlyName' => isset($lang['refresh_interval']) ? $lang['refresh_interval'] : 'Refresh Interval (seconds)',
                 'Type' => 'text',
@@ -392,26 +410,31 @@ function v2raysocks_traffic_output($vars)
             die();
         case 'clear_cache':
             try {
-                // Use improved cache clearing with pattern support
+                // Use enhanced Redis cache clearing with pattern support
                 $clearType = $_GET['type'] ?? 'all';
                 
                 switch ($clearType) {
                     case 'live':
-                        v2raysocks_traffic_clearCache(['live_stats']);
+                        v2raysocks_traffic_clearRelatedCache('live_stats');
                         $message = 'Live statistics cache cleared';
                         break;
                     case 'traffic':
-                        v2raysocks_traffic_clearCache([], 'traffic_*');
+                        v2raysocks_traffic_clearRelatedCache('user_traffic');
+                        v2raysocks_traffic_clearRelatedCache('node_traffic');
                         $message = 'Traffic data cache cleared';
                         break;
-                    case 'rankings':
-                        v2raysocks_traffic_clearCache([], '*_rankings_*');
-                        $message = 'Rankings cache cleared';
+                    case 'user':
+                        v2raysocks_traffic_redisOperate('clear_pattern', ['pattern' => 'user_*']);
+                        $message = 'User cache cleared';
+                        break;
+                    case 'node':
+                        v2raysocks_traffic_redisOperate('clear_pattern', ['pattern' => 'node_*']);
+                        $message = 'Node cache cleared';
                         break;
                     case 'all':
                     default:
-                        // Clear all cache with improved method
-                        v2raysocks_traffic_clearCache();
+                        // Clear all cache with enhanced method
+                        v2raysocks_traffic_clearRelatedCache('all');
                         $message = 'All cache cleared';
                         break;
                 }
@@ -426,6 +449,72 @@ function v2raysocks_traffic_output($vars)
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to clear cache: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            die();
+        
+        case 'prewarm_cache':
+            try {
+                $dataTypes = $_GET['types'] ? explode(',', $_GET['types']) : [];
+                $prewarmed = v2raysocks_traffic_prewarmCache($dataTypes);
+                
+                $result = [
+                    'status' => 'success',
+                    'message' => "Cache prewarming completed, {$prewarmed} entries preloaded",
+                    'prewarmed_count' => $prewarmed,
+                    'timestamp' => time()
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis prewarm_cache error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to prewarm cache: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            die();
+            
+        case 'smart_cleanup':
+            try {
+                $cleaned = v2raysocks_traffic_smartCacheCleanup();
+                
+                $result = [
+                    'status' => 'success',
+                    'message' => $cleaned !== false ? "Smart cleanup completed, {$cleaned} keys removed" : "No cleanup needed",
+                    'cleaned_count' => $cleaned,
+                    'timestamp' => time()
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis smart_cleanup error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to perform smart cleanup: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            die();
+            
+        case 'redis_performance':
+            try {
+                $performance = v2raysocks_traffic_getRedisPerformance();
+                
+                $result = [
+                    'status' => 'success',
+                    'data' => $performance,
+                    'timestamp' => time()
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis redis_performance error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get Redis performance: ' . $e->getMessage()
                 ];
             }
             
@@ -462,6 +551,7 @@ function v2raysocks_traffic_output($vars)
                     'redis_available' => extension_loaded('redis'),
                     'database_connection' => v2raysocks_traffic_createPDO() ? 'OK' : 'FAILED',
                     'redis_connection' => v2raysocks_traffic_redisOperate('ping', []) ? 'OK' : 'FAILED',
+                    'redis_performance' => v2raysocks_traffic_getRedisPerformance(),
                     'cache_performance' => $cacheStats,
                     'module_config' => v2raysocks_traffic_getModuleConfig(),
                     'server_info' => v2raysocks_traffic_serverInfo() ? 'OK' : 'FAILED',
@@ -644,6 +734,23 @@ function v2raysocks_traffic_activate()
 {
     // Module activation function
     // This is called when the module is first activated
+    
+    try {
+        // Initialize cache prewarming if Redis is available
+        if (extension_loaded('redis')) {
+            $redis = v2raysocks_traffic_getRedisInstance();
+            if ($redis) {
+                // Prewarm essential cache data
+                v2raysocks_traffic_prewarmCache(['server_info']);
+                logActivity("V2RaySocks Traffic Monitor: Module activated with cache prewarming", 0);
+            } else {
+                logActivity("V2RaySocks Traffic Monitor: Module activated (Redis unavailable)", 0);
+            }
+        }
+    } catch (\Throwable $e) {
+        logActivity("V2RaySocks Traffic Monitor: Module activation warning - " . $e->getMessage(), 0);
+    }
+    
     // Return an array with any errors or empty array for success
     return [];
 }
@@ -652,6 +759,21 @@ function v2raysocks_traffic_deactivate()
 {
     // Module deactivation function
     // This is called when the module is deactivated
+    
+    try {
+        // Clean up cache on deactivation
+        if (extension_loaded('redis')) {
+            $redis = v2raysocks_traffic_getRedisInstance();
+            if ($redis) {
+                // Clear all module-related cache
+                v2raysocks_traffic_clearRelatedCache('all');
+                logActivity("V2RaySocks Traffic Monitor: Module deactivated with cache cleanup", 0);
+            }
+        }
+    } catch (\Throwable $e) {
+        logActivity("V2RaySocks Traffic Monitor: Module deactivation warning - " . $e->getMessage(), 0);
+    }
+    
     // Return an array with any errors or empty array for success
     return [];
 }
