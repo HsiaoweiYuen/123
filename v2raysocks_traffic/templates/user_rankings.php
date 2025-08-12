@@ -208,6 +208,8 @@ $userRankingsHtml = '
             position: relative;
             padding-right: 20px !important;
             transition: background-color 0.2s ease;
+            text-align: center;
+            vertical-align: middle;
         }
         .sortable-header:hover {
             background-color: rgba(0, 123, 255, 0.1);
@@ -220,6 +222,7 @@ $userRankingsHtml = '
             font-size: 12px;
             color: #6c757d;
             opacity: 0.7;
+            line-height: 1;
         }
         .sortable-header.sort-asc .sort-indicator::after {
             content: "▲";
@@ -493,12 +496,12 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('total_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
-                                ' . v2raysocks_traffic_lang('used_traffic') . '
-                                <span class="sort-indicator"></span>
-                            </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="remaining_traffic">
                                 ' . v2raysocks_traffic_lang('remaining_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
+                                ' . v2raysocks_traffic_lang('today_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 120px;" class="sortable-header" data-sort="usage_rate">
@@ -662,7 +665,7 @@ $userRankingsHtml = '
         let currentUserUsagePage = 1;
         let userUsageRecordsPerPage = 50;
         let totalUserUsagePages = 1;
-        let currentSort = { field: "used_traffic", direction: "desc" };
+        let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
         // Load user rankings on page load
@@ -796,6 +799,9 @@ $userRankingsHtml = '
                         bValue = allUserRankings.indexOf(b) + 1;
                         break;
                     case "service_id":
+                        aValue = parseInt(a.sid) || 0;
+                        bValue = parseInt(b.sid) || 0;
+                        break;
                     case "user_id":
                         aValue = parseInt(a[currentSort.field]) || 0;
                         bValue = parseInt(b[currentSort.field]) || 0;
@@ -895,8 +901,8 @@ $userRankingsHtml = '
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
                         <td>${formatBytes(user.transfer_enable)}</td>
-                        <td>${formatBytes(user.period_traffic)}</td>
                         <td>${formatBytes(user.remaining_quota)}</td>
+                        <td>${formatBytes(user.period_traffic)}</td>
                         <td>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: ${utilizationPercent}%"></div>
