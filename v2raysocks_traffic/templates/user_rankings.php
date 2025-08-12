@@ -497,7 +497,7 @@ $userRankingsHtml = '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
-                                ' . v2raysocks_traffic_lang('used_traffic') . '
+                                ' . v2raysocks_traffic_lang('used_traffic_statistics') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="remaining_traffic">
@@ -524,12 +524,8 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('recent_4hour_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 80px;" class="sortable-header" data-sort="used_nodes">
+                            <th style="min-width: 80px; white-space: nowrap;" class="sortable-header" data-sort="used_nodes">
                                 ' . v2raysocks_traffic_lang('used_nodes') . '
-                                <span class="sort-indicator"></span>
-                            </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="excessive_speed_limit">
-                                ' . v2raysocks_traffic_lang('excessive_speed_limit') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="ss_speed_limit">
@@ -556,7 +552,7 @@ $userRankingsHtml = '
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="19" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
+                            <td colspan="18" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -772,7 +768,7 @@ $userRankingsHtml = '
             const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
             const tbody = document.getElementById("rankings-tbody");
-            tbody.innerHTML = `<tr><td colspan="15" class="loading">${t("loading_user_rankings")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="14" class="loading">${t("loading_user_rankings")}</td></tr>`;
             
             fetch(url)
                 .then(response => response.json())
@@ -781,12 +777,12 @@ $userRankingsHtml = '
                         allUserRankings = data.data || [];
                         sortAndDisplayUserRankings();
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="14" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading user rankings:", error);
-                    tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("network_error_retry")}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="14" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
         }
         
@@ -870,10 +866,6 @@ $userRankingsHtml = '
                         aValue = a.last_usage || 0;
                         bValue = b.last_usage || 0;
                         break;
-                    case "excessive_speed_limit":
-                        aValue = (a.excessive_speed_limits || "").toLowerCase();
-                        bValue = (b.excessive_speed_limits || "").toLowerCase();
-                        break;
                     case "ss_speed_limit":
                         aValue = (a.speedlimitss || "").toLowerCase();
                         bValue = (b.speedlimitss || "").toLowerCase();
@@ -906,7 +898,7 @@ $userRankingsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!users || users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="19" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
@@ -942,7 +934,6 @@ $userRankingsHtml = '
                         <td class="numeric-cell">${formatBytes(user.traffic_1hour || 0)}</td>
                         <td class="numeric-cell">${formatBytes(user.traffic_4hour || 0)}</td>
                         <td class="numeric-cell">${user.nodes_used}</td>
-                        <td>${user.excessive_speed_limits || "-"}</td>
                         <td>${user.speedlimitss || "-"}</td>
                         <td>${user.speedlimitother || "-"}</td>
                         <td>${user.usage_records}</td>
