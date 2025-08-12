@@ -2609,7 +2609,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
-        // Build SQL with node speed limits instead of user speed limits
+        // Build SQL with user speed limits from user table instead of node aggregation
         $sql = "
             SELECT 
                 u.id as user_id,
@@ -2621,6 +2621,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.enable,
                 u.created_at,
                 u.remark,
+                COALESCE(u.speedlimitss, '') as speedlimitss,
+                COALESCE(u.speedlimitother, '') as speedlimitother,
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
@@ -2630,14 +2632,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 COUNT(DISTINCT uu.node) as nodes_used,
                 COUNT(uu.id) as usage_records,
                 MIN(uu.t) as first_usage,
-                MAX(uu.t) as last_usage,
-                GROUP_CONCAT(DISTINCT COALESCE(n.speed_limit, '') ORDER BY n.speed_limit) as speedlimitss,
-                GROUP_CONCAT(DISTINCT COALESCE(n.excessive_speed_limit, '') ORDER BY n.excessive_speed_limit) as speedlimitother
+                MAX(uu.t) as last_usage
             FROM user u
             LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
-            LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
             WHERE u.enable = 1
-            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark
+            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark, u.speedlimitss, u.speedlimitother
         ";
 
         // Add sorting
@@ -2694,7 +2693,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['first_usage'] = intval($user['first_usage']);
             $user['last_usage'] = intval($user['last_usage']);
             
-            // Speed limit fields from node aggregation
+            // Speed limit fields from user table
             $user['speedlimitss'] = $user['speedlimitss'] ?? '';
             $user['speedlimitother'] = $user['speedlimitother'] ?? '';
             
