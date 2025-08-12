@@ -301,6 +301,39 @@ $userRankingsHtml = '
             padding-right: 8px !important;
         }
         
+        /* Sortable table headers */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px !important;
+        }
+        .sortable-header:hover {
+            background-color: #f8f9fa;
+        }
+        .sort-indicator {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #6c757d;
+            opacity: 0.7;
+        }
+        .sort-indicator.active {
+            color: #007bff;
+            opacity: 1;
+        }
+        .sort-indicator::after {
+            content: "↕";
+        }
+        .sort-indicator.asc::after {
+            content: "↑";
+        }
+        .sort-indicator.desc::after {
+            content: "↓";
+        }
+        
         /* UUID column font consistency */
         .uuid-column {
             font-family: inherit;
@@ -413,17 +446,7 @@ $userRankingsHtml = '
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date" style="width: 140px;">
                     </div>
-                    <div class="control-group">
-                        <label for="sort-by">' . v2raysocks_traffic_lang('sort_by') . ':</label>
-                        <select id="sort-by" name="sort_by">
-                            <option value="traffic_desc" selected>' . v2raysocks_traffic_lang('traffic_usage_high_to_low') . '</option>
-                            <option value="traffic_asc">' . v2raysocks_traffic_lang('traffic_usage_low_to_high') . '</option>
-                            <option value="remaining_desc">' . v2raysocks_traffic_lang('remaining_traffic_high_to_low') . '</option>
-                            <option value="remaining_asc">' . v2raysocks_traffic_lang('remaining_traffic_low_to_high') . '</option>
-                            <option value="nodes_desc">' . v2raysocks_traffic_lang('used_nodes_count') . '</option>
-                            <option value="recent_activity">' . v2raysocks_traffic_lang('recent_activity') . '</option>
-                        </select>
-                    </div>
+
                     <div class="control-group">
                         <label for="limit">' . v2raysocks_traffic_lang('display_count') . ':</label>
                         <select id="limit" name="limit">
@@ -450,21 +473,21 @@ $userRankingsHtml = '
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th style="min-width: 60px;">' . v2raysocks_traffic_lang('ranking') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('service_id') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('user_id') . '</th>
-                            <th style="min-width: 160px;">' . v2raysocks_traffic_lang('uuid') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('used_traffic') . '</th>
-                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('traffic_usage_rate') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_5min_traffic') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_1hour_traffic') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_4hour_traffic') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('used_nodes') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('status') . '</th>
-                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_active') . '</th>
+                            <th class="sortable-header" data-column="rank" style="min-width: 60px;">' . v2raysocks_traffic_lang('ranking') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="service_id" style="min-width: 80px;">' . v2raysocks_traffic_lang('service_id') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="user_id" style="min-width: 80px;">' . v2raysocks_traffic_lang('user_id') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="uuid" style="min-width: 160px;">' . v2raysocks_traffic_lang('uuid') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="total_traffic" style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="used_traffic" style="min-width: 100px;">' . v2raysocks_traffic_lang('used_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="remaining_traffic" style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="usage_rate" style="min-width: 120px;">' . v2raysocks_traffic_lang('traffic_usage_rate') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="traffic_5min" style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_5min_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="traffic_1hour" style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_1hour_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="traffic_4hour" style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_4hour_traffic') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="nodes_used" style="min-width: 80px;">' . v2raysocks_traffic_lang('used_nodes') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="record_count" style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="status" style="min-width: 80px;">' . v2raysocks_traffic_lang('status') . '<span class="sort-indicator"></span></th>
+                            <th class="sortable-header" data-column="last_active" style="min-width: 120px;">' . v2raysocks_traffic_lang('last_active') . '<span class="sort-indicator"></span></th>
                         </tr>
                     </thead>
                     <tbody id="rankings-tbody">
@@ -595,9 +618,17 @@ $userRankingsHtml = '
         let userUsageRecordsPerPage = 50;
         let totalUserUsagePages = 1;
         
+        // Table sorting variables
+        let allUserRankingsData = [];
+        let currentSortColumn = "rank";
+        let currentSortDirection = "asc";
+        
         // Load user rankings on page load
         $(document).ready(function() {
             loadUserRankings();
+            
+            // Initialize sort indicators
+            updateSortIndicators();
             
             // Add event listener for time range change
             document.getElementById("time-range").addEventListener("change", function() {
@@ -615,6 +646,12 @@ $userRankingsHtml = '
             $("#user-rankings-filter").on("submit", function(e) {
                 e.preventDefault();
                 loadUserRankings();
+            });
+            
+            // Add table header click event for sorting
+            $(document).on("click", ".sortable-header", function() {
+                const column = $(this).data("column");
+                sortTable(column);
             });
         });
         
@@ -681,11 +718,109 @@ $userRankingsHtml = '
             
             if (!users || users.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("no_data")}</td></tr>`;
+                allUserRankingsData = [];
+                return;
+            }
+            
+            // Store all user data for sorting
+            allUserRankingsData = users;
+            
+            // Apply current sorting
+            sortUserRankingsData();
+            
+            // Display the sorted data
+            renderUserRankingsTable();
+        }
+        
+        function sortUserRankingsData() {
+            if (allUserRankingsData.length === 0) return;
+            
+            allUserRankingsData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch (currentSortColumn) {
+                    case "rank":
+                        aVal = allUserRankingsData.indexOf(a) + 1;
+                        bVal = allUserRankingsData.indexOf(b) + 1;
+                        break;
+                    case "service_id":
+                        aVal = parseInt(a.sid) || 0;
+                        bVal = parseInt(b.sid) || 0;
+                        break;
+                    case "user_id":
+                        aVal = parseInt(a.user_id) || 0;
+                        bVal = parseInt(b.user_id) || 0;
+                        break;
+                    case "uuid":
+                        aVal = (a.uuid || "").toLowerCase();
+                        bVal = (b.uuid || "").toLowerCase();
+                        break;
+                    case "total_traffic":
+                        aVal = parseFloat(a.transfer_enable) || 0;
+                        bVal = parseFloat(b.transfer_enable) || 0;
+                        break;
+                    case "used_traffic":
+                        aVal = parseFloat(a.period_traffic) || 0;
+                        bVal = parseFloat(b.period_traffic) || 0;
+                        break;
+                    case "remaining_traffic":
+                        aVal = parseFloat(a.remaining_quota) || 0;
+                        bVal = parseFloat(b.remaining_quota) || 0;
+                        break;
+                    case "usage_rate":
+                        aVal = parseFloat(a.quota_utilization) || 0;
+                        bVal = parseFloat(b.quota_utilization) || 0;
+                        break;
+                    case "traffic_5min":
+                        aVal = parseFloat(a.traffic_5min) || 0;
+                        bVal = parseFloat(b.traffic_5min) || 0;
+                        break;
+                    case "traffic_1hour":
+                        aVal = parseFloat(a.traffic_1hour) || 0;
+                        bVal = parseFloat(b.traffic_1hour) || 0;
+                        break;
+                    case "traffic_4hour":
+                        aVal = parseFloat(a.traffic_4hour) || 0;
+                        bVal = parseFloat(b.traffic_4hour) || 0;
+                        break;
+                    case "nodes_used":
+                        aVal = parseInt(a.nodes_used) || 0;
+                        bVal = parseInt(b.nodes_used) || 0;
+                        break;
+                    case "record_count":
+                        aVal = parseInt(a.usage_records) || 0;
+                        bVal = parseInt(b.usage_records) || 0;
+                        break;
+                    case "status":
+                        aVal = a.enable ? 1 : 0;
+                        bVal = b.enable ? 1 : 0;
+                        break;
+                    case "last_active":
+                        aVal = parseInt(a.last_usage) || 0;
+                        bVal = parseInt(b.last_usage) || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (typeof aVal === "string") {
+                    return currentSortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                } else {
+                    return currentSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+                }
+            });
+        }
+        
+        function renderUserRankingsTable() {
+            const tbody = document.getElementById("rankings-tbody");
+            
+            if (allUserRankingsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
             let html = "";
-            users.forEach((user, index) => {
+            allUserRankingsData.forEach((user, index) => {
                 const rank = index + 1;
                 const rankClass = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
                 
@@ -703,8 +838,8 @@ $userRankingsHtml = '
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
                         <td>${formatBytes(user.transfer_enable)}</td>
-                        <td>${formatBytes(user.remaining_quota)}</td>
                         <td>${formatBytes(user.period_traffic)}</td>
+                        <td>${formatBytes(user.remaining_quota)}</td>
                         <td>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: ${utilizationPercent}%"></div>
@@ -723,6 +858,36 @@ $userRankingsHtml = '
             });
             
             tbody.innerHTML = html;
+        }
+        
+        function sortTable(column) {
+            // Toggle sort direction if clicking the same column
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = "asc";
+            }
+            
+            // Update sort indicators
+            updateSortIndicators();
+            
+            // Apply sorting and re-render table
+            sortUserRankingsData();
+            renderUserRankingsTable();
+        }
+        
+        function updateSortIndicators() {
+            // Remove all active classes and reset indicators
+            document.querySelectorAll(".sort-indicator").forEach(indicator => {
+                indicator.classList.remove("active", "asc", "desc");
+            });
+            
+            // Set active indicator for current sort column
+            const activeHeader = document.querySelector(`[data-column="${currentSortColumn}"] .sort-indicator`);
+            if (activeHeader) {
+                activeHeader.classList.add("active", currentSortDirection);
+            }
         }
         
         function showUserDetails(userId) {
@@ -1548,7 +1713,8 @@ $userRankingsHtml = '
                         exportParams += "&node_search=" + encodeURIComponent(window.currentUserNodeSearchFilter);
                     }
                 } else {
-                    const sortBy = document.getElementById("sort-by").value;
+                    // Use current table sorting for export
+                    const sortBy = `${currentSortColumn}_${currentSortDirection}`;
                     const limit = document.getElementById("limit").value;
                     exportParams = "export_type=user_rankings&time_range=" + timeRange + "&sort_by=" + sortBy + "&limit=" + limit + "&format=" + format;
                 }
