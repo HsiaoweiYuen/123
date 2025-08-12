@@ -915,8 +915,8 @@ $nodeStatsHtml = '
                         <td>${node.count_rate || "1.0"}x</td>
                         <td>${node.unique_users}</td>
                         <td>${node.usage_records}</td>
-                        <td>${node.excessive_speed_limit && node.excessive_speed_limit !== '0' && node.excessive_speed_limit !== '' ? node.excessive_speed_limit : t("unlimited")}</td>
-                        <td>${node.speed_limit && node.speed_limit !== '0' && node.speed_limit !== '' ? node.speed_limit : t("unlimited")}</td>
+                        <td>${node.excessive_speed_limit && node.excessive_speed_limit !== \"0\" && node.excessive_speed_limit !== \"\" ? node.excessive_speed_limit : t(\"unlimited\")}</td>
+                        <td>${node.speed_limit && node.speed_limit !== \"0\" && node.speed_limit !== \"\" ? node.speed_limit : t(\"unlimited\")}</td>
 
                         <td>${node.country || "N/A"}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
