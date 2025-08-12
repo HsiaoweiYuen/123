@@ -208,6 +208,8 @@ $nodeStatsHtml = '
             position: relative;
             padding-right: 20px !important;
             transition: background-color 0.2s ease;
+            text-align: center;
+            vertical-align: middle;
         }
         .sortable-header:hover {
             background-color: rgba(0, 123, 255, 0.1);
@@ -220,6 +222,7 @@ $nodeStatsHtml = '
             font-size: 12px;
             color: #6c757d;
             opacity: 0.7;
+            line-height: 1;
         }
         .sortable-header.sort-asc .sort-indicator::after {
             content: "▲";
@@ -662,7 +665,7 @@ $nodeStatsHtml = '
         let currentNodeUsagePage = 1;
         let nodeUsageRecordsPerPage = 50;
         let totalNodeUsagePages = 1;
-        let currentSort = { field: "today_traffic", direction: "desc" };
+        let currentSort = { field: "rank", direction: "asc" };
         let allNodeRankings = [];
         
         // Load node rankings on page load
