@@ -2365,12 +2365,17 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $stmt->execute();
             $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
             
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'speed_limit'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimit = $stmt->rowCount() > 0;
+            
             $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
             $stmt = $pdo->prepare($checkSql);
             $stmt->execute();
             $hasCountRate = $stmt->rowCount() > 0;
             
-            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
+            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasSpeedLimit && $hasCountRate;
         } catch (\Exception $e) {
             // If column check fails, assume columns don't exist
             $nodeHasNewFields = false;
