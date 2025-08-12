@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Traffic Rankings - Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; font-weight: bold; }
+        .table-striped tbody tr:nth-child(odd) { background-color: #f9f9f9; }
+        
+        /* Sortable table headers */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px !important;
+        }
+        .sortable-header:hover {
+            background-color: #e9ecef;
+        }
+        .sort-indicator {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #6c757d;
+            opacity: 0.7;
+        }
+        .sort-indicator.active {
+            color: #007bff;
+            opacity: 1;
+        }
+        .sort-indicator::after {
+            content: "↕";
+        }
+        .sort-indicator.asc::after {
+            content: "↑";
+        }
+        .sort-indicator.desc::after {
+            content: "↓";
+        }
+        
+        .numeric-cell {
+            text-align: right;
+        }
+        
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .demo-note {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        .removed-note {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid #f5c6cb;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Traffic Rankings - Optimization Demo</h1>
+    
+    <div class="demo-note">
+        <h3>✅ Changes Implemented:</h3>
+        <ul>
+            <li><strong>Column Reorganization:</strong> Flow columns now ordered as Total Traffic → Used Traffic → Remaining Traffic</li>
+            <li><strong>Sortable Headers:</strong> All table headers are now clickable with sort indicators (↑/↓)</li>
+            <li><strong>Sort Dropdown Removed:</strong> The sort-by dropdown has been removed from the search form</li>
+            <li><strong>Interactive Sorting:</strong> Click any header to sort by that column</li>
+        </ul>
+    </div>
+    
+    <!-- Controls Panel (Sort dropdown removed) -->
+    <div class="controls-panel">
+        <form>
+            <div class="controls-row">
+                <div class="control-group">
+                    <label for="time-range">Time Range:</label>
+                    <select id="time-range" name="time_range">
+                        <option value="today" selected>Today</option>
+                        <option value="week">Last 7 Days</option>
+                        <option value="15days">15 Days</option>
+                        <option value="month">Last 30 Days</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <div class="removed-note">
+                    Sort by: [REMOVED - Now controlled by clicking table headers]
+                </div>
+                
+                <div class="control-group">
+                    <label for="limit">Display Count:</label>
+                    <select id="limit" name="limit">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button type="submit" class="btn">Refresh Rankings</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Rankings Table -->
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th class="sortable-header" data-column="rank" style="min-width: 60px;">
+                        Rank<span class="sort-indicator active asc"></span>
+                    </th>
+                    <th class="sortable-header" data-column="service_id" style="min-width: 80px;">
+                        Service ID<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="user_id" style="min-width: 80px;">
+                        User ID<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="uuid" style="min-width: 160px;">
+                        UUID<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="total_traffic" style="min-width: 100px; background: #e3f2fd;">
+                        Total Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="used_traffic" style="min-width: 100px; background: #fff3e0;">
+                        Used Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="remaining_traffic" style="min-width: 100px; background: #e8f5e8;">
+                        Remaining Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="usage_rate" style="min-width: 120px;">
+                        Usage Rate<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="traffic_5min" style="min-width: 90px;">
+                        5min Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="traffic_1hour" style="min-width: 90px;">
+                        1hr Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="traffic_4hour" style="min-width: 90px;">
+                        4hr Traffic<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="nodes_used" style="min-width: 80px;">
+                        Used Nodes<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="record_count" style="min-width: 80px;">
+                        Records<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="status" style="min-width: 80px;">
+                        Status<span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable-header" data-column="last_active" style="min-width: 120px;">
+                        Last Active<span class="sort-indicator"></span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>🥇 1</td>
+                    <td class="numeric-cell">1001</td>
+                    <td>12345</td>
+                    <td>abc123-def456-ghi789</td>
+                    <td style="background: #e3f2fd;"><strong>100.0 GB</strong></td>
+                    <td style="background: #fff3e0;"><strong>75.2 GB</strong></td>
+                    <td style="background: #e8f5e8;"><strong>24.8 GB</strong></td>
+                    <td>75.2%</td>
+                    <td class="numeric-cell">125.4 MB</td>
+                    <td class="numeric-cell">1.2 GB</td>
+                    <td class="numeric-cell">4.5 GB</td>
+                    <td class="numeric-cell">3</td>
+                    <td>1,247</td>
+                    <td>✅ Active</td>
+                    <td>2 hours ago</td>
+                </tr>
+                <tr>
+                    <td>🥈 2</td>
+                    <td class="numeric-cell">1002</td>
+                    <td>12346</td>
+                    <td>def456-ghi789-jkl012</td>
+                    <td style="background: #e3f2fd;"><strong>50.0 GB</strong></td>
+                    <td style="background: #fff3e0;"><strong>38.9 GB</strong></td>
+                    <td style="background: #e8f5e8;"><strong>11.1 GB</strong></td>
+                    <td>77.8%</td>
+                    <td class="numeric-cell">98.7 MB</td>
+                    <td class="numeric-cell">950 MB</td>
+                    <td class="numeric-cell">3.8 GB</td>
+                    <td class="numeric-cell">2</td>
+                    <td>892</td>
+                    <td>✅ Active</td>
+                    <td>1 hour ago</td>
+                </tr>
+                <tr>
+                    <td>🥉 3</td>
+                    <td class="numeric-cell">1003</td>
+                    <td>12347</td>
+                    <td>ghi789-jkl012-mno345</td>
+                    <td style="background: #e3f2fd;"><strong>200.0 GB</strong></td>
+                    <td style="background: #fff3e0;"><strong>145.6 GB</strong></td>
+                    <td style="background: #e8f5e8;"><strong>54.4 GB</strong></td>
+                    <td>72.8%</td>
+                    <td class="numeric-cell">67.3 MB</td>
+                    <td class="numeric-cell">750 MB</td>
+                    <td class="numeric-cell">2.9 GB</td>
+                    <td class="numeric-cell">5</td>
+                    <td>2,103</td>
+                    <td>✅ Active</td>
+                    <td>30 minutes ago</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+        <h3>🎯 Key Improvements:</h3>
+        <ol>
+            <li><strong>Column Order:</strong> Traffic columns now flow logically: Total → Used → Remaining</li>
+            <li><strong>Interactive Headers:</strong> Click any column header to sort (try hovering over them)</li>
+            <li><strong>Visual Indicators:</strong> Sort direction shown with arrows (↑ ↓)</li>
+            <li><strong>Simplified Controls:</strong> Sort dropdown removed - sorting now controlled by table headers</li>
+            <li><strong>Responsive Design:</strong> Maintains mobile-friendly layout</li>
+        </ol>
+    </div>
+    
+    <script>
+        // Demo JavaScript for interactive sorting
+        document.querySelectorAll('.sortable-header').forEach(header => {
+            header.addEventListener('click', function() {
+                // Remove active class from all indicators
+                document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                    indicator.classList.remove('active', 'asc', 'desc');
+                });
+                
+                // Add active class to clicked header
+                const indicator = this.querySelector('.sort-indicator');
+                indicator.classList.add('active');
+                
+                // Toggle between asc and desc
+                if (indicator.classList.contains('asc')) {
+                    indicator.classList.remove('asc');
+                    indicator.classList.add('desc');
+                } else {
+                    indicator.classList.add('asc');
+                }
+                
+                // Show feedback
+                const column = this.dataset.column;
+                const direction = indicator.classList.contains('asc') ? 'ascending' : 'descending';
+                console.log(`Sorting by ${column} in ${direction} order`);
+            });
+        });
+    </script>
+</body>
+</html>
