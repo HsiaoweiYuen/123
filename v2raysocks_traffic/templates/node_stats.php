@@ -835,6 +835,27 @@ $nodeStatsHtml = '
                         aValue = a.last_seen_minutes || 0;
                         bValue = b.last_seen_minutes || 0;
                         break;
+                    case "protocol":
+                        aValue = (a.type || "").toLowerCase();
+                        bValue = (b.type || "").toLowerCase();
+                        break;
+                    case "billing_rate":
+                        aValue = a.count_rate || 1.0;
+                        bValue = b.count_rate || 1.0;
+                        break;
+                    case "excessive_speed_limit":
+                        aValue = (a.excessive_speed_limit || "").toLowerCase();
+                        bValue = (b.excessive_speed_limit || "").toLowerCase();
+                        break;
+                    case "ss_speed_limit":
+                        aValue = (a.speed_limit || "").toLowerCase();
+                        bValue = (b.speed_limit || "").toLowerCase();
+                        break;
+                    case "other_speed_limit":
+                        // For nodes, "other speed limit" is not available from node table
+                        aValue = "";
+                        bValue = "";
+                        break;
                     default:
                         aValue = a.total_traffic || 0;
                         bValue = b.total_traffic || 0;

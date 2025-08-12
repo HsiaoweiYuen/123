@@ -831,8 +831,8 @@ $userRankingsHtml = '
                         bValue = b.transfer_enable || 0;
                         break;
                     case "used_traffic":
-                        aValue = a.period_traffic || 0;
-                        bValue = b.period_traffic || 0;
+                        aValue = a.used_traffic || 0;
+                        bValue = b.used_traffic || 0;
                         break;
                     case "remaining_traffic":
                         aValue = a.remaining_quota || 0;
@@ -869,6 +869,18 @@ $userRankingsHtml = '
                     case "last_active":
                         aValue = a.last_usage || 0;
                         bValue = b.last_usage || 0;
+                        break;
+                    case "excessive_speed_limit":
+                        aValue = (a.excessive_speed_limits || "").toLowerCase();
+                        bValue = (b.excessive_speed_limits || "").toLowerCase();
+                        break;
+                    case "ss_speed_limit":
+                        aValue = (a.speedlimitss || "").toLowerCase();
+                        bValue = (b.speedlimitss || "").toLowerCase();
+                        break;
+                    case "other_speed_limit":
+                        aValue = (a.speedlimitother || "").toLowerCase();
+                        bValue = (b.speedlimitother || "").toLowerCase();
                         break;
                     default:
                         aValue = a.period_traffic || 0;

@@ -2356,6 +2356,26 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             return [];
         }
 
+        // Check if new columns exist in the node table
+        $nodeHasNewFields = true;
+        try {
+            // Try to check if the new columns exist
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'excessive_speed_limit'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
+            
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasCountRate = $stmt->rowCount() > 0;
+            
+            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
+        } catch (\Exception $e) {
+            // If column check fails, assume columns don't exist
+            $nodeHasNewFields = false;
+        }
+
         // Calculate today's date range and short-term time ranges
         $todayStart = $onlyToday ? strtotime('today') : 0;
         $todayEnd = $onlyToday ? strtotime('tomorrow') - 1 : time();
@@ -2364,8 +2384,19 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
+        // Build SQL dynamically based on column existence
+        $additionalColumns = $nodeHasNewFields ? 
+            "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
+             COALESCE(n.speed_limit, '') as speed_limit,
+             COALESCE(n.count_rate, 1.0) as count_rate," : 
+            "'' as excessive_speed_limit,
+             '' as speed_limit,
+             1.0 as count_rate,";
+        
+        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
+
         // Get nodes with traffic data - handle both node ID and name matching
-        $sql = '
+        $sql = "
             SELECT 
                 n.id,
                 n.name,
@@ -2375,10 +2406,8 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 n.max_traffic,
                 n.last_online,
                 n.country,
-                n.type,
-                n.excessive_speed_limit,
-                n.speed_limit,
-                n.count_rate,
+                COALESCE(n.type, '') as type,
+                $additionalColumns
                 COALESCE(SUM(uu.u), 0) as total_upload,
                 COALESCE(SUM(uu.d), 0) as total_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as total_traffic,
@@ -2389,9 +2418,9 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 COUNT(uu.id) as usage_records
             FROM node n
             LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
-                AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != \'DAY\'
-            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type, n.excessive_speed_limit, n.speed_limit, n.count_rate
-        ';
+                AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != 'DAY'
+            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type$groupByAddition
+        ";
 
         // Add sorting
         switch ($sortBy) {
@@ -2514,6 +2543,26 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             return [];
         }
 
+        // Check if new columns exist in the user table  
+        $userHasNewFields = true;
+        try {
+            // Try to check if the new columns exist
+            $checkSql = "SHOW COLUMNS FROM user LIKE 'speedlimitss'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimitSS = $stmt->rowCount() > 0;
+            
+            $checkSql = "SHOW COLUMNS FROM user LIKE 'speedlimitother'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimitOther = $stmt->rowCount() > 0;
+            
+            $userHasNewFields = $hasSpeedLimitSS && $hasSpeedLimitOther;
+        } catch (\Exception $e) {
+            // If column check fails, assume columns don't exist
+            $userHasNewFields = false;
+        }
+
         // Calculate time range
         switch ($timeRange) {
             case 'today':
@@ -2560,8 +2609,17 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
+        // Build SQL dynamically based on column existence
+        $userSpeedLimitColumns = $userHasNewFields ? 
+            "COALESCE(u.speedlimitss, '') as speedlimitss,
+             COALESCE(u.speedlimitother, '') as speedlimitother," : 
+            "'' as speedlimitss,
+             '' as speedlimitother,";
+        
+        $userGroupByAddition = $userHasNewFields ? ", u.speedlimitss, u.speedlimitother" : "";
+
         // Get users with traffic data including short-term traffic and speed limits
-        $sql = '
+        $sql = "
             SELECT 
                 u.id as user_id,
                 u.uuid,
@@ -2572,8 +2630,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.enable,
                 u.created_at,
                 u.remark,
-                u.speedlimitss,
-                u.speedlimitother,
+                $userSpeedLimitColumns
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
@@ -2584,13 +2641,13 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 COUNT(uu.id) as usage_records,
                 MIN(uu.t) as first_usage,
                 MAX(uu.t) as last_usage,
-                GROUP_CONCAT(DISTINCT n.excessive_speed_limit ORDER BY n.excessive_speed_limit) as excessive_speed_limits
+                GROUP_CONCAT(DISTINCT COALESCE(n.excessive_speed_limit, '') ORDER BY n.excessive_speed_limit) as excessive_speed_limits
             FROM user u
             LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
             LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
             WHERE u.enable = 1
-            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark, u.speedlimitss, u.speedlimitother
-        ';
+            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark$userGroupByAddition
+        ";
 
         // Add sorting
         switch ($sortBy) {
