@@ -214,7 +214,7 @@ $userRankingsHtml = '
         }
         .sort-indicator {
             position: absolute;
-            right: 8px;
+            right: 4px;
             top: 50%;
             transform: translateY(-50%);
             font-size: 12px;
@@ -309,16 +309,6 @@ $userRankingsHtml = '
                 width: 100%;
                 margin-bottom: 10px;
                 margin-right: 0 !important;
-            }
-            
-            /* Mobile responsive search controls for user records */
-            .usage-records-section div[style*="background: #f8f9fa"] div[style*="display: flex"] {
-                flex-direction: column !important;
-                gap: 10px !important;
-            }
-            .usage-records-section div[style*="flex: 0 0"] {
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
             }
         }
         
@@ -477,7 +467,7 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('ranking') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 80px;" class="sortable-header" data-sort="service_id">
+                            <th style="min-width: 80px; text-align: right;" class="sortable-header" data-sort="service_id">
                                 ' . v2raysocks_traffic_lang('service_id') . '
                                 <span class="sort-indicator"></span>
                             </th>
@@ -489,39 +479,39 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('uuid') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="total_traffic">
+                            <th style="min-width: 100px; text-align: right;" class="sortable-header" data-sort="total_traffic">
                                 ' . v2raysocks_traffic_lang('total_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
-                                ' . v2raysocks_traffic_lang('used_traffic') . '
+                            <th style="min-width: 100px; text-align: right;" class="sortable-header" data-sort="remaining_traffic">
+                                ' . v2raysocks_traffic_lang('remaining_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="remaining_traffic">
-                                ' . v2raysocks_traffic_lang('remaining_traffic') . '
+                            <th style="min-width: 100px; text-align: right;" class="sortable-header" data-sort="used_traffic">
+                                ' . v2raysocks_traffic_lang('today_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 120px;" class="sortable-header" data-sort="usage_rate">
                                 ' . v2raysocks_traffic_lang('traffic_usage_rate') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_5min">
+                            <th style="min-width: 90px; text-align: right;" class="sortable-header" data-sort="traffic_5min">
                                 ' . v2raysocks_traffic_lang('recent_5min_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_1hour">
+                            <th style="min-width: 90px; text-align: right;" class="sortable-header" data-sort="traffic_1hour">
                                 ' . v2raysocks_traffic_lang('recent_1hour_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_4hour">
+                            <th style="min-width: 90px; text-align: right;" class="sortable-header" data-sort="traffic_4hour">
                                 ' . v2raysocks_traffic_lang('recent_4hour_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 80px;" class="sortable-header" data-sort="used_nodes">
+                            <th style="min-width: 80px; text-align: right;" class="sortable-header" data-sort="used_nodes">
                                 ' . v2raysocks_traffic_lang('used_nodes') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 80px;" class="sortable-header" data-sort="record_count">
+                            <th style="min-width: 80px; text-align: right;" class="sortable-header" data-sort="record_count">
                                 ' . v2raysocks_traffic_lang('record_count') . '
                                 <span class="sort-indicator"></span>
                             </th>
@@ -587,20 +577,6 @@ $userRankingsHtml = '
                 
                 <!-- Unified Usage Records Container -->
                 <div class="usage-records-section" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;">
-                    <!-- Node-based Search Area -->
-                    <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
-                        <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                            <div style="flex: 0 0 200px; min-width: 150px;">
-                                <label for="user-node-search" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('node_search_label') . '</label>
-                                <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                            </div>
-                            <div style="display: flex; gap: 10px;">
-                                <button id="search-user-records" class="btn btn-primary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('search') . '</button>
-                                <button id="clear-user-search" class="btn btn-secondary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('clear') . '</button>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <div class="usage-records-header">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <h4 style="margin: 0;">' . v2raysocks_traffic_lang('traffic_history') . '</h4>
@@ -662,7 +638,7 @@ $userRankingsHtml = '
         let currentUserUsagePage = 1;
         let userUsageRecordsPerPage = 50;
         let totalUserUsagePages = 1;
-        let currentSort = { field: "used_traffic", direction: "desc" };
+        let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
         // Load user rankings on page load
@@ -796,9 +772,12 @@ $userRankingsHtml = '
                         bValue = allUserRankings.indexOf(b) + 1;
                         break;
                     case "service_id":
+                        aValue = parseInt(a.sid) || 0;
+                        bValue = parseInt(b.sid) || 0;
+                        break;
                     case "user_id":
-                        aValue = parseInt(a[currentSort.field]) || 0;
-                        bValue = parseInt(b[currentSort.field]) || 0;
+                        aValue = parseInt(a.user_id) || 0;
+                        bValue = parseInt(b.user_id) || 0;
                         break;
                     case "uuid":
                         aValue = (a.uuid || "").toLowerCase();
@@ -894,9 +873,9 @@ $userRankingsHtml = '
                         <td class="numeric-cell">${user.sid || "N/A"}</td>
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
-                        <td>${formatBytes(user.transfer_enable)}</td>
-                        <td>${formatBytes(user.period_traffic)}</td>
-                        <td>${formatBytes(user.remaining_quota)}</td>
+                        <td class="numeric-cell">${formatBytes(user.transfer_enable)}</td>
+                        <td class="numeric-cell">${formatBytes(user.remaining_quota)}</td>
+                        <td class="numeric-cell">${formatBytes(user.period_traffic)}</td>
                         <td>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: ${utilizationPercent}%"></div>
@@ -907,7 +886,7 @@ $userRankingsHtml = '
                         <td class="numeric-cell">${formatBytes(user.traffic_1hour || 0)}</td>
                         <td class="numeric-cell">${formatBytes(user.traffic_4hour || 0)}</td>
                         <td class="numeric-cell">${user.nodes_used}</td>
-                        <td>${user.usage_records}</td>
+                        <td class="numeric-cell">${user.usage_records}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastUsageText}</td>
                     </tr>
@@ -1159,19 +1138,10 @@ $userRankingsHtml = '
         }
         
         function filterAndUpdateUserUsageRecords() {
-            const nodeSearchTerm = document.getElementById("user-node-search").value.trim().toLowerCase();
-            
+            // No filtering needed since search functionality is removed
             let filteredRecords = allUserUsageRecords;
             
-            // Filter by node name if search term is provided
-            if (nodeSearchTerm) {
-                filteredRecords = allUserUsageRecords.filter(record => {
-                    const nodeName = (record.node_name || `节点 ${record.node}`).toLowerCase();
-                    return nodeName.includes(nodeSearchTerm);
-                });
-            }
-            
-            // Update pagination with filtered data
+            // Update pagination with all data
             updateUserUsagePaginationWithData(filteredRecords);
         }
         
@@ -1515,12 +1485,6 @@ $userRankingsHtml = '
                 return;
             }
             
-            // Get current node search filter value
-            const nodeSearchValue = document.getElementById("user-node-search").value.trim();
-            
-            // Store the search value globally for use in export
-            window.currentUserNodeSearchFilter = nodeSearchValue;
-            
             // Show the enhanced export modal instead of direct export
             document.getElementById("user-export-modal").style.display = "block";
         }
@@ -1639,26 +1603,6 @@ $userRankingsHtml = '
                 updateUserUsagePagination();
             });
             
-            // Node search event handlers
-            $("#search-user-records").on("click", function() {
-                currentUserUsagePage = 1;
-                filterAndUpdateUserUsageRecords();
-            });
-            
-            $("#clear-user-search").on("click", function() {
-                document.getElementById("user-node-search").value = "";
-                currentUserUsagePage = 1;
-                filterAndUpdateUserUsageRecords();
-            });
-            
-            // Enter key support for search
-            $("#user-node-search").on("keypress", function(e) {
-                if (e.which === 13) {
-                    currentUserUsagePage = 1;
-                    filterAndUpdateUserUsageRecords();
-                }
-            });
-            
             // Helper function to get main page time range bounds
             function getMainPageTimeRange() {
                 const timeRange = document.getElementById("time-range").value;
@@ -1734,11 +1678,6 @@ $userRankingsHtml = '
                 // Otherwise, export the user rankings list
                 if (currentUserId) {
                     exportParams = "export_type=usage_records&user_id=" + currentUserId + "&time_range=" + timeRange + "&format=" + format;
-                    
-                    // Add node search filter if available
-                    if (window.currentUserNodeSearchFilter) {
-                        exportParams += "&node_search=" + encodeURIComponent(window.currentUserNodeSearchFilter);
-                    }
                 } else {
                     const limit = document.getElementById("limit").value;
                     exportParams = `export_type=user_rankings&time_range=${timeRange}&sort_by=${currentSort.field}_${currentSort.direction}&limit=${limit}&format=${format}`;

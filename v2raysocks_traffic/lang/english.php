@@ -269,6 +269,7 @@ $_LANG = [
     'used_nodes_count' => 'Used nodes count',
     'recent_activity' => 'Recent activity',
     'used_traffic' => 'Used Traffic',
+    'today_traffic' => 'Today Traffic',
     'remaining_traffic' => 'Remaining Traffic',
     'traffic_usage_rate' => 'Traffic Usage Rate',
     'used_nodes' => 'Used Nodes',

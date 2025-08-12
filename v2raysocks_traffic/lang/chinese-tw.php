@@ -268,6 +268,7 @@ $_LANG = [
     'used_nodes_count' => '使用節點數',
     'recent_activity' => '最近活躍',
     'used_traffic' => '使用流量',
+    'today_traffic' => '今日流量',
     'remaining_traffic' => '剩餘流量',
     'traffic_usage_rate' => '流量使用率',
     'used_nodes' => '使用節點',
