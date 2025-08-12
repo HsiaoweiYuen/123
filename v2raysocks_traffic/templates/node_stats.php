@@ -201,6 +201,40 @@ $nodeStatsHtml = '
         .text-info { color: #17a2b8 !important; }
         .text-primary { color: #007bff !important; }
         
+        /* Sortable table headers */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px !important;
+            transition: background-color 0.2s ease;
+        }
+        .sortable-header:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        .sort-indicator {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #6c757d;
+            opacity: 0.7;
+        }
+        .sortable-header.sort-asc .sort-indicator::after {
+            content: "▲";
+            color: #007bff;
+            opacity: 1;
+        }
+        .sortable-header.sort-desc .sort-indicator::after {
+            content: "▼";
+            color: #007bff;
+            opacity: 1;
+        }
+        .sortable-header:not(.sort-asc):not(.sort-desc) .sort-indicator::after {
+            content: "⇅";
+        }
+        
         /* Chart controls panel */
         .chart-controls-panel .control-group {
             display: flex;
@@ -398,23 +432,74 @@ $nodeStatsHtml = '
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th style="min-width: 60px;">' . v2raysocks_traffic_lang('ranking') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('node_id') . '</th>
-                            <th style="min-width: 160px;">' . v2raysocks_traffic_lang('node_name') . '</th>
-                            <th style="min-width: 200px;">' . v2raysocks_traffic_lang('address') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('total_traffic_limit') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('used_traffic_statistics') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('remaining_traffic') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('today_traffic') . '</th>
-                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('traffic_usage_rate') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_5min_traffic') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_1hour_traffic') . '</th>
-                            <th style="min-width: 90px;">' . v2raysocks_traffic_lang('recent_4hour_traffic') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('user_count') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('record_count') . '</th>
-                            <th style="min-width: 100px;">' . v2raysocks_traffic_lang('country') . '</th>
-                            <th style="min-width: 80px;">' . v2raysocks_traffic_lang('online_status') . '</th>
-                            <th style="min-width: 120px;">' . v2raysocks_traffic_lang('last_online') . '</th>
+                            <th style="min-width: 60px;" class="sortable-header" data-sort="rank">
+                                ' . v2raysocks_traffic_lang('ranking') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 80px;" class="sortable-header" data-sort="node_id">
+                                ' . v2raysocks_traffic_lang('node_id') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 160px;" class="sortable-header" data-sort="node_name">
+                                ' . v2raysocks_traffic_lang('node_name') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 200px;" class="sortable-header" data-sort="address">
+                                ' . v2raysocks_traffic_lang('address') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="total_traffic_limit">
+                                ' . v2raysocks_traffic_lang('total_traffic_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic_statistics">
+                                ' . v2raysocks_traffic_lang('used_traffic_statistics') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="remaining_traffic">
+                                ' . v2raysocks_traffic_lang('remaining_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="today_traffic">
+                                ' . v2raysocks_traffic_lang('today_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 120px;" class="sortable-header" data-sort="traffic_usage_rate">
+                                ' . v2raysocks_traffic_lang('traffic_usage_rate') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_5min">
+                                ' . v2raysocks_traffic_lang('recent_5min_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_1hour">
+                                ' . v2raysocks_traffic_lang('recent_1hour_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 90px;" class="sortable-header" data-sort="traffic_4hour">
+                                ' . v2raysocks_traffic_lang('recent_4hour_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 80px;" class="sortable-header" data-sort="user_count">
+                                ' . v2raysocks_traffic_lang('user_count') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 80px;" class="sortable-header" data-sort="record_count">
+                                ' . v2raysocks_traffic_lang('record_count') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="country">
+                                ' . v2raysocks_traffic_lang('country') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 80px;" class="sortable-header" data-sort="online_status">
+                                ' . v2raysocks_traffic_lang('online_status') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 120px;" class="sortable-header" data-sort="last_online">
+                                ' . v2raysocks_traffic_lang('last_online') . '
+                                <span class="sort-indicator"></span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="rankings-tbody">
@@ -577,10 +662,36 @@ $nodeStatsHtml = '
         let currentNodeUsagePage = 1;
         let nodeUsageRecordsPerPage = 50;
         let totalNodeUsagePages = 1;
+        let currentSort = { field: "today_traffic", direction: "desc" };
+        let allNodeRankings = [];
         
         // Load node rankings on page load
         $(document).ready(function() {
             loadNodeRankings();
+            
+            // Add event listener for sortable headers
+            $(".sortable-header").on("click", function() {
+                const sortField = $(this).data("sort");
+                
+                // Toggle sort direction if clicking the same field
+                if (currentSort.field === sortField) {
+                    currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+                } else {
+                    currentSort.field = sortField;
+                    currentSort.direction = "desc"; // Default to descending for new field
+                }
+                
+                // Update sort indicators
+                updateSortIndicators();
+                
+                // Apply sorting to current data
+                if (allNodeRankings.length > 0) {
+                    sortAndDisplayNodeRankings();
+                } else {
+                    // Load fresh data if no data is cached
+                    loadNodeRankings();
+                }
+            });
         });
         
         function loadNodeRankings() {
@@ -601,7 +712,8 @@ $nodeStatsHtml = '
                             nodes = nodes.filter(node => node.is_online);
                         }
                         
-                        displayNodeRankings(nodes);
+                        allNodeRankings = nodes;
+                        sortAndDisplayNodeRankings();
                     } else {
                         tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
@@ -610,6 +722,114 @@ $nodeStatsHtml = '
                     console.error("Error loading node rankings:", error);
                     tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
+        }
+        
+        function updateSortIndicators() {
+            // Remove all sort indicators
+            $(".sortable-header").removeClass("sort-asc sort-desc");
+            
+            // Add indicator to current sort field
+            $(`.sortable-header[data-sort="${currentSort.field}"]`).addClass(`sort-${currentSort.direction}`);
+        }
+        
+        function sortAndDisplayNodeRankings() {
+            if (!allNodeRankings || allNodeRankings.length === 0) {
+                displayNodeRankings([]);
+                return;
+            }
+            
+            // Sort the data
+            const sortedData = [...allNodeRankings].sort((a, b) => {
+                let aValue, bValue;
+                
+                switch (currentSort.field) {
+                    case "rank":
+                        // For rank, we use the original array index (0-based) + 1
+                        aValue = allNodeRankings.indexOf(a) + 1;
+                        bValue = allNodeRankings.indexOf(b) + 1;
+                        break;
+                    case "node_id":
+                        aValue = parseInt(a.id) || 0;
+                        bValue = parseInt(b.id) || 0;
+                        break;
+                    case "node_name":
+                        aValue = (a.name || "").toLowerCase();
+                        bValue = (b.name || "").toLowerCase();
+                        break;
+                    case "address":
+                        aValue = (a.address || "").toLowerCase();
+                        bValue = (b.address || "").toLowerCase();
+                        break;
+                    case "total_traffic_limit":
+                        aValue = a.max_traffic || 0;
+                        bValue = b.max_traffic || 0;
+                        break;
+                    case "used_traffic_statistics":
+                        aValue = a.statistics || 0;
+                        bValue = b.statistics || 0;
+                        break;
+                    case "remaining_traffic":
+                        aValue = a.remaining_traffic || 0;
+                        bValue = b.remaining_traffic || 0;
+                        break;
+                    case "today_traffic":
+                        aValue = a.total_traffic || 0;
+                        bValue = b.total_traffic || 0;
+                        break;
+                    case "traffic_usage_rate":
+                        aValue = a.traffic_utilization || 0;
+                        bValue = b.traffic_utilization || 0;
+                        break;
+                    case "traffic_5min":
+                        aValue = a.traffic_5min || 0;
+                        bValue = b.traffic_5min || 0;
+                        break;
+                    case "traffic_1hour":
+                        aValue = a.traffic_1hour || 0;
+                        bValue = b.traffic_1hour || 0;
+                        break;
+                    case "traffic_4hour":
+                        aValue = a.traffic_4hour || 0;
+                        bValue = b.traffic_4hour || 0;
+                        break;
+                    case "user_count":
+                        aValue = a.unique_users || 0;
+                        bValue = b.unique_users || 0;
+                        break;
+                    case "record_count":
+                        aValue = a.usage_records || 0;
+                        bValue = b.usage_records || 0;
+                        break;
+                    case "country":
+                        aValue = (a.country || "").toLowerCase();
+                        bValue = (b.country || "").toLowerCase();
+                        break;
+                    case "online_status":
+                        aValue = a.is_online ? 1 : 0;
+                        bValue = b.is_online ? 1 : 0;
+                        break;
+                    case "last_online":
+                        aValue = a.last_seen_minutes || 0;
+                        bValue = b.last_seen_minutes || 0;
+                        break;
+                    default:
+                        aValue = a.total_traffic || 0;
+                        bValue = b.total_traffic || 0;
+                }
+                
+                // Handle string comparisons
+                if (typeof aValue === "string" && typeof bValue === "string") {
+                    return currentSort.direction === "asc" ? 
+                        aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                }
+                
+                // Handle numeric comparisons
+                return currentSort.direction === "asc" ? 
+                    (aValue - bValue) : (bValue - aValue);
+            });
+            
+            displayNodeRankings(sortedData);
+            updateSortIndicators();
         }
         
         function displayNodeRankings(nodes) {
@@ -667,6 +887,11 @@ $nodeStatsHtml = '
         
         function showNodeDetails(nodeId) {
             currentNodeId = nodeId;
+            
+            // Find the node name from the current data
+            const nodeData = allNodeRankings.find(node => node.id == nodeId);
+            currentNodeName = nodeData ? nodeData.name : null;
+            
             const modal = document.getElementById("node-modal");
             const nodeInfo = document.getElementById("node-info");
             const recordsTbody = document.getElementById("node-records-tbody");
@@ -1396,7 +1621,10 @@ $nodeStatsHtml = '
                 const exportType = $("input[name=\'node_export_type\']:checked").val();
                 const format = $("#node_export_format").val();
                 
-                let exportParams = `export_type=node_rankings&sort_by=${sortBy}&only_today=true&show_offline=${showOffline}&format=${format}`;
+                // Use current sorting state instead of just dropdown
+                const currentSortParam = `${currentSort.field}_${currentSort.direction}`;
+                
+                let exportParams = `export_type=node_rankings&sort_by=${currentSortParam}&only_today=true&show_offline=${showOffline}&format=${format}`;
                 
                 // Add specific export options
                 if (exportType === "limited") {
