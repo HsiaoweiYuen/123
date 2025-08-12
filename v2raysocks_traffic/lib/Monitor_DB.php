@@ -2356,25 +2356,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             return [];
         }
 
-        // Check if new columns exist in the node table
-        $nodeHasNewFields = true;
-        try {
-            // Try to check if the new columns exist
-            $checkSql = "SHOW COLUMNS FROM node LIKE 'excessive_speed_limit'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
-            
-            $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasCountRate = $stmt->rowCount() > 0;
-            
-            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
-        } catch (\Exception $e) {
-            // If column check fails, assume columns don't exist
-            $nodeHasNewFields = false;
-        }
+
 
         // Calculate today's date range and short-term time ranges
         $todayStart = $onlyToday ? strtotime('today') : 0;
@@ -2383,17 +2365,6 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         $time5min = $currentTime - 300;     // 5 minutes ago
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
-
-        // Build SQL dynamically based on column existence
-        $additionalColumns = $nodeHasNewFields ? 
-            "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
-             COALESCE(n.speed_limit, '') as speed_limit,
-             COALESCE(n.count_rate, 1.0) as count_rate," : 
-            "'' as excessive_speed_limit,
-             '' as speed_limit,
-             1.0 as count_rate,";
-        
-        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
 
         // Get nodes with traffic data - handle both node ID and name matching
         $sql = "
@@ -2407,7 +2378,9 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 n.last_online,
                 n.country,
                 COALESCE(n.type, '') as type,
-                $additionalColumns
+                COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
+                COALESCE(n.speed_limit, '') as speed_limit,
+                COALESCE(n.count_rate, 1.0) as count_rate,
                 COALESCE(SUM(uu.u), 0) as total_upload,
                 COALESCE(SUM(uu.d), 0) as total_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as total_traffic,
@@ -2419,7 +2392,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             FROM node n
             LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
                 AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != 'DAY'
-            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type$groupByAddition
+            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type, n.excessive_speed_limit, n.speed_limit, n.count_rate
         ";
 
         // Add sorting
@@ -2543,25 +2516,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             return [];
         }
 
-        // Check if new columns exist in the user table  
-        $userHasNewFields = true;
-        try {
-            // Try to check if the new columns exist
-            $checkSql = "SHOW COLUMNS FROM user LIKE 'speedlimitss'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasSpeedLimitSS = $stmt->rowCount() > 0;
-            
-            $checkSql = "SHOW COLUMNS FROM user LIKE 'speedlimitother'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasSpeedLimitOther = $stmt->rowCount() > 0;
-            
-            $userHasNewFields = $hasSpeedLimitSS && $hasSpeedLimitOther;
-        } catch (\Exception $e) {
-            // If column check fails, assume columns don't exist
-            $userHasNewFields = false;
-        }
+
 
         // Calculate time range
         switch ($timeRange) {
