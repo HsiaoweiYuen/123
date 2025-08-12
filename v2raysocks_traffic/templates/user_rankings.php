@@ -496,6 +496,10 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('total_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
+                                ' . v2raysocks_traffic_lang('used_traffic') . '
+                                <span class="sort-indicator"></span>
+                            </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="remaining_traffic">
                                 ' . v2raysocks_traffic_lang('remaining_traffic') . '
                                 <span class="sort-indicator"></span>
@@ -524,6 +528,18 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('used_nodes') . '
                                 <span class="sort-indicator"></span>
                             </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="excessive_speed_limit">
+                                ' . v2raysocks_traffic_lang('excessive_speed_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="ss_speed_limit">
+                                ' . v2raysocks_traffic_lang('ss_speed_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="other_speed_limit">
+                                ' . v2raysocks_traffic_lang('other_speed_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
                             <th style="min-width: 80px;" class="sortable-header" data-sort="record_count">
                                 ' . v2raysocks_traffic_lang('record_count') . '
                                 <span class="sort-indicator"></span>
@@ -540,7 +556,7 @@ $userRankingsHtml = '
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="15" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
+                            <td colspan="19" class="loading">' . v2raysocks_traffic_lang('user_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -878,7 +894,7 @@ $userRankingsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!users || users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="15" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="19" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
@@ -901,6 +917,7 @@ $userRankingsHtml = '
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
                         <td>${formatBytes(user.transfer_enable)}</td>
+                        <td>${formatBytes(user.used_traffic || 0)}</td>
                         <td>${formatBytes(user.remaining_quota)}</td>
                         <td>${formatBytes(user.period_traffic)}</td>
                         <td>
@@ -913,6 +930,9 @@ $userRankingsHtml = '
                         <td class="numeric-cell">${formatBytes(user.traffic_1hour || 0)}</td>
                         <td class="numeric-cell">${formatBytes(user.traffic_4hour || 0)}</td>
                         <td class="numeric-cell">${user.nodes_used}</td>
+                        <td>${user.excessive_speed_limits || "-"}</td>
+                        <td>${user.speedlimitss || "-"}</td>
+                        <td>${user.speedlimitother || "-"}</td>
                         <td>${user.usage_records}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastUsageText}</td>

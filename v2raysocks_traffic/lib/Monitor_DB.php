@@ -2376,6 +2376,9 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 n.last_online,
                 n.country,
                 n.type,
+                n.excessive_speed_limit,
+                n.speed_limit,
+                n.count_rate,
                 COALESCE(SUM(uu.u), 0) as total_upload,
                 COALESCE(SUM(uu.d), 0) as total_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as total_traffic,
@@ -2387,7 +2390,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             FROM node n
             LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
                 AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != \'DAY\'
-            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type
+            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type, n.excessive_speed_limit, n.speed_limit, n.count_rate
         ';
 
         // Add sorting
@@ -2440,6 +2443,12 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $node['max_traffic'] = floatval($node['max_traffic']);
             $node['statistics'] = floatval($node['statistics']);
             $node['last_online'] = intval($node['last_online']);
+            
+            // New fields processing
+            $node['type'] = $node['type'] ?? ''; // Protocol field
+            $node['excessive_speed_limit'] = $node['excessive_speed_limit'] ?? '';
+            $node['speed_limit'] = $node['speed_limit'] ?? '';
+            $node['count_rate'] = floatval($node['count_rate'] ?? 1.0); // Billing rate
             
             // Calculate remaining traffic using database statistics field (actual cumulative usage)
             $maxTrafficBytes = $node['max_traffic'] * 1000000000; // Convert GB to bytes
@@ -2551,7 +2560,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
-        // Get users with traffic data including short-term traffic
+        // Get users with traffic data including short-term traffic and speed limits
         $sql = '
             SELECT 
                 u.id as user_id,
@@ -2563,6 +2572,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.enable,
                 u.created_at,
                 u.remark,
+                u.speedlimitss,
+                u.speedlimitother,
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
@@ -2572,11 +2583,13 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 COUNT(DISTINCT uu.node) as nodes_used,
                 COUNT(uu.id) as usage_records,
                 MIN(uu.t) as first_usage,
-                MAX(uu.t) as last_usage
+                MAX(uu.t) as last_usage,
+                GROUP_CONCAT(DISTINCT n.excessive_speed_limit ORDER BY n.excessive_speed_limit) as excessive_speed_limits
             FROM user u
             LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
+            LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
             WHERE u.enable = 1
-            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark
+            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark, u.speedlimitss, u.speedlimitother
         ';
 
         // Add sorting
@@ -2633,8 +2646,14 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['first_usage'] = intval($user['first_usage']);
             $user['last_usage'] = intval($user['last_usage']);
             
-            // Calculate remaining quota
+            // Speed limit fields
+            $user['speedlimitss'] = $user['speedlimitss'] ?? '';
+            $user['speedlimitother'] = $user['speedlimitother'] ?? '';
+            $user['excessive_speed_limits'] = $user['excessive_speed_limits'] ?? '';
+            
+            // Calculate remaining quota and used traffic
             $totalUsed = $user['total_upload_user'] + $user['total_download_user'];
+            $user['used_traffic'] = $totalUsed; // Total used traffic from user table
             $user['remaining_quota'] = max(0, $user['transfer_enable'] - $totalUsed);
             $user['quota_utilization'] = $user['transfer_enable'] > 0 ? ($totalUsed / $user['transfer_enable']) * 100 : 0;
             
