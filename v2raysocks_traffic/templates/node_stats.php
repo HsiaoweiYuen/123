@@ -840,12 +840,12 @@ $nodeStatsHtml = '
                         bValue = b.count_rate || 1.0;
                         break;
                     case "excessive_speed_limit":
-                        aValue = (a.excessive_speed_limit || "").toLowerCase();
-                        bValue = (b.excessive_speed_limit || "").toLowerCase();
+                        aValue = parseInt(a.excessive_speed_limit) || 0;
+                        bValue = parseInt(b.excessive_speed_limit) || 0;
                         break;
                     case "node_speed_limit":
-                        aValue = (a.speed_limit || "").toLowerCase();
-                        bValue = (b.speed_limit || "").toLowerCase();
+                        aValue = parseInt(a.speed_limit) || 0;
+                        bValue = parseInt(b.speed_limit) || 0;
                         break;
                     default:
                         aValue = a.total_traffic || 0;
@@ -912,8 +912,8 @@ $nodeStatsHtml = '
                         <td>${node.count_rate || "1.0"}x</td>
                         <td>${node.unique_users}</td>
                         <td>${node.usage_records}</td>
-                        <td>${node.excessive_speed_limit || "-"}</td>
-                        <td>${node.speed_limit || "-"}</td>
+                        <td>${node.excessive_speed_limit > 0 ? node.excessive_speed_limit + " Mbps" : "-"}</td>
+                        <td>${node.speed_limit > 0 ? node.speed_limit + " Mbps" : "-"}</td>
                         <td>${node.country || "N/A"}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastSeenText}</td>

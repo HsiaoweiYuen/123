@@ -2356,24 +2356,40 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             return [];
         }
 
-        // Check if new columns exist in the node table
-        $nodeHasNewFields = true;
+        // Check if speed limit and billing rate columns exist in the node table
+        $hasSpeedLimit = false;
+        $hasExcessiveSpeedLimit = false;
+        $hasCountRate = false;
+        
         try {
-            // Try to check if the new columns exist
+            // Check for speed_limit column
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'speed_limit'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimit = $stmt->rowCount() > 0;
+            
+            // Check for excessive_speed_limit column
             $checkSql = "SHOW COLUMNS FROM node LIKE 'excessive_speed_limit'";
             $stmt = $pdo->prepare($checkSql);
             $stmt->execute();
             $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
             
+            // Check for count_rate column (traffic_rate in some versions)
             $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
             $stmt = $pdo->prepare($checkSql);
             $stmt->execute();
             $hasCountRate = $stmt->rowCount() > 0;
             
-            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
+            // If count_rate doesn't exist, check for traffic_rate as fallback
+            if (!$hasCountRate) {
+                $checkSql = "SHOW COLUMNS FROM node LIKE 'traffic_rate'";
+                $stmt = $pdo->prepare($checkSql);
+                $stmt->execute();
+                $hasCountRate = $stmt->rowCount() > 0;
+            }
         } catch (\Exception $e) {
             // If column check fails, assume columns don't exist
-            $nodeHasNewFields = false;
+            logActivity("V2RaySocks Traffic Monitor: Column check failed: " . $e->getMessage(), 0);
         }
 
         // Calculate today's date range and short-term time ranges
@@ -2384,16 +2400,22 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
-        // Build SQL dynamically based on column existence
-        $additionalColumns = $nodeHasNewFields ? 
-            "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
-             COALESCE(n.speed_limit, '') as speed_limit,
-             COALESCE(n.count_rate, 1.0) as count_rate," : 
-            "'' as excessive_speed_limit,
-             '' as speed_limit,
-             1.0 as count_rate,";
+        // Build SQL dynamically based on individual column existence
+        $speedLimitColumn = $hasSpeedLimit ? "COALESCE(n.speed_limit, 0) as speed_limit," : "0 as speed_limit,";
+        $excessiveSpeedLimitColumn = $hasExcessiveSpeedLimit ? "COALESCE(n.excessive_speed_limit, 0) as excessive_speed_limit," : "0 as excessive_speed_limit,";
+        $countRateColumn = $hasCountRate ? "COALESCE(n.count_rate, 1.0) as count_rate," : "1.0 as count_rate,";
         
-        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
+        // Build GROUP BY clause with available columns
+        $groupByFields = "n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type";
+        if ($hasSpeedLimit) {
+            $groupByFields .= ", n.speed_limit";
+        }
+        if ($hasExcessiveSpeedLimit) {
+            $groupByFields .= ", n.excessive_speed_limit";
+        }
+        if ($hasCountRate) {
+            $groupByFields .= ", n.count_rate";
+        }
 
         // Get nodes with traffic data - handle both node ID and name matching
         $sql = "
@@ -2407,7 +2429,9 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
                 n.last_online,
                 n.country,
                 COALESCE(n.type, '') as type,
-                $additionalColumns
+                $speedLimitColumn
+                $excessiveSpeedLimitColumn
+                $countRateColumn
                 COALESCE(SUM(uu.u), 0) as total_upload,
                 COALESCE(SUM(uu.d), 0) as total_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as total_traffic,
@@ -2419,7 +2443,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             FROM node n
             LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
                 AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != 'DAY'
-            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type$groupByAddition
+            GROUP BY $groupByFields
         ";
 
         // Add sorting
@@ -2475,8 +2499,8 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             
             // New fields processing
             $node['type'] = $node['type'] ?? ''; // Protocol field
-            $node['excessive_speed_limit'] = $node['excessive_speed_limit'] ?? '';
-            $node['speed_limit'] = $node['speed_limit'] ?? '';
+            $node['excessive_speed_limit'] = intval($node['excessive_speed_limit'] ?? 0);
+            $node['speed_limit'] = intval($node['speed_limit'] ?? 0);
             $node['count_rate'] = floatval($node['count_rate'] ?? 1.0); // Billing rate
             
             // Calculate remaining traffic using database statistics field (actual cumulative usage)
