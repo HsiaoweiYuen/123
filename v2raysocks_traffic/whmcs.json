@@ -21,14 +21,14 @@
     },
     "support": {
         "homepage": "https://helloblock.net/",
-        "support_url": "https://helloblock.net.com/", 
+        "support_url": "https://helloblock.net/", 
         "email": "hsiaoweiyuen@gmail.com",
-        "docs_url": "https://helloblock.net.com/"
+        "docs_url": "https://helloblock.net/"
     },
     "authors": [
         {
             "name": "HelloBlock",
-            "homepage": "https://helloblock.net.com/"
+            "homepage": "https://helloblock.net/"
         }
     ]
 }
