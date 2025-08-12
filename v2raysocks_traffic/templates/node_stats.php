@@ -515,7 +515,7 @@ $nodeStatsHtml = '
                                 ' . v2raysocks_traffic_lang('country') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 80px;" class="sortable-header" data-sort="online_status">
+                            <th style="min-width: 80px; white-space: nowrap;" class="sortable-header" data-sort="online_status">
                                 ' . v2raysocks_traffic_lang('online_status') . '
                                 <span class="sort-indicator"></span>
                             </th>

@@ -2609,16 +2609,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
-        // Build SQL dynamically based on column existence
-        $userSpeedLimitColumns = $userHasNewFields ? 
-            "COALESCE(u.speedlimitss, '') as speedlimitss,
-             COALESCE(u.speedlimitother, '') as speedlimitother," : 
-            "'' as speedlimitss,
-             '' as speedlimitother,";
-        
-        $userGroupByAddition = $userHasNewFields ? ", u.speedlimitss, u.speedlimitother" : "";
-
-        // Get users with traffic data including short-term traffic and speed limits
+        // Build SQL with node speed limits instead of user speed limits
         $sql = "
             SELECT 
                 u.id as user_id,
@@ -2630,7 +2621,6 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.enable,
                 u.created_at,
                 u.remark,
-                $userSpeedLimitColumns
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
@@ -2641,12 +2631,13 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 COUNT(uu.id) as usage_records,
                 MIN(uu.t) as first_usage,
                 MAX(uu.t) as last_usage,
-                GROUP_CONCAT(DISTINCT COALESCE(n.excessive_speed_limit, '') ORDER BY n.excessive_speed_limit) as excessive_speed_limits
+                GROUP_CONCAT(DISTINCT COALESCE(n.speed_limit, '') ORDER BY n.speed_limit) as speedlimitss,
+                GROUP_CONCAT(DISTINCT COALESCE(n.excessive_speed_limit, '') ORDER BY n.excessive_speed_limit) as speedlimitother
             FROM user u
             LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
             LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
             WHERE u.enable = 1
-            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark$userGroupByAddition
+            GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark
         ";
 
         // Add sorting
@@ -2703,10 +2694,9 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['first_usage'] = intval($user['first_usage']);
             $user['last_usage'] = intval($user['last_usage']);
             
-            // Speed limit fields
+            // Speed limit fields from node aggregation
             $user['speedlimitss'] = $user['speedlimitss'] ?? '';
             $user['speedlimitother'] = $user['speedlimitother'] ?? '';
-            $user['excessive_speed_limits'] = $user['excessive_speed_limits'] ?? '';
             
             // Calculate remaining quota and used traffic
             $totalUsed = $user['total_upload_user'] + $user['total_download_user'];
