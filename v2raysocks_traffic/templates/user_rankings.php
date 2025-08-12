@@ -768,7 +768,7 @@ $userRankingsHtml = '
             const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
             const tbody = document.getElementById("rankings-tbody");
-            tbody.innerHTML = `<tr><td colspan="14" class="loading">${t("loading_user_rankings")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="18" class="loading">${t("loading_user_rankings")}</td></tr>`;
             
             fetch(url)
                 .then(response => response.json())
@@ -777,12 +777,12 @@ $userRankingsHtml = '
                         allUserRankings = data.data || [];
                         sortAndDisplayUserRankings();
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="14" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading user rankings:", error);
-                    tbody.innerHTML = `<tr><td colspan="14" class="no-data">${t("network_error_retry")}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
         }
         
