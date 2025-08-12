@@ -272,8 +272,7 @@ $_LANG = [
     'remaining_traffic' => 'Remaining Traffic',
     'traffic_usage_rate' => 'Traffic Usage Rate',
     'used_nodes' => 'Used Nodes',
-    'excessive_speed_limit' => 'Excessive Speed Limit',
-    'node_speed_limit' => 'Node Speed Limit',
+
     'ss_speed_limit' => 'SS Speed Limit',
     'other_speed_limit' => 'Other Speed Limit',
     'record_count' => 'Record Count',

@@ -271,8 +271,7 @@ $_LANG = [
     'remaining_traffic' => '剩余流量',
     'traffic_usage_rate' => '流量使用率',
     'used_nodes' => '使用节点',
-    'excessive_speed_limit' => '达量限速',
-    'node_speed_limit' => '节点限速',
+
     'ss_speed_limit' => 'SS限速',
     'other_speed_limit' => '其他限速',
     'record_count' => '记录数',
