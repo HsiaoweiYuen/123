@@ -447,6 +447,10 @@ $nodeStatsHtml = '
                                 ' . v2raysocks_traffic_lang('node_name') . '
                                 <span class="sort-indicator"></span>
                             </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="protocol">
+                                ' . v2raysocks_traffic_lang('protocol') . '
+                                <span class="sort-indicator"></span>
+                            </th>
                             <th style="min-width: 200px;" class="sortable-header" data-sort="address">
                                 ' . v2raysocks_traffic_lang('address') . '
                                 <span class="sort-indicator"></span>
@@ -483,12 +487,28 @@ $nodeStatsHtml = '
                                 ' . v2raysocks_traffic_lang('recent_4hour_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="billing_rate">
+                                ' . v2raysocks_traffic_lang('billing_rate') . '
+                                <span class="sort-indicator"></span>
+                            </th>
                             <th style="min-width: 80px;" class="sortable-header" data-sort="user_count">
                                 ' . v2raysocks_traffic_lang('user_count') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 80px;" class="sortable-header" data-sort="record_count">
                                 ' . v2raysocks_traffic_lang('record_count') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="excessive_speed_limit">
+                                ' . v2raysocks_traffic_lang('excessive_speed_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="ss_speed_limit">
+                                ' . v2raysocks_traffic_lang('ss_speed_limit') . '
+                                <span class="sort-indicator"></span>
+                            </th>
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="other_speed_limit">
+                                ' . v2raysocks_traffic_lang('other_speed_limit') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="country">
@@ -507,7 +527,7 @@ $nodeStatsHtml = '
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="17" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
+                            <td colspan="22" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -815,6 +835,27 @@ $nodeStatsHtml = '
                         aValue = a.last_seen_minutes || 0;
                         bValue = b.last_seen_minutes || 0;
                         break;
+                    case "protocol":
+                        aValue = (a.type || "").toLowerCase();
+                        bValue = (b.type || "").toLowerCase();
+                        break;
+                    case "billing_rate":
+                        aValue = a.count_rate || 1.0;
+                        bValue = b.count_rate || 1.0;
+                        break;
+                    case "excessive_speed_limit":
+                        aValue = (a.excessive_speed_limit || "").toLowerCase();
+                        bValue = (b.excessive_speed_limit || "").toLowerCase();
+                        break;
+                    case "ss_speed_limit":
+                        aValue = (a.speed_limit || "").toLowerCase();
+                        bValue = (b.speed_limit || "").toLowerCase();
+                        break;
+                    case "other_speed_limit":
+                        // For nodes, "other speed limit" is not available from node table
+                        aValue = "";
+                        bValue = "";
+                        break;
                     default:
                         aValue = a.total_traffic || 0;
                         bValue = b.total_traffic || 0;
@@ -839,7 +880,7 @@ $nodeStatsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!nodes || nodes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="17" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="22" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
@@ -862,6 +903,7 @@ $nodeStatsHtml = '
                         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
                         <td>${node.id}</td>
                         <td title="${node.name}">${node.name}</td>
+                        <td>${node.type || "-"}</td>
                         <td title="${node.address}">${node.address ? (node.address.length > 40 ? node.address.substring(0, 40) + "..." : node.address) : "N/A"}</td>
                         <td>${formatBytes(node.max_traffic * 1000000000)}</td>
                         <td>${formatBytes(node.statistics)}</td>
@@ -876,8 +918,12 @@ $nodeStatsHtml = '
                         <td class="numeric-cell">${formatBytes(node.traffic_5min || 0)}</td>
                         <td class="numeric-cell">${formatBytes(node.traffic_1hour || 0)}</td>
                         <td class="numeric-cell">${formatBytes(node.traffic_4hour || 0)}</td>
+                        <td>${node.count_rate || "1.0"}x</td>
                         <td>${node.unique_users}</td>
                         <td>${node.usage_records}</td>
+                        <td>${node.excessive_speed_limit || "-"}</td>
+                        <td>${node.speed_limit || "-"}</td>
+                        <td>-</td>
                         <td>${node.country || "N/A"}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastSeenText}</td>
