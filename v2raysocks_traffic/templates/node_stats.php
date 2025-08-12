@@ -503,7 +503,7 @@ $nodeStatsHtml = '
                                 ' . v2raysocks_traffic_lang('excessive_speed_limit') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="node_speed_limit">
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="speed_limit">
                                 ' . v2raysocks_traffic_lang('node_speed_limit') . '
                                 <span class="sort-indicator"></span>
                             </th>
@@ -523,7 +523,7 @@ $nodeStatsHtml = '
                     </thead>
                     <tbody id="rankings-tbody">
                         <tr>
-                            <td colspan="20" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
+                            <td colspan="21" class="loading">' . v2raysocks_traffic_lang('node_rankings_loading') . '</td>
                         </tr>
                     </tbody>
                 </table>
@@ -718,7 +718,7 @@ $nodeStatsHtml = '
             const showOffline = document.getElementById("show-offline").value === "true";
             
             const tbody = document.getElementById("rankings-tbody");
-            tbody.innerHTML = `<tr><td colspan="20" class="loading">${t("loading_node_rankings")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="21" class="loading">${t("loading_node_rankings")}</td></tr>`;
             
             fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
                 .then(response => response.json())
@@ -734,12 +734,12 @@ $nodeStatsHtml = '
                         allNodeRankings = nodes;
                         sortAndDisplayNodeRankings();
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="20" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="21" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading node rankings:", error);
-                    tbody.innerHTML = `<tr><td colspan="20" class="no-data">${t("network_error_retry")}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="21" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
         }
         
@@ -843,7 +843,7 @@ $nodeStatsHtml = '
                         aValue = (a.excessive_speed_limit || "").toLowerCase();
                         bValue = (b.excessive_speed_limit || "").toLowerCase();
                         break;
-                    case "node_speed_limit":
+                    case "speed_limit":
                         aValue = (a.speed_limit || "").toLowerCase();
                         bValue = (b.speed_limit || "").toLowerCase();
                         break;
@@ -871,7 +871,7 @@ $nodeStatsHtml = '
             const tbody = document.getElementById("rankings-tbody");
             
             if (!nodes || nodes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="20" class="no-data">${t("no_data")}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="21" class="no-data">${t("no_data")}</td></tr>`;
                 return;
             }
             
