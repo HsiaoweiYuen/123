@@ -2356,26 +2356,6 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             return [];
         }
 
-        // Check if new columns exist in the node table
-        $nodeHasNewFields = true;
-        try {
-            // Try to check if the new columns exist
-            $checkSql = "SHOW COLUMNS FROM node LIKE 'excessive_speed_limit'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
-            
-            $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute();
-            $hasCountRate = $stmt->rowCount() > 0;
-            
-            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
-        } catch (\Exception $e) {
-            // If column check fails, assume columns don't exist
-            $nodeHasNewFields = false;
-        }
-
         // Calculate today's date range and short-term time ranges
         $todayStart = $onlyToday ? strtotime('today') : 0;
         $todayEnd = $onlyToday ? strtotime('tomorrow') - 1 : time();
@@ -2384,16 +2364,12 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         $time1hour = $currentTime - 3600;   // 1 hour ago  
         $time4hour = $currentTime - 14400;  // 4 hours ago
 
-        // Build SQL dynamically based on column existence
-        $additionalColumns = $nodeHasNewFields ? 
-            "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
+        // Use direct COALESCE approach like user rankings (simpler and more reliable)
+        $additionalColumns = "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
              COALESCE(n.speed_limit, '') as speed_limit,
-             COALESCE(n.count_rate, 1.0) as count_rate," : 
-            "'' as excessive_speed_limit,
-             '' as speed_limit,
-             1.0 as count_rate,";
+             COALESCE(n.count_rate, 1.0) as count_rate,";
         
-        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
+        $groupByAddition = ", n.excessive_speed_limit, n.speed_limit, n.count_rate";
 
         // Get nodes with traffic data - handle both node ID and name matching
         $sql = "
