@@ -17,9 +17,9 @@ function v2raysocks_traffic_config()
     return [
         'name' => isset($lang['module_name']) ? $lang['module_name'] : 'V2RaySocks Traffic Analysis',
         'description' => isset($lang['module_description']) ? $lang['module_description'] : 'Real-time traffic analysis and analytics for V2RaySocks',
-        'author' => 'doxtex.com',
+        'author' => 'helloblock.net',
         'language' => 'english',
-        'version' => '2025-01-01',
+        'version' => '1.0.1',
         'fields' => [
             'language' => [
                 'FriendlyName' => isset($lang['interface_language']) ? $lang['interface_language'] : 'Interface Language',
