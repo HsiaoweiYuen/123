@@ -2386,11 +2386,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
 
         // Build SQL dynamically based on column existence
         $additionalColumns = $nodeHasNewFields ? 
-            "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
-             COALESCE(n.speed_limit, '') as speed_limit,
+            "COALESCE(n.excessive_speed_limit, 0) as excessive_speed_limit,
+             n.speed_limit as speed_limit,
              COALESCE(n.count_rate, 1.0) as count_rate," : 
-            "'' as excessive_speed_limit,
-             '' as speed_limit,
+            "0 as excessive_speed_limit,
+             NULL as speed_limit,
              1.0 as count_rate,";
         
         $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
@@ -2475,8 +2475,8 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             
             // New fields processing
             $node['type'] = $node['type'] ?? ''; // Protocol field
-            $node['excessive_speed_limit'] = $node['excessive_speed_limit'] ?? '';
-            $node['speed_limit'] = $node['speed_limit'] ?? '';
+            $node['excessive_speed_limit'] = $node['excessive_speed_limit'] !== null ? intval($node['excessive_speed_limit']) : 0;
+            $node['speed_limit'] = $node['speed_limit'] !== null ? intval($node['speed_limit']) : null;
             $node['count_rate'] = floatval($node['count_rate'] ?? 1.0); // Billing rate
             
             // Calculate remaining traffic using database statistics field (actual cumulative usage)
@@ -2621,8 +2621,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 u.enable,
                 u.created_at,
                 u.remark,
-                COALESCE(u.speedlimitss, '') as speedlimitss,
-                COALESCE(u.speedlimitother, '') as speedlimitother,
+                COALESCE(u.speedlimitss, NULL) as speedlimitss,
+                COALESCE(u.speedlimitother, NULL) as speedlimitother,
                 COALESCE(SUM(uu.u), 0) as period_upload,
                 COALESCE(SUM(uu.d), 0) as period_download,
                 COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
@@ -2694,8 +2694,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['last_usage'] = intval($user['last_usage']);
             
             // Speed limit fields from user table
-            $user['speedlimitss'] = $user['speedlimitss'] ?? '';
-            $user['speedlimitother'] = $user['speedlimitother'] ?? '';
+            $user['speedlimitss'] = $user['speedlimitss'] !== null ? intval($user['speedlimitss']) : null;
+            $user['speedlimitother'] = $user['speedlimitother'] !== null ? intval($user['speedlimitother']) : null;
             
             // Calculate remaining quota and used traffic
             $totalUsed = $user['total_upload_user'] + $user['total_download_user'];

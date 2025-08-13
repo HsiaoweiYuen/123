@@ -820,12 +820,12 @@ $nodeStatsHtml = '
                         bValue = b.usage_records || 0;
                         break;
                     case "excessive_speed_limit":
-                        aValue = (a.excessive_speed_limit || "").toLowerCase();
-                        bValue = (b.excessive_speed_limit || "").toLowerCase();
+                        aValue = a.excessive_speed_limit !== null ? a.excessive_speed_limit : -1;
+                        bValue = b.excessive_speed_limit !== null ? b.excessive_speed_limit : -1;
                         break;
                     case "speed_limit":
-                        aValue = (a.speed_limit || "").toLowerCase();
-                        bValue = (b.speed_limit || "").toLowerCase();
+                        aValue = a.speed_limit !== null ? a.speed_limit : -1;
+                        bValue = b.speed_limit !== null ? b.speed_limit : -1;
                         break;
                     case "country":
                         aValue = (a.country || "").toLowerCase();
@@ -913,8 +913,8 @@ $nodeStatsHtml = '
                         <td>${node.count_rate || "1.0"}x</td>
                         <td>${node.unique_users}</td>
                         <td>${node.usage_records}</td>
-                        <td>${node.excessive_speed_limit || "-"}</td>
-                        <td>${node.speed_limit || "-"}</td>
+                        <td>${node.excessive_speed_limit !== null ? node.excessive_speed_limit : "-"}</td>
+                        <td>${node.speed_limit !== null ? node.speed_limit : "-"}</td>
                         <td>${node.country || "N/A"}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td>${lastSeenText}</td>
