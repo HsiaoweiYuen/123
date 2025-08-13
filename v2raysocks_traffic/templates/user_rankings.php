@@ -295,7 +295,6 @@ $userRankingsHtml = '
                 margin-left: 8px;
             }
             .chart-container {
-                height: 300px;
                 padding: 10px;
             }
             .usage-records-section {
