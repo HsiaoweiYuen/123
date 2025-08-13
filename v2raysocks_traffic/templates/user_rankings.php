@@ -1042,11 +1042,11 @@ $userRankingsHtml = '
                 const progressWidth = Math.min(100, utilizationPercent); // Cap visual width at 100%
                 
                 // Determine color class based on utilization
-                let colorClass = 'normal';
+                let colorClass = "normal";
                 if (utilizationPercent >= 100) {
-                    colorClass = 'danger';
+                    colorClass = "danger";
                 } else if (utilizationPercent >= 80) {
-                    colorClass = 'warning';
+                    colorClass = "warning";
                 }
                 
                 const statusClass = user.enable ? "status-active" : "status-inactive";
