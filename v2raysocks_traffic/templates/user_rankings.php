@@ -459,14 +459,12 @@ $userRankingsHtml = '
                         <input type="date" id="end-date" name="end_date" style="width: 140px;">
                     </div>
                     <div class="control-group">
-                        <label for="limit">' . v2raysocks_traffic_lang('display_count') . ':</label>
-                        <select id="limit" name="limit">
-                            <option value="50">50</option>
-                            <option value="100" selected>100</option>
-                            <option value="200">200</option>
-                            <option value="500">500</option>
-                            <option value="all">' . v2raysocks_traffic_lang('all_option') . '</option>
-                        </select>
+                        <label for="uuid-search">' . v2raysocks_traffic_lang('uuid_search_label') . '</label>
+                        <input type="text" id="uuid-search" name="uuid_search" placeholder="' . v2raysocks_traffic_lang('enter_uuid') . '" style="width: 200px;">
+                    </div>
+                    <div class="control-group">
+                        <button type="button" id="search-uuid" class="btn btn-secondary" style="margin-right: 10px;">' . v2raysocks_traffic_lang('search') . '</button>
+                        <button type="button" id="clear-uuid" class="btn btn-secondary">' . v2raysocks_traffic_lang('clear') . '</button>
                     </div>
                     <div class="control-group">
                         <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
@@ -564,6 +562,30 @@ $userRankingsHtml = '
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="rankings-pagination-controls" style="margin-top: 15px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span id="rankings-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
+                    </div>
+                    <div>
+                        <label for="rankings-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                        <select id="rankings-records-per-page" style="margin-right: 15px; padding: 5px;">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                        
+                        <button id="rankings-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
+                        <button id="rankings-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
+                        <span id="rankings-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
+                        <button id="rankings-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
+                        <button id="rankings-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -688,6 +710,12 @@ $userRankingsHtml = '
         let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
+        // Rankings pagination variables
+        let allRankingsData = [];
+        let currentRankingsPage = 1;
+        let rankingsRecordsPerPage = 50;
+        let totalRankingsPages = 1;
+        
         // Load user rankings on page load
         $(document).ready(function() {
             loadUserRankings();
@@ -733,6 +761,57 @@ $userRankingsHtml = '
                 e.preventDefault();
                 loadUserRankings();
             });
+            
+            // UUID search event handlers
+            $("#search-uuid").on("click", function() {
+                currentRankingsPage = 1;
+                loadUserRankings();
+            });
+            
+            $("#clear-uuid").on("click", function() {
+                document.getElementById("uuid-search").value = "";
+                currentRankingsPage = 1;
+                loadUserRankings();
+            });
+            
+            // Enter key support for UUID search
+            $("#uuid-search").on("keypress", function(e) {
+                if (e.which === 13) {
+                    currentRankingsPage = 1;
+                    loadUserRankings();
+                }
+            });
+            
+            // Rankings pagination event handlers
+            $("#rankings-records-per-page").on("change", function() {
+                rankingsRecordsPerPage = parseInt($(this).val());
+                currentRankingsPage = 1;
+                updateRankingsPagination();
+            });
+            
+            $("#rankings-first-page").on("click", function() {
+                currentRankingsPage = 1;
+                updateRankingsPagination();
+            });
+            
+            $("#rankings-prev-page").on("click", function() {
+                if (currentRankingsPage > 1) {
+                    currentRankingsPage--;
+                    updateRankingsPagination();
+                }
+            });
+            
+            $("#rankings-next-page").on("click", function() {
+                if (currentRankingsPage < totalRankingsPages) {
+                    currentRankingsPage++;
+                    updateRankingsPagination();
+                }
+            });
+            
+            $("#rankings-last-page").on("click", function() {
+                currentRankingsPage = totalRankingsPages;
+                updateRankingsPagination();
+            });
         });
         
         function loadUserRankings() {
@@ -771,9 +850,17 @@ $userRankingsHtml = '
                 }
             }
             
-            // Use form serialization approach but remove sort_by parameter
+            // Get UUID search value
+            const uuidSearch = document.getElementById("uuid-search").value.trim();
+            
+            // Use form serialization approach but customize parameters
             const formData = $("#user-rankings-filter").serialize();
-            const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
+            let url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc&limit=10000";
+            
+            // Add UUID search parameter if provided
+            if (uuidSearch) {
+                url += "&uuid_search=" + encodeURIComponent(uuidSearch);
+            }
             
             const tbody = document.getElementById("rankings-tbody");
             tbody.innerHTML = `<tr><td colspan="18" class="loading">${t("loading_user_rankings")}</td></tr>`;
@@ -898,7 +985,11 @@ $userRankingsHtml = '
                     (aValue - bValue) : (bValue - aValue);
             });
             
-            displayUserRankings(sortedData);
+            // Store sorted data for pagination
+            allRankingsData = sortedData;
+            
+            // Update pagination and display
+            updateRankingsPagination();
             updateSortIndicators();
         }
         
@@ -924,6 +1015,105 @@ $userRankingsHtml = '
                     colorClass = \'danger\';
                 } else if (utilizationPercent >= 80) {
                     colorClass = \'warning\';
+                }
+                
+                const statusClass = user.enable ? "status-active" : "status-inactive";
+                const statusText = user.enable ? t("enabled") : t("disabled");
+                
+                const lastUsageText = user.last_usage ? 
+                    formatTimeAgo(user.last_usage) : t("no_data");
+                
+                html += `
+                    <tr onclick="showUserDetails(${user.user_id})">
+                        <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+                        <td class="numeric-cell">${user.sid || "N/A"}</td>
+                        <td>${user.user_id}</td>
+                        <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
+                        <td>${formatBytes(user.transfer_enable)}</td>
+                        <td>${formatBytes(user.used_traffic || 0)}</td>
+                        <td>${formatBytes(user.remaining_quota)}</td>
+                        <td>${formatBytes(user.period_traffic)}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill ${colorClass}" style="width: ${progressWidth}%"></div>
+                                <div class="progress-text">${utilizationPercent.toFixed(1)}%</div>
+                            </div>
+                        </td>
+                        <td class="numeric-cell">${formatBytes(user.traffic_5min || 0)}</td>
+                        <td class="numeric-cell">${formatBytes(user.traffic_1hour || 0)}</td>
+                        <td class="numeric-cell">${formatBytes(user.traffic_4hour || 0)}</td>
+                        <td class="numeric-cell">${user.nodes_used}</td>
+                        <td>${user.speedlimitss || "-"}</td>
+                        <td>${user.speedlimitother || "-"}</td>
+                        <td>${user.usage_records}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${lastUsageText}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function updateRankingsPagination() {
+            const tbody = document.getElementById("rankings-tbody");
+            const paginationDiv = document.getElementById("rankings-pagination-controls");
+            
+            if (!allRankingsData || allRankingsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Calculate pagination
+            totalRankingsPages = Math.ceil(allRankingsData.length / rankingsRecordsPerPage);
+            const startIndex = (currentRankingsPage - 1) * rankingsRecordsPerPage;
+            const endIndex = Math.min(startIndex + rankingsRecordsPerPage, allRankingsData.length);
+            const pageData = allRankingsData.slice(startIndex, endIndex);
+            
+            // Display paginated data with proper ranking
+            displayUserRankingsWithPagination(pageData, startIndex);
+            
+            // Update pagination controls
+            $("#rankings-pagination-info").text(t("showing_records", {
+                start: startIndex + 1,
+                end: endIndex,
+                total: allRankingsData.length
+            }));
+            $("#rankings-page-info").text(t("page_info", {
+                current: currentRankingsPage,
+                total: totalRankingsPages
+            }));
+            
+            // Enable/disable pagination buttons
+            $("#rankings-first-page, #rankings-prev-page").prop("disabled", currentRankingsPage === 1);
+            $("#rankings-next-page, #rankings-last-page").prop("disabled", currentRankingsPage === totalRankingsPages);
+            
+            paginationDiv.style.display = "block";
+        }
+        
+        function displayUserRankingsWithPagination(users, startIndex) {
+            const tbody = document.getElementById("rankings-tbody");
+            
+            if (!users || users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
+                return;
+            }
+            
+            let html = "";
+            users.forEach((user, index) => {
+                const rank = startIndex + index + 1; // Correct ranking for pagination
+                const rankClass = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
+                
+                const utilizationPercent = user.quota_utilization || 0;
+                const progressWidth = Math.min(100, utilizationPercent); // Cap visual width at 100%
+                
+                // Determine color class based on utilization
+                let colorClass = "normal";
+                if (utilizationPercent >= 100) {
+                    colorClass = "danger";
+                } else if (utilizationPercent >= 80) {
+                    colorClass = "warning";
                 }
                 
                 const statusClass = user.enable ? "status-active" : "status-inactive";
@@ -1787,8 +1977,14 @@ $userRankingsHtml = '
                         exportParams += "&node_search=" + encodeURIComponent(window.currentUserNodeSearchFilter);
                     }
                 } else {
-                    const limit = document.getElementById("limit").value;
-                    exportParams = `export_type=user_rankings&time_range=${timeRange}&sort_by=${currentSort.field}_${currentSort.direction}&limit=${limit}&format=${format}`;
+                    // Export user rankings with UUID search if applicable
+                    const uuidSearch = document.getElementById("uuid-search").value.trim();
+                    exportParams = `export_type=user_rankings&time_range=${timeRange}&sort_by=${currentSort.field}_${currentSort.direction}&limit=10000&format=${format}`;
+                    
+                    // Add UUID search parameter if provided
+                    if (uuidSearch) {
+                        exportParams += "&uuid_search=" + encodeURIComponent(uuidSearch);
+                    }
                 }
                 
                 // Add custom date range parameters if applicable  
