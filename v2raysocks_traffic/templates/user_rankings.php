@@ -308,6 +308,11 @@ $userRankingsHtml = '
                 padding-right: 4px !important;
             }
             
+            /* Adjust UUID column for mobile */
+            .uuid-column {
+                max-width: 240px; /* 缩小手机版UUID列宽度但保持可读性 */
+            }
+            
             /* Custom date range styling for mobile */
             #custom-date-range {
                 flex-direction: column !important;
@@ -334,6 +339,14 @@ $userRankingsHtml = '
             }
         }
         
+        /* Responsive styles for very small devices */
+        @media (max-width: 480px) {
+            /* Further adjust UUID column for very small devices */
+            .uuid-column {
+                max-width: 200px; /* 超小屏幕进一步缩小UUID列宽度 */
+            }
+        }
+        
         /* Ensure charts stay within bounds */
         .chart-container canvas {
             max-width: 100% !important;
@@ -347,11 +360,13 @@ $userRankingsHtml = '
             padding-right: 8px !important;
         }
         
-        /* UUID column font consistency */
+        /* UUID column styling for 40-character limit */
         .uuid-column {
-            font-family: inherit;
-            font-size: inherit;
-            font-weight: normal;
+            max-width: 320px; /* 40字符 × 8px平均字符宽度 */
+            white-space: nowrap; /* 禁止换行 */
+            overflow: hidden; /* 隐藏超出内容 */
+            text-overflow: ellipsis; /* 显示省略号 */
+            font-family: monospace; /* 等宽字体便于查看 */
         }
         
         /* Custom date range styling */
@@ -490,7 +505,7 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('user_id') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 160px;" class="sortable-header" data-sort="uuid">
+                            <th style="min-width: 160px;" class="sortable-header uuid-column" data-sort="uuid">
                                 ' . v2raysocks_traffic_lang('uuid') . '
                                 <span class="sort-indicator"></span>
                             </th>
