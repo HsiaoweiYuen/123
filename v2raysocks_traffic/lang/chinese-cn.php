@@ -115,8 +115,8 @@ $_LANG = [
     // Common Status
     'online' => '在线',
     'offline' => '离线',
-    'active' => '活跃',
-    'inactive' => '不活跃',
+    'active' => '正常',
+    'inactive' => '达量',
     'yes' => '是',
     'no' => '否',
     
