@@ -578,7 +578,7 @@ $nodeStatsHtml = '
                                 <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             </div>
                             <div style="flex: 0 0 180px; min-width: 150px;">
-                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_filter_label') . '</label>
+                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . '</label>
                                 <select id="node-time-filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                     <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                                     <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
@@ -1847,7 +1847,7 @@ $nodeStatsHtml = '
                             • ' . v2raysocks_traffic_lang('node_id_label') . ' <span id="export-node-id">-</span><br>
                             • ' . v2raysocks_traffic_lang('uuid_search_label') . ' <span id="export-uuid">-</span><br>
                             • ' . v2raysocks_traffic_lang('user_id') . ': <span id="export-user-id">-</span><br>
-                            • ' . v2raysocks_traffic_lang('time_filter_label_colon') . ' <span id="export-time-filter">-</span>
+                            • ' . v2raysocks_traffic_lang('time_range_label') . ': <span id="export-time-filter">-</span>
                         </small>
                     </div>
                     

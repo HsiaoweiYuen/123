@@ -152,7 +152,6 @@ $_LANG = [
     'feature_not_available' => '功能不可用',
     
     // Pagination
-    'showing_records' => '顯示記錄',
     'to' => '至',
     'of' => '，共',
     'records' => '條記錄',
@@ -164,7 +163,7 @@ $_LANG = [
     'previous' => '上一頁',
     'next' => '下一頁',
     'last' => '末頁',
-    'showing_records' => '顯示記錄 {start} 到 {end}，共 {total} 條',
+    'showing_records' => '顯示第 {start} 到 {end} 條記錄，共 {total} 條',
     'page_info' => '第 {current} 頁，共 {total} 頁',
     'first_page' => '首頁',
     'previous_page' => '上一頁',
