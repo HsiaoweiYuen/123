@@ -75,20 +75,24 @@ function v2raysocks_traffic_makeProgressBar($current, $total, $type = 'primary')
     if ($total == 0) {
         $percentage = 0;
     } else {
-        $percentage = min(100, ($current / $total) * 100);
+        $percentage = ($current / $total) * 100; // Remove 100% cap
     }
     
-    $barClass = 'progress-bar-' . $type;
-    if ($percentage > 80) {
-        $barClass = 'progress-bar-warning';
-    }
-    if ($percentage > 95) {
+    // Cap visual width at 100% but show actual percentage
+    $visualWidth = min(100, $percentage);
+    
+    // Determine color class based on utilization
+    if ($percentage >= 100) {
         $barClass = 'progress-bar-danger';
+    } else if ($percentage >= 80) {
+        $barClass = 'progress-bar-warning';
+    } else {
+        $barClass = 'progress-bar-' . $type;
     }
     
     return '
     <div class="progress" style="margin-bottom: 0;">
-        <div class="progress-bar ' . $barClass . '" role="progressbar" style="width: ' . $percentage . '%">
+        <div class="progress-bar ' . $barClass . '" role="progressbar" style="width: ' . $visualWidth . '%">
             ' . round($percentage, 1) . '%
         </div>
     </div>';
