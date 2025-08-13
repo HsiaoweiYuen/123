@@ -444,7 +444,7 @@ $userRankingsHtml = '
                 <div class="controls-row">
                     <div class="control-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="time-range" name="time_range">
+                        <select id="time-range" name="time_range" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="week">' . v2raysocks_traffic_lang('near_7_days') . '</option>
                             <option value="15days">' . v2raysocks_traffic_lang('15_days') . '</option>
@@ -454,16 +454,16 @@ $userRankingsHtml = '
                     </div>
                     <div class="control-group" id="custom-date-range" style="display: none;">
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start-date" name="start_date" style="width: 140px; margin-right: 10px;">
+                        <input type="date" id="start-date" name="start_date" style="width: 140px; margin-right: 10px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 140px;">
+                        <input type="date" id="end-date" name="end_date" style="width: 140px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="control-group">
-                        <label for="service-id-search">' . v2raysocks_traffic_lang('user_id_label') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('search_placeholder') . '" style="width: 120px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 120px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="control-group">
-                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px;">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
                     </div>
                 </div>
             </form>
