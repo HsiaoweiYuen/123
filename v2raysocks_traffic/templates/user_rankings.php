@@ -388,7 +388,6 @@ $userRankingsHtml = '
             "last_15_days_range": "' . v2raysocks_traffic_lang('last_15_days_range') . '",
             "last_30_days_range": "' . v2raysocks_traffic_lang('last_30_days_range') . '",
             "custom_range_option": "' . v2raysocks_traffic_lang('custom_range_option') . '",
-            "to": "' . v2raysocks_traffic_lang('to') . '",
             "upload_traffic_unit": "' . v2raysocks_traffic_lang('upload_traffic_unit') . '",
             "download_traffic_unit": "' . v2raysocks_traffic_lang('download_traffic_unit') . '",
             "total_traffic_unit": "' . v2raysocks_traffic_lang('total_traffic_unit') . '",
@@ -645,7 +644,7 @@ $userRankingsHtml = '
                         <div id="user-usage-pagination" style="margin-top: 15px; display: none;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <span id="user-pagination-info">' . v2raysocks_traffic_lang('showing_records') . ' 0 ' . v2raysocks_traffic_lang('to') . ' 0' . v2raysocks_traffic_lang('of') . ' 0 ' . v2raysocks_traffic_lang('records') . '</span>
+                                    <span id="user-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                                 </div>
                                 <div>
                                     <label for="user-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
@@ -658,7 +657,7 @@ $userRankingsHtml = '
                                     
                                     <button id="user-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
                                     <button id="user-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
-                                    <span id="user-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page') . ' 1 ' . v2raysocks_traffic_lang('of_pages') . ' 1 ' . v2raysocks_traffic_lang('pages') . '</span>
+                                    <span id="user-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
                                     <button id="user-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
                                     <button id="user-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
                                 </div>

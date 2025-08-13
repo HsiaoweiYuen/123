@@ -638,7 +638,7 @@ $nodeStatsHtml = '
                         <div id="node-usage-pagination" style="margin-top: 15px; display: none;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <span id="node-pagination-info">' . v2raysocks_traffic_lang('showing_records') . ' 0 ' . v2raysocks_traffic_lang('to') . ' 0' . v2raysocks_traffic_lang('of') . ' 0 ' . v2raysocks_traffic_lang('records') . '</span>
+                                    <span id="node-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                                 </div>
                                 <div>
                                     <label for="node-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
@@ -651,7 +651,7 @@ $nodeStatsHtml = '
                                     
                                     <button id="node-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
                                     <button id="node-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
-                                    <span id="node-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page') . ' 1 ' . v2raysocks_traffic_lang('of_pages') . ' 1 ' . v2raysocks_traffic_lang('pages') . '</span>
+                                    <span id="node-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
                                     <button id="node-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
                                     <button id="node-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
                                 </div>

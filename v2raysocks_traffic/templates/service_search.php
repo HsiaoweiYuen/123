@@ -392,10 +392,10 @@ $serviceSearchHtml = '
                 <div id="service-pagination-controls" style="margin-top: 15px; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <span id="service-pagination-info">' . v2raysocks_traffic_lang('showing_records') . ' 0 ' . v2raysocks_traffic_lang('to') . ' 0 ' . v2raysocks_traffic_lang('of') . ' 0 ' . v2raysocks_traffic_lang('records') . '</span>
+                            <span id="service-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                         </div>
                         <div>
-                            <label for="service-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page') . '</label>
+                            <label for="service-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
                             <select id="service-records-per-page" style="margin-right: 15px; padding: 5px;">
                                 <option value="25">25</option>
                                 <option value="50" selected>50</option>
@@ -403,11 +403,11 @@ $serviceSearchHtml = '
                                 <option value="200">200</option>
                             </select>
                             
-                            <button id="service-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first') . '</button>
-                            <button id="service-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous') . '</button>
-                            <span id="service-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page') . ' 1 ' . v2raysocks_traffic_lang('of_pages') . ' 1 ' . v2raysocks_traffic_lang('pages') . '</span>
-                            <button id="service-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next') . '</button>
-                            <button id="service-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last') . '</button>
+                            <button id="service-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
+                            <button id="service-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
+                            <span id="service-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
+                            <button id="service-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
+                            <button id="service-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
                         </div>
                     </div>
                 </div>
@@ -785,8 +785,8 @@ $serviceSearchHtml = '
                 });
                 
                 // Update pagination controls
-                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . ' ${startIndex + 1} ' . v2raysocks_traffic_lang('to') . ' ${endIndex} ' . v2raysocks_traffic_lang('of') . ' ${allServiceData.length} ' . v2raysocks_traffic_lang('records') . '`);
-                $("#service-page-info").text(`' . v2raysocks_traffic_lang('page') . ' ${serviceCurrentPage} ' . v2raysocks_traffic_lang('of_pages') . ' ${serviceTotalPages} ' . v2raysocks_traffic_lang('pages') . '`);
+                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . '`.replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allServiceData.length));
+                $("#service-page-info").text(`' . v2raysocks_traffic_lang('page_info') . '`.replace("{current}", serviceCurrentPage).replace("{total}", serviceTotalPages));
                 
                 // Enable/disable pagination buttons
                 $("#service-first-page, #service-prev-page").prop("disabled", serviceCurrentPage === 1);
