@@ -553,6 +553,7 @@ $trafficDashboardHtml = '
         let trafficChart;
         let refreshInterval;
         let currentTrafficData = []; // Store current data for chart type changes
+        let currentGroupedData = null; // Store current grouped data for chart type changes
         let allTrafficData = []; // Store all filtered data for pagination
         let currentPage = 1;
         let recordsPerPage = 50;
@@ -627,7 +628,7 @@ $trafficDashboardHtml = '
             // Chart type and unit change handlers
             $("#traffic-chart-type, #traffic-chart-unit").on("change", function() {
                 if (currentTrafficData && currentTrafficData.length > 0) {
-                    updateTrafficChart(currentTrafficData);
+                    updateTrafficChart(currentTrafficData, currentGroupedData);
                 }
             });
             
@@ -814,7 +815,7 @@ $trafficDashboardHtml = '
         }
         
         function loadTrafficData() {
-            const params = $("#traffic-filter").serialize();
+            const params = $("#traffic-filter").serialize() + "&grouped=true";
             
             // Add loading indicator without clearing existing data
             const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";
@@ -831,7 +832,7 @@ $trafficDashboardHtml = '
                     $("#loading-indicator").remove();
                     if (response.status === "success") {
                         updateTrafficTable(response.data);
-                        updateTrafficChart(response.data);
+                        updateTrafficChart(response.data, response.grouped_data);
                     } else {
                         console.error("Traffic data error:", response);
                         $("#traffic-data").html("<tr><td colspan=\'11\' class=\'loading\'>Error: " + (response.message || "Unknown error") + "</td></tr>");
@@ -932,15 +933,16 @@ $trafficDashboardHtml = '
             return labels;
         }
 
-        function updateTrafficChart(data) {
+        function updateTrafficChart(data, groupedData) {
             // Store data for chart type changes
             currentTrafficData = data;
+            currentGroupedData = groupedData;
             
             // Group data by time periods based on selected range
             const timeRange = $("#time-range").val();
             const chartType = $("#traffic-chart-type").val();
             let unit = $("#traffic-chart-unit").val();
-            const timeData = {};
+            let timeData = {};
             
             // Validate input data
             if (!data || !Array.isArray(data) || data.length === 0) {
@@ -968,47 +970,71 @@ $trafficDashboardHtml = '
             let recordCount = data.length;
             let allDataPoints = [];
             
-            data.forEach(function(row) {
-                // Validate row data
-                if (!row || !row.t) {
-                    console.warn("Invalid data row:", row);
-                    return;
-                }
+            // Use server-side grouped data if available (PR#37 pattern)
+            if (groupedData) {
+                // Use pre-grouped data from server (avoids client-side timezone issues)
+                Object.keys(groupedData).forEach(function(timeKey) {
+                    const groupData = groupedData[timeKey];
+                    timeData[timeKey] = {
+                        upload: groupData.upload || 0,
+                        download: groupData.download || 0
+                    };
+                    allDataPoints.push(groupData.upload || 0);
+                    allDataPoints.push(groupData.download || 0);
+                    allDataPoints.push(groupData.total || 0);
+                });
                 
-                const date = new Date(row.t * 1000);
-                let timeKey;
-                
-                // Add to totals
-                const upload = parseFloat(row.u) || 0;
-                const download = parseFloat(row.d) || 0;
-                totalUpload += upload;
-                totalDownload += download;
-                allDataPoints.push(upload);
-                allDataPoints.push(download);
-                allDataPoints.push(upload + download);
-                
-                // Time grouping using server local time (not UTC)
-                if (timeRange === "today") {
-                    // For today, group by hour with proper time display
-                    timeKey = date.getHours().toString().padStart(2, "0") + ":00";
-                } else if (["week", "halfmonth"].includes(timeRange)) {
-                    // For weekly/bi-weekly ranges, group by day using local time
-                    timeKey = date.getFullYear() + "-" + 
-                             (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                             date.getDate().toString().padStart(2, "0");
-                } else {
-                    // For longer ranges, group by day using local time
-                    timeKey = date.getFullYear() + "-" + 
-                             (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                             date.getDate().toString().padStart(2, "0");
-                }
-                
-                if (!timeData[timeKey]) {
-                    timeData[timeKey] = { upload: 0, download: 0 };
-                }
-                timeData[timeKey].upload += upload;
-                timeData[timeKey].download += download;
-            });
+                // Calculate totals from raw data
+                data.forEach(function(row) {
+                    const upload = parseFloat(row.u) || 0;
+                    const download = parseFloat(row.d) || 0;
+                    totalUpload += upload;
+                    totalDownload += download;
+                });
+            } else {
+                // Fallback to client-side grouping if no server grouping available
+                data.forEach(function(row) {
+                    // Validate row data
+                    if (!row || !row.t) {
+                        console.warn("Invalid data row:", row);
+                        return;
+                    }
+                    
+                    const date = new Date(row.t * 1000);
+                    let timeKey;
+                    
+                    // Add to totals
+                    const upload = parseFloat(row.u) || 0;
+                    const download = parseFloat(row.d) || 0;
+                    totalUpload += upload;
+                    totalDownload += download;
+                    allDataPoints.push(upload);
+                    allDataPoints.push(download);
+                    allDataPoints.push(upload + download);
+                    
+                    // Time grouping using server local time (not UTC)
+                    if (timeRange === "today") {
+                        // For today, group by hour with proper time display
+                        timeKey = date.getHours().toString().padStart(2, "0") + ":00";
+                    } else if (["week", "halfmonth"].includes(timeRange)) {
+                        // For weekly/bi-weekly ranges, group by day using local time
+                        timeKey = date.getFullYear() + "-" + 
+                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                 date.getDate().toString().padStart(2, "0");
+                    } else {
+                        // For longer ranges, group by day using local time
+                        timeKey = date.getFullYear() + "-" + 
+                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                 date.getDate().toString().padStart(2, "0");
+                    }
+                    
+                    if (!timeData[timeKey]) {
+                        timeData[timeKey] = { upload: 0, download: 0 };
+                    }
+                    timeData[timeKey].upload += upload;
+                    timeData[timeKey].download += download;
+                });
+            }
             
             // Auto unit detection
             if (unit === "auto") {

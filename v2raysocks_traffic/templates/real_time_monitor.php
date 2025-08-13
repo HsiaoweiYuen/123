@@ -402,7 +402,7 @@ $realTimeMonitorHtml = '
         }
         
         function loadCustomTimeRangeData() {
-            const params = $("#custom-time-filter").serialize();
+            const params = $("#custom-time-filter").serialize() + "&grouped=true";
             
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
@@ -417,33 +417,23 @@ $realTimeMonitorHtml = '
                         let totalDownload = 0;
                         let recordCount = response.data.length;
                         
-                        // Calculate peak time
+                        // Use server-side grouped data for peak calculation (PR#37 pattern)
                         let timeStats = {};
-                        const timeRange = $("#rt-time-range").val();
+                        if (response.grouped_data) {
+                            // Use pre-grouped data from server (avoids client-side timezone issues)
+                            Object.keys(response.grouped_data).forEach(function(timeKey) {
+                                const groupData = response.grouped_data[timeKey];
+                                timeStats[timeKey] = groupData.total;
+                            });
+                        }
                         
+                        // Calculate totals from raw data
                         response.data.forEach(function(row) {
                             const upload = parseFloat(row.u) || 0;
                             const download = parseFloat(row.d) || 0;
-                            const total = upload + download;
                             
                             totalUpload += upload;
                             totalDownload += download;
-                            
-                            // Group by time period for peak calculation
-                            const timestamp = parseInt(row.t) * 1000;
-                            const date = new Date(timestamp);
-                            let timeKey;
-                            
-                            if (timeRange === "today") {
-                                timeKey = date.getHours() + ":00";
-                            } else {
-                                timeKey = date.toLocaleDateString();
-                            }
-                            
-                            if (!timeStats[timeKey]) {
-                                timeStats[timeKey] = 0;
-                            }
-                            timeStats[timeKey] += total;
                         });
                         
                         // Find peak time and idle time
