@@ -460,7 +460,7 @@ $userRankingsHtml = '
                     </div>
                     <div class="control-group">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 120px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="control-group">
                         <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px;">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
