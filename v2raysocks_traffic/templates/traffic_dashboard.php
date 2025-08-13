@@ -47,6 +47,10 @@ $trafficDashboardHtml = '
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
+            height: 400px;
+            position: relative;
+            max-width: 100%;
+            overflow: hidden;
         }
         .filter-panel {
             background: #f8f9fa;
@@ -222,6 +226,12 @@ $trafficDashboardHtml = '
                 transform: translateY(-50%) !important;
                 padding: 15px !important;
             }
+        }
+        
+        /* Ensure charts stay within bounds */
+        .chart-container canvas {
+            max-width: 100% !important;
+            height: auto !important;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
