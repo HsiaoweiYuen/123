@@ -50,8 +50,16 @@ $nodeStatsHtml = '
         }
         .progress-fill {
             height: 100%;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+        .progress-fill.normal {
             background: linear-gradient(90deg, #28a745, #20c997);
-            transition: width 0.3s ease;
+        }
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffc107, #e0a800);
+        }
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #dc3545, #c82333);
         }
         .progress-text {
             position: absolute;
@@ -61,6 +69,7 @@ $nodeStatsHtml = '
             font-size: 0.8em;
             font-weight: bold;
             color: #333;
+            text-shadow: 0 0 3px rgba(255,255,255,0.8);
         }
         
         .loading, .no-data {
@@ -870,7 +879,17 @@ $nodeStatsHtml = '
                 const rank = index + 1;
                 const rankClass = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
                 
-                const utilizationPercent = Math.min(100, node.traffic_utilization || 0);
+                const utilizationPercent = node.traffic_utilization || 0;
+                const progressWidth = Math.min(100, utilizationPercent); // Cap visual width at 100%
+                
+                // Determine color class based on utilization
+                let colorClass = \'normal\';
+                if (utilizationPercent >= 100) {
+                    colorClass = \'danger\';
+                } else if (utilizationPercent >= 80) {
+                    colorClass = \'warning\';
+                }
+                
                 const statusClass = node.is_online ? "status-online" : "status-offline";
                 const statusText = node.is_online ? t("online") : t("offline");
                 
@@ -892,7 +911,7 @@ $nodeStatsHtml = '
                         <td>${formatBytes(node.total_traffic)}</td>
                         <td>
                             <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${utilizationPercent}%"></div>
+                                <div class="progress-fill ${colorClass}" style="width: ${progressWidth}%"></div>
                                 <div class="progress-text">${utilizationPercent.toFixed(1)}%</div>
                             </div>
                         </td>
