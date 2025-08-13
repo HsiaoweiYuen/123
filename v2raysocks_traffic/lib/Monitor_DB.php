@@ -2359,18 +2359,18 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         // Check if new columns exist in the node table
         $nodeHasNewFields = true;
         try {
-            // Try to check if the new columns exist
+            // Try to check if the speed limit columns exist
             $checkSql = "SHOW COLUMNS FROM node LIKE 'excessive_speed_limit'";
             $stmt = $pdo->prepare($checkSql);
             $stmt->execute();
             $hasExcessiveSpeedLimit = $stmt->rowCount() > 0;
             
-            $checkSql = "SHOW COLUMNS FROM node LIKE 'count_rate'";
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'speed_limit'";
             $stmt = $pdo->prepare($checkSql);
             $stmt->execute();
-            $hasCountRate = $stmt->rowCount() > 0;
+            $hasSpeedLimit = $stmt->rowCount() > 0;
             
-            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasCountRate;
+            $nodeHasNewFields = $hasExcessiveSpeedLimit && $hasSpeedLimit;
         } catch (\Exception $e) {
             // If column check fails, assume columns don't exist
             $nodeHasNewFields = false;
@@ -2387,13 +2387,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
         // Build SQL dynamically based on column existence
         $additionalColumns = $nodeHasNewFields ? 
             "COALESCE(n.excessive_speed_limit, '') as excessive_speed_limit,
-             COALESCE(n.speed_limit, '') as speed_limit,
-             COALESCE(n.count_rate, 1.0) as count_rate," : 
+             COALESCE(n.speed_limit, '') as speed_limit," : 
             "'' as excessive_speed_limit,
-             '' as speed_limit,
-             1.0 as count_rate,";
+             '' as speed_limit,";
         
-        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit, n.count_rate" : "";
+        $groupByAddition = $nodeHasNewFields ? ", n.excessive_speed_limit, n.speed_limit" : "";
 
         // Get nodes with traffic data - handle both node ID and name matching
         $sql = "
