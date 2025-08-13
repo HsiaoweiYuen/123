@@ -151,9 +151,18 @@ function v2raysocks_traffic_output($vars)
                     $trafficData = v2raysocks_traffic_getTrafficData($filters);
                 }
                 
+                // Apply PR#37 time grouping if requested
+                $grouped = $_GET['grouped'] ?? 'false';
+                $groupedData = null;
+                if ($grouped === 'true') {
+                    $timeRange = $filters['time_range'] ?? 'today';
+                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData, $timeRange);
+                }
+                
                 $result = [
                     'status' => 'success',
                     'data' => $trafficData,
+                    'grouped_data' => $groupedData,
                     'count' => count($trafficData),
                     'filters_applied' => array_filter($filters),
                     'enhanced_mode' => $useEnhanced === 'true'

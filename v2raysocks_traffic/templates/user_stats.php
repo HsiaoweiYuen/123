@@ -402,6 +402,8 @@ $userStatsHtml = '
             $("#user-traffic-history").html("<tr><td colspan=\\"5\\" class=\\"loading\\">Searching user data...</td></tr>");
             
             const params = {
+                enhanced: "true",
+                grouped: "true",
                 time_range: timeRange
             };
             params[searchType] = searchValue;
@@ -416,7 +418,7 @@ $userStatsHtml = '
                         currentUserData = response.data[0]; // Get first result for user info
                         displayUserInfo(currentUserData);
                         updateUserTrafficHistory(response.data);
-                        updateUserTrafficChart(response.data);
+                        updateUserTrafficChart(response.data, response.grouped_data);
                         $("#user-results").show();
                     } else {
                         $("#no-results").show();
@@ -458,25 +460,37 @@ $userStatsHtml = '
             $("#user-traffic-history").html(html);
         }
         
-        function updateUserTrafficChart(data) {
-            // Group data by time for chart
-            const timeData = {};
+        function updateUserTrafficChart(data, groupedData) {
+            // Use server-side grouped data if available (PR#37 pattern)
+            let timeData = {};
             
-            data.forEach(function(row) {
-                // use actual data timestamp for time grouping
-                const date = new Date(row.t * 1000);
-                // Use consistent date formatting to avoid timezone variations
-                const month = String(date.getMonth() + 1).padStart(2, "0");
-                const day = String(date.getDate()).padStart(2, "0");
-                const year = date.getFullYear();
-                const timeKey = month + "/" + day + "/" + year;
-                
-                if (!timeData[timeKey]) {
-                    timeData[timeKey] = { upload: 0, download: 0 };
-                }
-                timeData[timeKey].upload += (row.u || 0);
-                timeData[timeKey].download += (row.d || 0);
-            });
+            if (groupedData) {
+                // Use pre-grouped data from server (avoids client-side timezone issues)
+                Object.keys(groupedData).forEach(function(timeKey) {
+                    const groupData = groupedData[timeKey];
+                    timeData[timeKey] = {
+                        upload: groupData.upload || 0,
+                        download: groupData.download || 0
+                    };
+                });
+            } else {
+                // Fallback to client-side grouping if no server grouping available
+                data.forEach(function(row) {
+                    // use actual data timestamp for time grouping
+                    const date = new Date(row.t * 1000);
+                    // Use consistent date formatting to avoid timezone variations
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    const year = date.getFullYear();
+                    const timeKey = month + "/" + day + "/" + year;
+                    
+                    if (!timeData[timeKey]) {
+                        timeData[timeKey] = { upload: 0, download: 0 };
+                    }
+                    timeData[timeKey].upload += (row.u || 0);
+                    timeData[timeKey].download += (row.d || 0);
+                });
+            }
             
             // Sort labels chronologically instead of alphabetically
             const labels = Object.keys(timeData).sort((a, b) => {

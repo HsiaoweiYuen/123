@@ -3770,3 +3770,56 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         echo "Error exporting usage records: " . $e->getMessage();
     }
 }
+
+/**
+ * Apply PR#37 time grouping pattern to traffic data
+ * Groups traffic data by time periods using server local time (not UTC)
+ * 
+ * @param array $data Raw traffic data with 't', 'u', 'd' fields
+ * @param string $timeRange Time range for grouping logic ('today', 'week', etc.)
+ * @return array Grouped data with server-side time keys
+ */
+function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
+    $timeData = [];
+    
+    foreach ($data as $row) {
+        // Use actual data timestamp like PR#37 pattern
+        $timestamp = intval($row['t']);
+        $date = new DateTime();
+        $date->setTimestamp($timestamp);
+        
+        // Time grouping using server local time (not UTC) - consistent with PR#37
+        if ($timeRange === 'today') {
+            // For today, group by hour with proper time display
+            $timeKey = $date->format('H') . ':00';
+        } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
+            // For weekly/bi-weekly/monthly ranges, use MM/DD/YYYY format for compatibility
+            $timeKey = $date->format('m/d/Y');
+        } else {
+            // For longer ranges, use MM/DD/YYYY format
+            $timeKey = $date->format('m/d/Y');
+        }
+        
+        if (!isset($timeData[$timeKey])) {
+            $timeData[$timeKey] = [
+                'upload' => 0, 
+                'download' => 0, 
+                'total' => 0,
+                'timeKey' => $timeKey,
+                'timestamp' => $timestamp
+            ];
+        }
+        
+        $upload = floatval($row['u'] ?? 0);
+        $download = floatval($row['d'] ?? 0);
+        
+        $timeData[$timeKey]['upload'] += $upload;
+        $timeData[$timeKey]['download'] += $download;
+        $timeData[$timeKey]['total'] += ($upload + $download);
+    }
+    
+    // Sort time keys properly
+    ksort($timeData);
+    
+    return $timeData;
+}
