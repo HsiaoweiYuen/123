@@ -152,17 +152,6 @@ $_LANG = [
     'feature_not_available' => '功能不可用',
     
     // Pagination
-    'to' => '-',
-    'of' => '条，共',
-    'records' => '条记录',
-    'records_per_page' => '每页显示：',
-    'page' => '第',
-    'of_pages' => '页，共',
-    'pages' => '页',
-    'first' => '首页',
-    'previous' => '上一页',
-    'next' => '下一页',
-    'last' => '末页',
     'showing_records' => '显示第 {start} 到 {end} 条记录，共 {total} 条',
     'page_info' => '第 {current} 页，共 {total} 页',
     'first_page' => '首页',

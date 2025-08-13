@@ -152,17 +152,6 @@ $_LANG = [
     'feature_not_available' => 'Feature not available',
     
     // Pagination
-    'to' => 'to',
-    'of' => 'of',
-    'records' => 'records',
-    'records_per_page' => 'Records per page',
-    'page' => 'Page',
-    'of_pages' => 'of',
-    'pages' => 'pages',
-    'first' => 'First',
-    'previous' => 'Previous',
-    'next' => 'Next',
-    'last' => 'Last',
     'showing_records' => 'Showing {start} to {end} of {total} records',
     'page_info' => 'Page {current} of {total}',
     'first_page' => 'First',
