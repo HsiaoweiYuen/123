@@ -486,10 +486,10 @@ $trafficDashboardHtml = '
             <div id="pagination-controls" style="margin-top: 15px; display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <span id="pagination-info">' . v2raysocks_traffic_lang('showing_records') . ' 0 ' . v2raysocks_traffic_lang('to') . ' 0 ' . v2raysocks_traffic_lang('of') . ' 0 ' . v2raysocks_traffic_lang('records') . '</span>
+                        <span id="pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                     </div>
                     <div>
-                        <label for="records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page') . '</label>
+                        <label for="records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
                         <select id="records-per-page" style="margin-right: 15px; padding: 5px;">
                             <option value="25">25</option>
                             <option value="50" selected>50</option>
@@ -497,11 +497,11 @@ $trafficDashboardHtml = '
                             <option value="200">200</option>
                         </select>
                         
-                        <button id="first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first') . '</button>
-                        <button id="prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous') . '</button>
-                        <span id="page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page') . ' 1 ' . v2raysocks_traffic_lang('of_pages') . ' 1 ' . v2raysocks_traffic_lang('pages') . '</span>
-                        <button id="next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next') . '</button>
-                        <button id="last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last') . '</button>
+                        <button id="first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
+                        <button id="prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
+                        <span id="page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
+                        <button id="next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
+                        <button id="last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
                     </div>
                 </div>
             </div>
@@ -888,8 +888,8 @@ $trafficDashboardHtml = '
                 });
                 
                 // Update pagination controls
-                $("#pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . ' ${startIndex + 1} ' . v2raysocks_traffic_lang('to') . ' ${endIndex} ' . v2raysocks_traffic_lang('of') . ' ${allTrafficData.length} ' . v2raysocks_traffic_lang('records') . '`);
-                $("#page-info").text(`' . v2raysocks_traffic_lang('page') . ' ${currentPage} ' . v2raysocks_traffic_lang('of_pages') . ' ${totalPages} ' . v2raysocks_traffic_lang('pages') . '`);
+                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTrafficData.length));
+                $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", currentPage).replace("{total}", totalPages));
                 
                 // Enable/disable pagination buttons
                 $("#first-page, #prev-page").prop("disabled", currentPage === 1);
