@@ -68,8 +68,8 @@ $trafficDashboardHtml = '
         /* Compact layout for time inputs */
         .filter-group#custom-dates,
         .filter-group#custom-dates-end {
-            flex: 0 0 120px;
-            min-width: 120px;
+            flex: 1 1 auto;
+            min-width: auto;
         }
         .filter-group label {
             display: block;
@@ -161,8 +161,8 @@ $trafficDashboardHtml = '
             }
             .filter-group#custom-dates,
             .filter-group#custom-dates-end {
-                flex: 0 0 120px;
-                min-width: 120px;
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
             }
             /* Filter button should be full width on mobile */
             .filter-group:last-child {
@@ -373,7 +373,7 @@ $trafficDashboardHtml = '
                 <div class="filter-row">
                     <div class="filter-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="time-range" name="time_range" style="width: 120px;">
+                        <select id="time-range" name="time_range" style="width: 100%;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
@@ -383,15 +383,15 @@ $trafficDashboardHtml = '
                     </div>
                     <div class="filter-group">
                         <label for="service-id">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 120px;">
+                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%;">
                     </div>
                     <div class="filter-group" id="custom-dates" style="display: none;">
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start-date" name="start_date" style="width: 120px;">
+                        <input type="date" id="start-date" name="start_date" style="width: 100%;">
                     </div>
                     <div class="filter-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 120px;">
+                        <input type="date" id="end-date" name="end_date" style="width: 100%;">
                     </div>
                     <div class="filter-group">
                         <label>&nbsp;</label>

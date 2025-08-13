@@ -31,7 +31,7 @@ $realTimeMonitorHtml = '
         .filter-group input, .filter-group select { padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; }
         /* Make custom date inputs more compact */
         #rt-custom-dates, #rt-custom-dates-end { flex: 0 0 auto; max-width: 160px; }
-        #rt-custom-dates input, #rt-custom-dates-end input { width: 120px; max-width: 120px; }
+        #rt-custom-dates input, #rt-custom-dates-end input { width: 100%; max-width: 100%; }
         .btn { padding: 8px 15px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
@@ -1146,9 +1146,9 @@ $realTimeMonitorHtml = '
                     
                     <div id="date-range-options" style="margin-bottom: 15px; display: none;">
                         <label for="export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
-                        <input type="time" id="export_start_time" name="export_start_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;"><br><br>
+                        <input type="time" id="export_start_time" name="export_start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;"><br><br>
                         <label for="export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
-                        <input type="time" id="export_end_time" name="export_end_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="export_end_time" name="export_end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
