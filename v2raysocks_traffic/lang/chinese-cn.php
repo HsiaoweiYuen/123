@@ -45,6 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => '时间范围',
+    'time_filter_label' => '时间筛选',
     'user_id' => '用户ID',
     'service_id' => '服务ID',
     'node_id' => '节点ID',
@@ -152,7 +153,6 @@ $_LANG = [
     'feature_not_available' => '功能不可用',
     
     // Pagination
-    'showing_records' => '显示第',
     'to' => '-',
     'of' => '条，共',
     'records' => '条记录',

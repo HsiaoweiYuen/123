@@ -45,6 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => 'Time Range',
+    'time_filter_label' => 'Time Filter',
     'user_id' => 'User ID',
     'service_id' => 'Service ID',
     'node_id' => 'Node ID',
@@ -152,7 +153,6 @@ $_LANG = [
     'feature_not_available' => 'Feature not available',
     
     // Pagination
-    'showing_records' => 'Showing records',
     'to' => 'to',
     'of' => 'of',
     'records' => 'records',
