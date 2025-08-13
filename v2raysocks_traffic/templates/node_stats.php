@@ -607,11 +607,11 @@ $nodeStatsHtml = '
                             <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                                 <div style="flex: 0 0 140px;">
                                     <label for="node-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . '</label>
-                                    <input type="time" id="node-start-time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                    <input type="time" id="node-start-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                 </div>
                                 <div style="flex: 0 0 140px;">
                                     <label for="node-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . '</label>
-                                    <input type="time" id="node-end-time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                    <input type="time" id="node-end-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                 </div>
                             </div>
                         </div>
@@ -1845,9 +1845,9 @@ $nodeStatsHtml = '
                     
                     <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_usage_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
-                        <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
+                        <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
                         <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
-                        <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1" style="width: 120px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     

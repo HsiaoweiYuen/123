@@ -125,7 +125,7 @@ function v2raysocks_traffic_getUnifiedStyles() {
         }
         .control-group {
             flex: 1;
-            min-width: 120px;
+            min-width: auto;
         }
         .control-group label {
             display: block;

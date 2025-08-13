@@ -37,8 +37,8 @@ $serviceSearchHtml = '
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
         .form-group#custom-dates-end {
-            flex: 0 0 120px;
-            min-width: 120px;
+            flex: 1 1 auto;
+            min-width: auto;
         }
         .form-group label { 
             display: block; 
@@ -149,8 +149,8 @@ $serviceSearchHtml = '
             }
             .form-group#custom-dates,
             .form-group#custom-dates-end {
-                flex: 0 0 120px;
-                min-width: 120px;
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
             }
             /* Search button should be full width on mobile */
             .form-group:last-child {
@@ -319,11 +319,11 @@ $serviceSearchHtml = '
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
                         <label for="start_date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start_date" name="start_date" style="width: 120px;">
+                        <input type="date" id="start_date" name="start_date" style="width: 100%;">
                     </div>
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end_date" name="end_date" style="width: 120px;">
+                        <input type="date" id="end_date" name="end_date" style="width: 100%;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
