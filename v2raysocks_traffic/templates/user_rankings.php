@@ -459,14 +459,8 @@ $userRankingsHtml = '
                         <input type="date" id="end-date" name="end_date" style="width: 140px;">
                     </div>
                     <div class="control-group">
-                        <label for="limit">' . v2raysocks_traffic_lang('display_count') . ':</label>
-                        <select id="limit" name="limit">
-                            <option value="50">50</option>
-                            <option value="100" selected>100</option>
-                            <option value="200">200</option>
-                            <option value="500">500</option>
-                            <option value="all">' . v2raysocks_traffic_lang('all_option') . '</option>
-                        </select>
+                        <label for="service-id-search">' . v2raysocks_traffic_lang('user_id_label') . ':</label>
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('search_placeholder') . '" style="width: 120px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="control-group">
                         <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
@@ -564,6 +558,30 @@ $userRankingsHtml = '
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="rankings-pagination-controls" style="margin-top: 15px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span id="rankings-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
+                    </div>
+                    <div>
+                        <label for="rankings-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                        <select id="rankings-records-per-page" style="margin-right: 15px; padding: 5px;">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                        
+                        <button id="rankings-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
+                        <button id="rankings-prev-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('previous_page') . '</button>
+                        <span id="rankings-page-info" style="margin: 0 10px;">' . v2raysocks_traffic_lang('page_info') . '</span>
+                        <button id="rankings-next-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('next_page') . '</button>
+                        <button id="rankings-last-page" class="btn btn-sm" style="margin-left: 5px;">' . v2raysocks_traffic_lang('last_page') . '</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -688,6 +706,12 @@ $userRankingsHtml = '
         let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
+        // Main rankings pagination variables
+        let currentRankingsPage = 1;
+        let rankingsRecordsPerPage = 50;
+        let totalRankingsPages = 1;
+        let filteredRankings = [];
+        
         // Load user rankings on page load
         $(document).ready(function() {
             loadUserRankings();
@@ -732,6 +756,52 @@ $userRankingsHtml = '
             $("#user-rankings-filter").on("submit", function(e) {
                 e.preventDefault();
                 loadUserRankings();
+            });
+            
+            // Service ID search event handlers
+            $("#service-id-search").on("input", function() {
+                if (allUserRankings.length > 0) {
+                    displayUserRankings(allUserRankings);
+                }
+            });
+            
+            // Enter key support for search
+            $("#service-id-search").on("keypress", function(e) {
+                if (e.which === 13) {
+                    if (allUserRankings.length > 0) {
+                        displayUserRankings(allUserRankings);
+                    }
+                }
+            });
+            
+            // Rankings pagination event handlers
+            $("#rankings-records-per-page").on("change", function() {
+                currentRankingsPage = 1;
+                updateRankingsPagination();
+            });
+            
+            $("#rankings-first-page").on("click", function() {
+                currentRankingsPage = 1;
+                updateRankingsPagination();
+            });
+            
+            $("#rankings-prev-page").on("click", function() {
+                if (currentRankingsPage > 1) {
+                    currentRankingsPage--;
+                    updateRankingsPagination();
+                }
+            });
+            
+            $("#rankings-next-page").on("click", function() {
+                if (currentRankingsPage < totalRankingsPages) {
+                    currentRankingsPage++;
+                    updateRankingsPagination();
+                }
+            });
+            
+            $("#rankings-last-page").on("click", function() {
+                currentRankingsPage = totalRankingsPages;
+                updateRankingsPagination();
             });
         });
         
@@ -903,27 +973,80 @@ $userRankingsHtml = '
         }
         
         function displayUserRankings(users) {
-            const tbody = document.getElementById("rankings-tbody");
-            
+            // Store filtered data and apply pagination
+            applyServiceIdFilter(users);
+        }
+        
+        function applyServiceIdFilter(users) {
             if (!users || users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
+                filteredRankings = [];
+                updateRankingsPagination();
                 return;
             }
             
+            const serviceIdSearch = document.getElementById("service-id-search").value.trim();
+            
+            if (!serviceIdSearch) {
+                // No search term, show all users
+                filteredRankings = [...users];
+            } else {
+                // Filter and prioritize by service ID
+                const exactMatches = [];
+                const partialMatches = [];
+                const otherUsers = [];
+                
+                users.forEach(user => {
+                    const serviceId = (user.sid || "").toString();
+                    if (serviceId === serviceIdSearch) {
+                        exactMatches.push(user);
+                    } else if (serviceId.includes(serviceIdSearch)) {
+                        partialMatches.push(user);
+                    } else {
+                        otherUsers.push(user);
+                    }
+                });
+                
+                // Combine results: exact matches first, then partial matches, then others
+                filteredRankings = [...exactMatches, ...partialMatches, ...otherUsers];
+            }
+            
+            // Reset to first page when filter changes
+            currentRankingsPage = 1;
+            updateRankingsPagination();
+        }
+        
+        function updateRankingsPagination() {
+            const tbody = document.getElementById("rankings-tbody");
+            const paginationDiv = document.getElementById("rankings-pagination-controls");
+            
+            if (filteredRankings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Calculate pagination
+            rankingsRecordsPerPage = parseInt(document.getElementById("rankings-records-per-page").value);
+            totalRankingsPages = Math.ceil(filteredRankings.length / rankingsRecordsPerPage);
+            const startIndex = (currentRankingsPage - 1) * rankingsRecordsPerPage;
+            const endIndex = Math.min(startIndex + rankingsRecordsPerPage, filteredRankings.length);
+            const pageData = filteredRankings.slice(startIndex, endIndex);
+            
+            // Generate table rows for current page
             let html = "";
-            users.forEach((user, index) => {
-                const rank = index + 1;
-                const rankClass = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
+            pageData.forEach((user, index) => {
+                const globalRank = startIndex + index + 1; // Global ranking position
+                const rankClass = globalRank === 1 ? "rank-1" : globalRank === 2 ? "rank-2" : globalRank === 3 ? "rank-3" : "rank-other";
                 
                 const utilizationPercent = user.quota_utilization || 0;
                 const progressWidth = Math.min(100, utilizationPercent); // Cap visual width at 100%
                 
                 // Determine color class based on utilization
-                let colorClass = \'normal\';
+                let colorClass = 'normal';
                 if (utilizationPercent >= 100) {
-                    colorClass = \'danger\';
+                    colorClass = 'danger';
                 } else if (utilizationPercent >= 80) {
-                    colorClass = \'warning\';
+                    colorClass = 'warning';
                 }
                 
                 const statusClass = user.enable ? "status-active" : "status-inactive";
@@ -934,7 +1057,7 @@ $userRankingsHtml = '
                 
                 html += `
                     <tr onclick="showUserDetails(${user.user_id})">
-                        <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+                        <td><span class="rank-badge ${rankClass}">${globalRank}</span></td>
                         <td class="numeric-cell">${user.sid || "N/A"}</td>
                         <td>${user.user_id}</td>
                         <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
@@ -962,6 +1085,25 @@ $userRankingsHtml = '
             });
             
             tbody.innerHTML = html;
+            
+            // Update pagination info
+            document.getElementById("rankings-pagination-info").textContent = t("showing_records", {
+                start: startIndex + 1,
+                end: endIndex,
+                total: filteredRankings.length
+            });
+            document.getElementById("rankings-page-info").textContent = t("page_info", {
+                current: currentRankingsPage,
+                total: totalRankingsPages
+            });
+            
+            // Enable/disable pagination buttons
+            document.getElementById("rankings-first-page").disabled = currentRankingsPage === 1;
+            document.getElementById("rankings-prev-page").disabled = currentRankingsPage === 1;
+            document.getElementById("rankings-next-page").disabled = currentRankingsPage === totalRankingsPages;
+            document.getElementById("rankings-last-page").disabled = currentRankingsPage === totalRankingsPages;
+            
+            paginationDiv.style.display = "block";
         }
         
         function showUserDetails(userId) {
