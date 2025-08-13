@@ -115,8 +115,8 @@ $_LANG = [
     // Common Status
     'online' => 'Online',
     'offline' => 'Offline',
-    'active' => 'Active',
-    'inactive' => 'Inactive',
+    'active' => 'Enable/Normal',
+    'inactive' => 'Disabled/Exhausted',
     'yes' => 'Yes',
     'no' => 'No',
     
