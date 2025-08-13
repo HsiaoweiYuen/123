@@ -953,8 +953,8 @@ function v2raysocks_traffic_getLiveStats()
             ];
         }
         
-        // Get total users (only enabled users)
-        $stmt = $pdo->prepare('SELECT COUNT(*) as total_users FROM user WHERE enable IN (1, 2)');
+        // Get total users (all users)
+        $stmt = $pdo->prepare('SELECT COUNT(*) as total_users FROM user');
         $stmt->execute();
         $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
         
@@ -2633,7 +2633,6 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 MAX(uu.t) as last_usage
             FROM user u
             LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
-            WHERE u.enable = 1
             GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark, u.speedlimitss, u.speedlimitother
         ";
 
