@@ -402,17 +402,7 @@ $nodeStatsHtml = '
         <!-- Controls Panel -->
         <div class="controls-panel">
             <div class="controls-row">
-                <div class="control-group">
-                    <label for="sort-by">' . v2raysocks_traffic_lang('sort_by') . ':</label>
-                    <select id="sort-by">
-                        <option value="traffic_desc" selected>' . v2raysocks_traffic_lang('traffic_usage_high_to_low') . '</option>
-                        <option value="traffic_asc">' . v2raysocks_traffic_lang('traffic_usage_low_to_high') . '</option>
-                        <option value="remaining_desc">' . v2raysocks_traffic_lang('remaining_traffic_high_to_low') . '</option>
-                        <option value="remaining_asc">' . v2raysocks_traffic_lang('remaining_traffic_low_to_high') . '</option>
-                        <option value="users_desc">' . v2raysocks_traffic_lang('used_users_count') . '</option>
-                        <option value="name_asc">' . v2raysocks_traffic_lang('node_name') . '</option>
-                    </select>
-                </div>
+
                 <div class="control-group">
                     <label for="show-offline">' . v2raysocks_traffic_lang('show_offline_nodes') . ':</label>
                     <select id="show-offline">
@@ -714,13 +704,12 @@ $nodeStatsHtml = '
         });
         
         function loadNodeRankings() {
-            const sortBy = document.getElementById("sort-by").value;
             const showOffline = document.getElementById("show-offline").value === "true";
             
             const tbody = document.getElementById("rankings-tbody");
             tbody.innerHTML = `<tr><td colspan="21" class="loading">${t("loading_node_rankings")}</td></tr>`;
             
-            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&sort_by=" + sortBy + "&only_today=true")
+            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&only_today=true")
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
@@ -1656,7 +1645,6 @@ $nodeStatsHtml = '
             $("#node-export-form").on("submit", function(e) {
                 e.preventDefault();
                 
-                const sortBy = document.getElementById("sort-by").value;
                 const showOffline = document.getElementById("show-offline").value;
                 const exportType = $("input[name=\'node_export_type\']:checked").val();
                 const format = $("#node_export_format").val();
