@@ -2837,22 +2837,39 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             $timeData[$timeKey]['users'][] = $row['user_id'];
         }
         
-        // Sort time keys properly
-        ksort($timeData);
-        
-        // Prepare chart data arrays
+        // Generate complete time labels and ensure no gaps for "today" 
         $labels = [];
         $uploadData = [];
         $downloadData = [];
         $totalData = [];
         $userCounts = [];
         
-        foreach ($timeData as $timeKey => $data) {
-            $labels[] = $timeKey;
-            $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
-            $downloadData[] = $data['download'] / 1000000000; // Convert to GB
-            $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
-            $userCounts[] = count(array_unique($data['users']));
+        if ($timeRange === 'today') {
+            // For today, generate complete 24-hour time axis to avoid gaps
+            for ($hour = 0; $hour < 24; $hour++) {
+                $timeKey = sprintf('%02d:00', $hour);
+                $labels[] = $timeKey;
+                
+                // Fill missing hours with zero values
+                if (!isset($timeData[$timeKey])) {
+                    $timeData[$timeKey] = ['upload' => 0, 'download' => 0, 'users' => []];
+                }
+                
+                $uploadData[] = $timeData[$timeKey]['upload'] / 1000000000; // Convert to GB
+                $downloadData[] = $timeData[$timeKey]['download'] / 1000000000; // Convert to GB
+                $totalData[] = ($timeData[$timeKey]['upload'] + $timeData[$timeKey]['download']) / 1000000000; // Convert to GB
+                $userCounts[] = count(array_unique($timeData[$timeKey]['users']));
+            }
+        } else {
+            // For other time ranges, use existing sorting logic
+            ksort($timeData);
+            foreach ($timeData as $timeKey => $data) {
+                $labels[] = $timeKey;
+                $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
+                $downloadData[] = $data['download'] / 1000000000; // Convert to GB
+                $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
+                $userCounts[] = count(array_unique($data['users']));
+            }
         }
         
         $chartData = [
@@ -3017,22 +3034,39 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             $timeData[$timeKey]['nodes'][] = $row['node'];
         }
         
-        // Sort time keys properly
-        ksort($timeData);
-        
-        // Prepare chart data arrays
+        // Generate complete time labels and ensure no gaps for "today" 
         $labels = [];
         $uploadData = [];
         $downloadData = [];
         $totalData = [];
         $nodeCounts = [];
         
-        foreach ($timeData as $timeKey => $data) {
-            $labels[] = $timeKey;
-            $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
-            $downloadData[] = $data['download'] / 1000000000; // Convert to GB
-            $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
-            $nodeCounts[] = count(array_unique($data['nodes']));
+        if ($timeRange === 'today') {
+            // For today, generate complete 24-hour time axis to avoid gaps
+            for ($hour = 0; $hour < 24; $hour++) {
+                $timeKey = sprintf('%02d:00', $hour);
+                $labels[] = $timeKey;
+                
+                // Fill missing hours with zero values
+                if (!isset($timeData[$timeKey])) {
+                    $timeData[$timeKey] = ['upload' => 0, 'download' => 0, 'nodes' => []];
+                }
+                
+                $uploadData[] = $timeData[$timeKey]['upload'] / 1000000000; // Convert to GB
+                $downloadData[] = $timeData[$timeKey]['download'] / 1000000000; // Convert to GB
+                $totalData[] = ($timeData[$timeKey]['upload'] + $timeData[$timeKey]['download']) / 1000000000; // Convert to GB
+                $nodeCounts[] = count(array_unique($timeData[$timeKey]['nodes']));
+            }
+        } else {
+            // For other time ranges, use existing sorting logic
+            ksort($timeData);
+            foreach ($timeData as $timeKey => $data) {
+                $labels[] = $timeKey;
+                $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
+                $downloadData[] = $data['download'] / 1000000000; // Convert to GB
+                $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
+                $nodeCounts[] = count(array_unique($data['nodes']));
+            }
         }
         
         $chartData = [

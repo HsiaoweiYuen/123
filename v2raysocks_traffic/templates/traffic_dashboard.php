@@ -1045,39 +1045,54 @@ $trafficDashboardHtml = '
             // Update custom time range summary
             updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
             
-            // Improved sorting for different time formats
-            const labels = Object.keys(timeData).sort((a, b) => {
-                // Handle different time formats properly
-                if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
-                    // Hour:minute format
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (YYYY/MM/DD or MM/DD for legacy)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: YYYY/MM/DD
-                        const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
-                        const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (legacy - assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
+            // Generate complete time labels and ensure no gaps for "today" 
+            let labels;
+            if (timeRange === "today") {
+                // For today, generate complete 24-hour time axis to avoid gaps
+                labels = [];
+                for (let hour = 0; hour < 24; hour++) {
+                    const timeKey = hour.toString().padStart(2, "0") + ":00";
+                    labels.push(timeKey);
+                    // Fill missing hours with zero values
+                    if (!timeData[timeKey]) {
+                        timeData[timeKey] = { upload: 0, download: 0 };
                     }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format YYYY-MM-DD
-                    return new Date(a) - new Date(b);
-                } else {
-                    // Default string sort
-                    return a.localeCompare(b);
                 }
-            });
+            } else {
+                // For other time ranges, use existing sorting logic
+                labels = Object.keys(timeData).sort((a, b) => {
+                    // Handle different time formats properly
+                    if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
+                        // Hour:minute format
+                        const [aHour, aMin] = a.split(":").map(Number);
+                        const [bHour, bMin] = b.split(":").map(Number);
+                        return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                    } else if (a.includes("/")) {
+                        // Date format sorting (YYYY/MM/DD or MM/DD for legacy)
+                        const aParts = a.split("/").map(Number);
+                        const bParts = b.split("/").map(Number);
+                        
+                        if (aParts.length === 3 && bParts.length === 3) {
+                            // Format: YYYY/MM/DD
+                            const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
+                            const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
+                            return aDate - bDate;
+                        } else if (aParts.length === 2 && bParts.length === 2) {
+                            // Format: MM/DD (legacy - assume same year)
+                            const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
+                            const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
+                            return aDate - bDate;
+                        }
+                        return a.localeCompare(b);
+                    } else if (a.includes("-")) {
+                        // Date format YYYY-MM-DD
+                        return new Date(a) - new Date(b);
+                    } else {
+                        // Default string sort
+                        return a.localeCompare(b);
+                    }
+                });
+            }
             
             let datasets = [];
             

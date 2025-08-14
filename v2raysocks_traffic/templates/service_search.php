@@ -971,10 +971,25 @@ $serviceSearchHtml = '
                 allDataPoints.push(upload + download);
             });
             
-            // Sort labels chronologically instead of alphabetically
-            const labels = timeKeys.sort((a, b) => {
-                return timeData[a].timestamp - timeData[b].timestamp;
-            });
+            // Generate complete time labels and ensure no gaps for "today" 
+            let labels;
+            if ($("#time_range").val() === "today") {
+                // For today, generate complete 24-hour time axis to avoid gaps
+                labels = [];
+                for (let hour = 0; hour < 24; hour++) {
+                    const timeKey = hour.toString().padStart(2, "0") + ":00";
+                    labels.push(timeKey);
+                    // Fill missing hours with zero values
+                    if (!timeData[timeKey]) {
+                        timeData[timeKey] = { upload: 0, download: 0, timestamp: Date.now() / 1000 };
+                    }
+                }
+            } else {
+                // For other time ranges, sort labels chronologically by timestamp
+                labels = timeKeys.sort((a, b) => {
+                    return timeData[a].timestamp - timeData[b].timestamp;
+                });
+            }
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();
             
