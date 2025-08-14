@@ -460,7 +460,170 @@ $userStatsHtml = '
             $("#user-traffic-history").html(html);
         }
         
+        // Generate default time labels for empty charts - using server local time (not UTC)
+        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
+            const now = new Date();
+            const labels = [];
+            
+            switch (timeRange) {
+                case "5min":
+                    // Generate 5-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 5 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "10min":
+                    // Generate 10-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 10 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "30min":
+                    // Generate 30-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 30 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "1hour":
+                    // Generate hourly interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
+                    }
+                    break;
+                case "today":
+                    // Generate 3-hour interval labels like real_time_monitor.php
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 3 * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
+                    }
+                    break;
+                default:
+                    // Generate date labels for multi-day ranges
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
+                    break;
+            }
+            
+            return labels;
+        }
+
+        // Generate continuous time labels between two time points to fill gaps
+        function generateContinuousTimeLabels(firstLabel, lastLabel, timeRange) {
+            const labels = [];
+            
+            if (!firstLabel || !lastLabel) {
+                return [firstLabel, lastLabel].filter(Boolean);
+            }
+            
+            // For time format (HH:MM)
+            if (firstLabel.includes(":") && !firstLabel.includes("/") && !firstLabel.includes("-")) {
+                const [startHour, startMin] = firstLabel.split(":").map(Number);
+                const [endHour, endMin] = lastLabel.split(":").map(Number);
+                
+                const startMinutes = startHour * 60 + (startMin || 0);
+                const endMinutes = endHour * 60 + (endMin || 0);
+                
+                let interval;
+                switch (timeRange) {
+                    case "5min": interval = 5; break;
+                    case "10min": interval = 10; break;
+                    case "30min": interval = 30; break;
+                    case "1hour": interval = 60; break;
+                    default: interval = 180; // 3 hours for today
+                }
+                
+                for (let minutes = startMinutes; minutes <= endMinutes; minutes += interval) {
+                    const hour = Math.floor(minutes / 60) % 24;
+                    const min = minutes % 60;
+                    labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                }
+            }
+            // For date format (MM/DD)
+            else if (firstLabel.includes("/")) {
+                const firstParts = firstLabel.split("/").map(Number);
+                const lastParts = lastLabel.split("/").map(Number);
+                
+                if (firstParts.length >= 2 && lastParts.length >= 2) {
+                    const startDate = new Date(firstParts[2] || 2024, firstParts[0] - 1, firstParts[1]);
+                    const endDate = new Date(lastParts[2] || 2024, lastParts[0] - 1, lastParts[1]);
+                    
+                    const currentDate = new Date(startDate);
+                    while (currentDate <= endDate) {
+                        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+                        const day = String(currentDate.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                }
+            }
+            // For YYYY-MM-DD format
+            else if (firstLabel.includes("-")) {
+                const startDate = new Date(firstLabel);
+                const endDate = new Date(lastLabel);
+                
+                const currentDate = new Date(startDate);
+                while (currentDate <= endDate) {
+                    labels.push(currentDate.toISOString().split('T')[0]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            }
+            
+            return labels.length > 0 ? labels : [firstLabel, lastLabel].filter(Boolean);
+        }
+        
         function updateUserTrafficChart(data, groupedData) {
+            // Handle empty data case first
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                console.log("No user traffic data available for chart");
+                // Generate default time labels for proper time axis
+                const defaultLabels = generateDefaultTimeLabels("today", 8);
+                
+                if (userChart) {
+                    userChart.destroy();
+                }
+                
+                const ctx = document.getElementById("user-traffic-chart").getContext("2d");
+                userChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: defaultLabels,
+                        datasets: [
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", new Array(defaultLabels.length).fill(0)),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", new Array(defaultLabels.length).fill(0))
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: "' . v2raysocks_traffic_lang('traffic') . ' (GB)"
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+            
             // Use server-side grouped data if available (PR#37 pattern)
             let timeData = {};
             
@@ -523,8 +686,39 @@ $userStatsHtml = '
                     return a.localeCompare(b);
                 }
             });
-            const uploadData = labels.map(time => (timeData[time].upload / (1000 * 1000 * 1000)).toFixed(2));
-            const downloadData = labels.map(time => (timeData[time].download / (1000 * 1000 * 1000)).toFixed(2));
+            
+            // Handle gap filling and data point limiting like traffic_dashboard.php
+            let finalLabels, finalTimeData;
+            if (labels.length === 0) {
+                // Generate default time labels for empty data
+                finalLabels = generateDefaultTimeLabels("today", 8);
+                finalTimeData = {};
+                finalLabels.forEach(label => {
+                    finalTimeData[label] = { upload: 0, download: 0 };
+                });
+            } else {
+                // Fill missing time points with zero data for continuous time axis
+                const firstLabel = labels[0];
+                const lastLabel = labels[labels.length - 1];
+                
+                // Generate continuous time labels from first to last data point
+                const continuousLabels = generateContinuousTimeLabels(firstLabel, lastLabel, "today");
+                
+                // Fill missing time points with zero data
+                finalTimeData = {};
+                continuousLabels.forEach(label => {
+                    finalTimeData[label] = timeData[label] || { upload: 0, download: 0 };
+                });
+                
+                finalLabels = continuousLabels;
+            }
+            
+            // Limit data points to prevent chart performance issues
+            const maxDataPoints = 100;
+            const limitedLabels = finalLabels.slice(-maxDataPoints);
+            
+            const uploadData = limitedLabels.map(time => (finalTimeData[time].upload / (1000 * 1000 * 1000)).toFixed(2));
+            const downloadData = limitedLabels.map(time => (finalTimeData[time].download / (1000 * 1000 * 1000)).toFixed(2));
             
             if (userChart) {
                 userChart.destroy();
@@ -534,7 +728,7 @@ $userStatsHtml = '
             userChart = new Chart(ctx, {
                 type: "line",
                 data: {
-                    labels: labels,
+                    labels: limitedLabels,
                     datasets: [
                         getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", uploadData),
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", downloadData)
