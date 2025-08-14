@@ -933,6 +933,56 @@ $trafficDashboardHtml = '
             return labels;
         }
 
+        // Generate complete time series to prevent chart discontinuity
+        function generateCompleteTimeSeriesForTrafficChart(timeRange) {
+            const labels = [];
+            const now = new Date();
+            
+            switch (timeRange) {
+                case "today":
+                    // Generate all 24 hours for today
+                    for (let hour = 0; hour < 24; hour++) {
+                        labels.push(hour.toString().padStart(2, "0") + ":00");
+                    }
+                    break;
+                    
+                case "week":
+                    // Generate all 7 days for the past week
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const timeKey = date.getFullYear() + "-" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                       date.getDate().toString().padStart(2, "0");
+                        labels.push(timeKey);
+                    }
+                    break;
+                    
+                case "halfmonth":
+                    // Generate all 15 days for the past half month
+                    for (let i = 14; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const timeKey = date.getFullYear() + "-" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                       date.getDate().toString().padStart(2, "0");
+                        labels.push(timeKey);
+                    }
+                    break;
+                    
+                default:
+                    // For other ranges, generate past 30 days
+                    for (let i = 29; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const timeKey = date.getFullYear() + "-" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                       date.getDate().toString().padStart(2, "0");
+                        labels.push(timeKey);
+                    }
+                    break;
+            }
+            
+            return labels;
+        }
+
         function updateTrafficChart(data, groupedData) {
             // Store data for chart type changes
             currentTrafficData = data;
@@ -1045,37 +1095,13 @@ $trafficDashboardHtml = '
             // Update custom time range summary
             updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
             
-            // Improved sorting for different time formats
-            const labels = Object.keys(timeData).sort((a, b) => {
-                // Handle different time formats properly
-                if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
-                    // Hour:minute format
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (YYYY/MM/DD or MM/DD for legacy)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: YYYY/MM/DD
-                        const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
-                        const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (legacy - assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format YYYY-MM-DD
-                    return new Date(a) - new Date(b);
-                } else {
-                    // Default string sort
-                    return a.localeCompare(b);
+            // Generate complete time series to avoid time gaps in chart
+            const labels = generateCompleteTimeSeriesForTrafficChart(timeRange);
+            
+            // Fill missing time points with zero values
+            labels.forEach(timeKey => {
+                if (!timeData[timeKey]) {
+                    timeData[timeKey] = { upload: 0, download: 0 };
                 }
             });
             
