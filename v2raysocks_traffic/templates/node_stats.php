@@ -1259,7 +1259,7 @@ $nodeStatsHtml = '
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
                 
-                // For "today" type ranges, don't generate future time points
+                // For "today" type ranges, do not generate future time points
                 if (timeRange === "today" && timestamp > now) {
                     break;
                 }
