@@ -1448,10 +1448,8 @@ $userRankingsHtml = '
             
             switch (timeRange) {
                 case "today":
-                    // Generate hour labels for today - only up to current hour
-                    const currentHour = new Date().getHours();
-                    const maxHours = Math.min(currentHour + 1, 24);
-                    for (let i = 0; i < Math.min(points, maxHours); i++) {
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
                         labels.push(String(i).padStart(2, "0") + ":00");
                     }
                     break;
@@ -1480,93 +1478,6 @@ $userRankingsHtml = '
             return labels;
         }
 
-        // Generate complete time series to prevent chart discontinuity
-        function generateCompleteTimeSeriesForUserChart(timeRange) {
-            const labels = [];
-            const now = new Date();
-            
-            switch (timeRange) {
-                case "today":
-                    // Generate hours up to current time only
-                    const currentHour = now.getHours();
-                    for (let hour = 0; hour <= currentHour; hour++) {
-                        labels.push(hour.toString().padStart(2, "0") + ":00");
-                    }
-                    break;
-                    
-                case "week":
-                case "7days":
-                    // Generate all 7 days for the past week
-                    for (let i = 6; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-                    
-                case "15days":
-                    // Generate all 15 days for the past 15 days
-                    for (let i = 14; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-                    
-                case "month":
-                case "30days":
-                    // Generate all 30 days for the past month
-                    for (let i = 29; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-                    
-                case "custom":
-                    // For custom ranges, default to 30 days or use date picker values
-                    const startDate = document.getElementById("start-date").value;
-                    const endDate = document.getElementById("end-date").value;
-                    
-                    if (startDate && endDate) {
-                        const start = new Date(startDate);
-                        const end = new Date(endDate);
-                        const current = new Date(start);
-                        
-                        while (current <= end) {
-                            const month = String(current.getMonth() + 1).padStart(2, "0");
-                            const day = String(current.getDate()).padStart(2, "0");
-                            labels.push(month + "/" + day);
-                            current.setDate(current.getDate() + 1);
-                        }
-                    } else {
-                        // Fallback to 30 days
-                        for (let i = 29; i >= 0; i--) {
-                            const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                            const month = String(date.getMonth() + 1).padStart(2, "0");
-                            const day = String(date.getDate()).padStart(2, "0");
-                            labels.push(month + "/" + day);
-                        }
-                    }
-                    break;
-                    
-                default:
-                    // Default to 7 days
-                    for (let i = 6; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-            }
-            
-            return labels;
-        }
-
         function displayUserChart(chartData) {
             const ctx = document.getElementById("user-traffic-chart").getContext("2d");
             
@@ -1585,32 +1496,6 @@ $userRankingsHtml = '
                     total: new Array(defaultLabels.length).fill(0),
                     user_id: chartData.user_id || "Unknown"
                 };
-            } else {
-                // Ensure complete time series to prevent gaps
-                const timeRange = document.getElementById("time-range").value;
-                const completeLabels = generateCompleteTimeSeriesForUserChart(timeRange);
-                const originalData = {
-                    labels: [...chartData.labels],
-                    upload: [...chartData.upload],
-                    download: [...chartData.download],
-                    total: [...chartData.total]
-                };
-                
-                // Reset arrays to match complete time series
-                chartData.labels = completeLabels;
-                chartData.upload = new Array(completeLabels.length).fill(0);
-                chartData.download = new Array(completeLabels.length).fill(0);
-                chartData.total = new Array(completeLabels.length).fill(0);
-                
-                // Fill in actual data where available
-                originalData.labels.forEach((label, index) => {
-                    const completeIndex = completeLabels.indexOf(label);
-                    if (completeIndex !== -1) {
-                        chartData.upload[completeIndex] = originalData.upload[index] || 0;
-                        chartData.download[completeIndex] = originalData.download[index] || 0;
-                        chartData.total[completeIndex] = originalData.total[index] || 0;
-                    }
-                });
             }
             
             // Get current unit and mode settings

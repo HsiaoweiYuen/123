@@ -1258,12 +1258,6 @@ $nodeStatsHtml = '
             
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
-                
-                // For "today" type ranges, do not generate future time points
-                if (timeRange === "today" && timestamp > now) {
-                    break;
-                }
-                
                 if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
                     // Use consistent time formatting like service_search.php
                     labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
@@ -1273,45 +1267,6 @@ $nodeStatsHtml = '
                     const day = String(timestamp.getDate()).padStart(2, "0");
                     labels.push(month + "/" + day);
                 }
-            }
-            
-            return labels;
-        }
-
-        // Generate complete time series to prevent chart discontinuity
-        function generateCompleteTimeSeriesForNodeChart(timeRange) {
-            const labels = [];
-            const now = new Date();
-            
-            switch (timeRange) {
-                case "today":
-                default:
-                    // Generate hours up to current time only
-                    const currentHour = now.getHours();
-                    for (let hour = 0; hour <= currentHour; hour++) {
-                        labels.push(hour.toString().padStart(2, "0") + ":00");
-                    }
-                    break;
-                    
-                case "week":
-                    // Generate all 7 days for the past week  
-                    for (let i = 6; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-                    
-                case "month":
-                    // Generate all 30 days for the past month
-                    for (let i = 29; i >= 0; i--) {
-                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
             }
             
             return labels;
@@ -1334,31 +1289,6 @@ $nodeStatsHtml = '
                     total: new Array(defaultLabels.length).fill(0),
                     node_id: chartData.node_id || "Unknown"
                 };
-            } else {
-                // Ensure complete time series to prevent gaps
-                const completeLabels = generateCompleteTimeSeriesForNodeChart("today");
-                const originalData = {
-                    labels: [...chartData.labels],
-                    upload: [...chartData.upload],
-                    download: [...chartData.download],
-                    total: [...chartData.total]
-                };
-                
-                // Reset arrays to match complete time series
-                chartData.labels = completeLabels;
-                chartData.upload = new Array(completeLabels.length).fill(0);
-                chartData.download = new Array(completeLabels.length).fill(0);
-                chartData.total = new Array(completeLabels.length).fill(0);
-                
-                // Fill in actual data where available
-                originalData.labels.forEach((label, index) => {
-                    const completeIndex = completeLabels.indexOf(label);
-                    if (completeIndex !== -1) {
-                        chartData.upload[completeIndex] = originalData.upload[index] || 0;
-                        chartData.download[completeIndex] = originalData.download[index] || 0;
-                        chartData.total[completeIndex] = originalData.total[index] || 0;
-                    }
-                });
             }
             
             // Get current unit and mode settings
