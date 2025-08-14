@@ -1231,45 +1231,126 @@ $nodeStatsHtml = '
             const now = new Date();
             const labels = [];
             
-            let start, interval;
             switch (timeRange) {
                 case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
+                    // Generate 5-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 5 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
                     break;
                 case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
+                    // Generate 10-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 10 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
                     break;
                 case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
+                    // Generate 30-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 30 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
                     break;
                 case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
+                    // Generate hourly interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
+                    }
                     break;
                 case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    // Generate 3-hour interval labels like real_time_monitor.php
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 3 * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
+                    }
                     break;
-            }
-            
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
-                } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
-                }
+                default:
+                    // Generate date labels for multi-day ranges
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
+                    break;
             }
             
             return labels;
+        }
+
+        // Generate continuous time labels between two time points to fill gaps
+        function generateContinuousTimeLabels(firstLabel, lastLabel, timeRange) {
+            const labels = [];
+            
+            if (!firstLabel || !lastLabel) {
+                return [firstLabel, lastLabel].filter(Boolean);
+            }
+            
+            // For time format (HH:MM)
+            if (firstLabel.includes(":") && !firstLabel.includes("/") && !firstLabel.includes("-")) {
+                const [startHour, startMin] = firstLabel.split(":").map(Number);
+                const [endHour, endMin] = lastLabel.split(":").map(Number);
+                
+                const startMinutes = startHour * 60 + (startMin || 0);
+                const endMinutes = endHour * 60 + (endMin || 0);
+                
+                let interval;
+                switch (timeRange) {
+                    case "5min": interval = 5; break;
+                    case "10min": interval = 10; break;
+                    case "30min": interval = 30; break;
+                    case "1hour": interval = 60; break;
+                    default: interval = 180; // 3 hours for today
+                }
+                
+                for (let minutes = startMinutes; minutes <= endMinutes; minutes += interval) {
+                    const hour = Math.floor(minutes / 60) % 24;
+                    const min = minutes % 60;
+                    labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                }
+            }
+            // For date format (MM/DD)
+            else if (firstLabel.includes("/")) {
+                const firstParts = firstLabel.split("/").map(Number);
+                const lastParts = lastLabel.split("/").map(Number);
+                
+                if (firstParts.length >= 2 && lastParts.length >= 2) {
+                    const startDate = new Date(firstParts[2] || 2024, firstParts[0] - 1, firstParts[1]);
+                    const endDate = new Date(lastParts[2] || 2024, lastParts[0] - 1, lastParts[1]);
+                    
+                    const currentDate = new Date(startDate);
+                    while (currentDate <= endDate) {
+                        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+                        const day = String(currentDate.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                }
+            }
+            // For YYYY-MM-DD format
+            else if (firstLabel.includes("-")) {
+                const startDate = new Date(firstLabel);
+                const endDate = new Date(lastLabel);
+                
+                const currentDate = new Date(startDate);
+                while (currentDate <= endDate) {
+                    labels.push(currentDate.toISOString().split('T')[0]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            }
+            
+            return labels.length > 0 ? labels : [firstLabel, lastLabel].filter(Boolean);
         }
 
         function displayNodeChart(chartData) {
@@ -1289,6 +1370,18 @@ $nodeStatsHtml = '
                     total: new Array(defaultLabels.length).fill(0),
                     node_id: chartData.node_id || "Unknown"
                 };
+            }
+            
+            // Add data point limiting for non-empty data to prevent performance issues
+            if (chartData.labels && chartData.labels.length > 0) {
+                const maxDataPoints = 100;
+                if (chartData.labels.length > maxDataPoints) {
+                    const startIndex = chartData.labels.length - maxDataPoints;
+                    chartData.labels = chartData.labels.slice(startIndex);
+                    chartData.upload = chartData.upload.slice(startIndex);
+                    chartData.download = chartData.download.slice(startIndex);
+                    chartData.total = chartData.total.slice(startIndex);
+                }
             }
             
             // Get current unit and mode settings
