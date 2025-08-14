@@ -681,6 +681,8 @@ $serviceSearchHtml = '
             
             // Try advanced search first for service_id
             if (searchType === "service_id") {
+                // Add grouped=true parameter to use server-side time grouping (PR#37 pattern)
+                requestData.grouped = "true";
                 $.ajax({
                     url: "addonmodules.php?module=v2raysocks_traffic&action=search_service_advanced",
                     type: "GET",
@@ -692,7 +694,7 @@ $serviceSearchHtml = '
                         if (response.status === "success") {
                             if (response.data && response.data.length > 0) {
                                 updateServiceTrafficTable(response.data);
-                                updateServiceTrafficChart(response.data);
+                                updateServiceTrafficChart(response.data, response.grouped_data);
                             } else {
                                 // Try fallback to regular search
                                 searchServiceTrafficFallback(requestData);
@@ -717,6 +719,8 @@ $serviceSearchHtml = '
         
         function searchServiceTrafficFallback(formData) {
             console.log("Trying fallback search...");
+            // Add grouped=true parameter to use server-side time grouping (PR#37 pattern)
+            formData += (formData ? "&" : "") + "grouped=true";
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
                 type: "GET",
@@ -727,7 +731,7 @@ $serviceSearchHtml = '
                     console.log("Fallback service search response:", response);
                     if (response.status === "success") {
                         updateServiceTrafficTable(response.data);
-                        updateServiceTrafficChart(response.data);
+                        updateServiceTrafficChart(response.data, response.grouped_data);
                     } else {
                         console.error("Fallback service search error:", response);
                         $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
@@ -833,7 +837,7 @@ $serviceSearchHtml = '
             return labels;
         }
         
-        function updateServiceTrafficChart(data) {
+        function updateServiceTrafficChart(data, groupedData) {
             // Handle empty data case - generate default time labels
             if (!data || data.length === 0) {
                 const timeRange = $("#time_range").val();
@@ -929,50 +933,86 @@ $serviceSearchHtml = '
                 return;
             }
             
-            // Group data by time periods for chart
-            const timeData = {};
-            const timeKeys = []; // Track insertion order for proper sorting
+            // Use server-side grouped data if available (PR#37 pattern)
+            let timeData = {};
             let allDataPoints = [];
             
-            data.forEach(function(row) {
-                // use actual data timestamp for time grouping
-                const date = new Date(row.t * 1000);
-                let timeKey;
+            if (groupedData) {
+                // Use pre-grouped data from server (avoids client-side timezone issues)
+                Object.keys(groupedData).forEach(function(timeKey) {
+                    const groupData = groupedData[timeKey];
+                    timeData[timeKey] = {
+                        upload: groupData.upload || 0,
+                        download: groupData.download || 0,
+                        timestamp: groupData.timestamp
+                    };
+                    
+                    // Collect all data points for auto unit detection
+                    allDataPoints.push(groupData.upload || 0);
+                    allDataPoints.push(groupData.download || 0);
+                    allDataPoints.push((groupData.upload || 0) + (groupData.download || 0));
+                });
+            } else {
+                // Fallback to client-side grouping if no server grouping available
+                const timeKeys = []; // Track insertion order for proper sorting
                 
-                // Group by different time periods based on range - use consistent formatting
-                const timeRange = $("#time_range").val();
-                if (timeRange === "today") {
-                    timeKey = date.getHours() + ":00";
-                } else {
-                    // Format as MM/DD for consistency with default labels
-                    const month = String(date.getMonth() + 1).padStart(2, "0");
-                    const day = String(date.getDate()).padStart(2, "0");
-                    timeKey = month + "/" + day;
-                }
-                
-                if (!timeData[timeKey]) {
-                    timeData[timeKey] = { upload: 0, download: 0, timestamp: row.t };
-                    timeKeys.push(timeKey);
-                }
-                const upload = (row.u || 0);
-                const download = (row.d || 0);
-                timeData[timeKey].upload += upload;
-                timeData[timeKey].download += download;
-                
-                // Update timestamp to the latest one for this time period
-                if (row.t > timeData[timeKey].timestamp) {
-                    timeData[timeKey].timestamp = row.t;
-                }
-                
-                // Collect all data points for auto unit detection
-                allDataPoints.push(upload);
-                allDataPoints.push(download);
-                allDataPoints.push(upload + download);
-            });
+                data.forEach(function(row) {
+                    // use actual data timestamp for time grouping
+                    const date = new Date(row.t * 1000);
+                    let timeKey;
+                    
+                    // Group by different time periods based on range - use consistent formatting
+                    const timeRange = $("#time_range").val();
+                    if (timeRange === "today") {
+                        timeKey = date.getHours() + ":00";
+                    } else {
+                        // Format as MM/DD for consistency with default labels
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        timeKey = month + "/" + day;
+                    }
+                    
+                    if (!timeData[timeKey]) {
+                        timeData[timeKey] = { upload: 0, download: 0, timestamp: row.t };
+                        timeKeys.push(timeKey);
+                    }
+                    const upload = (row.u || 0);
+                    const download = (row.d || 0);
+                    timeData[timeKey].upload += upload;
+                    timeData[timeKey].download += download;
+                    
+                    // Update timestamp to the latest one for this time period
+                    if (row.t > timeData[timeKey].timestamp) {
+                        timeData[timeKey].timestamp = row.t;
+                    }
+                    
+                    // Collect all data points for auto unit detection
+                    allDataPoints.push(upload);
+                    allDataPoints.push(download);
+                    allDataPoints.push(upload + download);
+                });
+            }
             
             // Sort labels chronologically instead of alphabetically
-            const labels = timeKeys.sort((a, b) => {
-                return timeData[a].timestamp - timeData[b].timestamp;
+            const labels = Object.keys(timeData).sort((a, b) => {
+                if (timeData[a].timestamp && timeData[b].timestamp) {
+                    return timeData[a].timestamp - timeData[b].timestamp;
+                }
+                // Fallback sorting for time format
+                if (a.includes(":") && !a.includes("/")) {
+                    // Time format sorting (HH:MM)
+                    const [aHour, aMin] = a.split(":").map(Number);
+                    const [bHour, bMin] = b.split(":").map(Number);
+                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                } else if (a.includes("/")) {
+                    // Date format sorting (MM/DD)
+                    const aParts = a.split("/").map(Number);
+                    const bParts = b.split("/").map(Number);
+                    const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
+                    const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
+                    return aDate - bDate;
+                }
+                return a.localeCompare(b);
             });
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();

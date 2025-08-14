@@ -1477,6 +1477,103 @@ $userRankingsHtml = '
             
             return labels;
         }
+        
+        // Fill time gaps to prevent chart discontinuities (PR#37 pattern)
+        function fillUserChartTimeGaps(chartData) {
+            if (!chartData.labels || chartData.labels.length === 0) {
+                return chartData;
+            }
+            
+            // Determine time range based on label format
+            const firstLabel = chartData.labels[0];
+            let timeRange = "today";
+            if (firstLabel.includes("-") || (firstLabel.includes("/") && firstLabel.length > 5)) {
+                timeRange = "week"; // Multi-day format
+            }
+            
+            // Generate complete time sequence based on first and last labels
+            let completeLabels = [];
+            let labelToIndex = {};
+            
+            // Map existing labels to their indices
+            chartData.labels.forEach((label, index) => {
+                labelToIndex[label] = index;
+            });
+            
+            if (timeRange === "today") {
+                // For hourly data, generate 24 hour labels
+                for (let hour = 0; hour < 24; hour++) {
+                    const label = String(hour).padStart(2, "0") + ":00";
+                    completeLabels.push(label);
+                }
+            } else {
+                // For daily data, generate labels between first and last dates
+                const firstDate = parseUserChartLabel(chartData.labels[0]);
+                const lastDate = parseUserChartLabel(chartData.labels[chartData.labels.length - 1]);
+                
+                if (firstDate && lastDate) {
+                    const currentDate = new Date(firstDate);
+                    while (currentDate <= lastDate) {
+                        const label = formatUserChartLabel(currentDate);
+                        completeLabels.push(label);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                } else {
+                    // Fallback to existing labels if parsing fails
+                    completeLabels = [...chartData.labels];
+                }
+            }
+            
+            // Create new data arrays with zeros for missing time points
+            const filledUpload = [];
+            const filledDownload = [];
+            const filledTotal = [];
+            
+            completeLabels.forEach(label => {
+                const existingIndex = labelToIndex[label];
+                if (existingIndex !== undefined) {
+                    filledUpload.push(chartData.upload[existingIndex] || 0);
+                    filledDownload.push(chartData.download[existingIndex] || 0);
+                    filledTotal.push(chartData.total[existingIndex] || 0);
+                } else {
+                    filledUpload.push(0);
+                    filledDownload.push(0);
+                    filledTotal.push(0);
+                }
+            });
+            
+            return {
+                labels: completeLabels,
+                upload: filledUpload,
+                download: filledDownload,
+                total: filledTotal,
+                user_id: chartData.user_id,
+                time_range: chartData.time_range
+            };
+        }
+        
+        // Helper function to parse date from chart label
+        function parseUserChartLabel(label) {
+            if (label.includes("-")) {
+                // YYYY-MM-DD format
+                return new Date(label);
+            } else if (label.includes("/")) {
+                // MM/DD format (assume current year)
+                const parts = label.split("/");
+                if (parts.length === 2) {
+                    return new Date(new Date().getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                }
+            }
+            return null;
+        }
+        
+        // Helper function to format date as chart label
+        function formatUserChartLabel(date) {
+            // Use YYYY-MM-DD format for consistency with server-side grouping
+            return date.getFullYear() + "-" + 
+                   String(date.getMonth() + 1).padStart(2, "0") + "-" + 
+                   String(date.getDate()).padStart(2, "0");
+        }
 
         function displayUserChart(chartData) {
             const ctx = document.getElementById("user-traffic-chart").getContext("2d");
@@ -1496,6 +1593,9 @@ $userRankingsHtml = '
                     total: new Array(defaultLabels.length).fill(0),
                     user_id: chartData.user_id || "Unknown"
                 };
+            } else {
+                // Fill time gaps to prevent chart discontinuities (PR#37 pattern)
+                chartData = fillUserChartTimeGaps(chartData);
             }
             
             // Get current unit and mode settings
