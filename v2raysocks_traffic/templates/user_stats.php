@@ -460,35 +460,109 @@ $userStatsHtml = '
             $("#user-traffic-history").html(html);
         }
         
+        // Generate complete time range for user charts - ensures no gaps in time series
+        function generateCompleteTimeRangeForUser(timeRange = "month") {
+            const timeData = {};
+            const now = new Date();
+            let startTime, endTime, interval;
+            
+            switch (timeRange) {
+                case "today":
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
+                    break;
+                case "week":
+                case "7days":
+                    startTime = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    break;
+                case "month":
+                case "30days":
+                default:
+                    startTime = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+            }
+            
+            // Generate all time periods in the range
+            for (let timestamp = startTime.getTime(); timestamp <= endTime.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                let timeKey;
+                
+                // Format time key based on interval
+                if (interval >= 24 * 60 * 60 * 1000) {
+                    // Daily intervals - use MM/DD/YYYY format consistent with backend
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    const year = date.getFullYear();
+                    timeKey = month + "/" + day + "/" + year;
+                } else {
+                    // Hourly intervals
+                    timeKey = String(date.getHours()).padStart(2, "0") + ":00";
+                }
+                
+                // Initialize with 0 values
+                timeData[timeKey] = { upload: 0, download: 0 };
+            }
+            
+            return timeData;
+        }
+        
         function updateUserTrafficChart(data, groupedData) {
-            // Use server-side grouped data if available (PR#37 pattern)
-            let timeData = {};
+            // Determine time range from data or default to month
+            let timeRange = "month";
+            if (data && data.length > 0) {
+                // Simple heuristic based on data span
+                const timestamps = data.map(row => row.t).sort();
+                const span = timestamps[timestamps.length - 1] - timestamps[0];
+                if (span <= 24 * 60 * 60) {
+                    timeRange = "today";
+                } else if (span <= 7 * 24 * 60 * 60) {
+                    timeRange = "week";
+                }
+            }
+            
+            // Start with complete time range filled with 0 values
+            let timeData = generateCompleteTimeRangeForUser(timeRange);
             
             if (groupedData) {
                 // Use pre-grouped data from server (avoids client-side timezone issues)
                 Object.keys(groupedData).forEach(function(timeKey) {
                     const groupData = groupedData[timeKey];
-                    timeData[timeKey] = {
-                        upload: groupData.upload || 0,
-                        download: groupData.download || 0
-                    };
+                    // Only update if this time key exists in our complete range
+                    if (timeData[timeKey]) {
+                        timeData[timeKey] = {
+                            upload: groupData.upload || 0,
+                            download: groupData.download || 0
+                        };
+                    }
                 });
             } else {
                 // Fallback to client-side grouping if no server grouping available
                 data.forEach(function(row) {
                     // use actual data timestamp for time grouping
                     const date = new Date(row.t * 1000);
-                    // Use consistent date formatting to avoid timezone variations
-                    const month = String(date.getMonth() + 1).padStart(2, "0");
-                    const day = String(date.getDate()).padStart(2, "0");
-                    const year = date.getFullYear();
-                    const timeKey = month + "/" + day + "/" + year;
+                    let timeKey;
                     
-                    if (!timeData[timeKey]) {
-                        timeData[timeKey] = { upload: 0, download: 0 };
+                    if (timeRange === "today") {
+                        timeKey = String(date.getHours()).padStart(2, "0") + ":00";
+                    } else {
+                        // Use consistent date formatting to avoid timezone variations
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        const year = date.getFullYear();
+                        timeKey = month + "/" + day + "/" + year;
                     }
-                    timeData[timeKey].upload += (row.u || 0);
-                    timeData[timeKey].download += (row.d || 0);
+                    
+                    // Only update if this time key exists in our complete range
+                    if (timeData[timeKey]) {
+                        timeData[timeKey].upload += (row.u || 0);
+                        timeData[timeKey].download += (row.d || 0);
+                    }
                 });
             }
             

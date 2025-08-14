@@ -237,6 +237,25 @@ $todayTrafficChartHtml = '
             });
         });
         
+        // Generate complete time range for today traffic chart - ensures no gaps
+        function generateCompleteHourlyRange() {
+            const timeData = {};
+            const now = new Date();
+            const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const interval = 60 * 60 * 1000; // 1 hour
+            
+            // Generate all hours in the day
+            for (let timestamp = startTime.getTime(); timestamp <= now.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                const timeKey = String(date.getHours()).padStart(2, "0");
+                
+                // Initialize with 0 values
+                timeData[timeKey] = { upload: 0, download: 0 };
+            }
+            
+            return timeData;
+        }
+        
         function initTodayChart() {
             const ctx = document.getElementById("today-traffic-chart").getContext("2d");
             todayChart = new Chart(ctx, {
@@ -392,69 +411,34 @@ $todayTrafficChartHtml = '
         }
         
         function updateTodayChart() {
-            if (!todayData || !todayData.hourly_stats) {
-                console.log("No today data available for chart");
-                return;
-            }
-            
             const chartType = $("#chart-type").val();
             let unit = $("#data-unit").val();
             
-            // Sort hours chronologically instead of alphabetically
-            const hours = Object.keys(todayData.hourly_stats).sort((a, b) => {
-                if (a.includes(":") && !a.includes("/")) {
-                    // Time format sorting (HH:MM)
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format sorting (YYYY-MM-DD)
-                    return new Date(a) - new Date(b);
-                } else {
-                    // For numeric hour strings (0, 1, 2, ..., 23)
-                    return parseInt(a) - parseInt(b);
-                }
-            });
+            // Start with complete hourly range and overlay actual data
+            const completeHourlyData = generateCompleteHourlyRange();
             
-            if (hours.length === 0) {
-                console.log("No hourly data available");
-                // Clear chart data
-                todayChart.data.labels = [];
-                todayChart.data.datasets = [];
-                todayChart.update();
-                return;
+            // Overlay actual data if available
+            if (todayData && todayData.hourly_stats) {
+                Object.keys(todayData.hourly_stats).forEach(hour => {
+                    if (completeHourlyData[hour]) {
+                        completeHourlyData[hour] = todayData.hourly_stats[hour];
+                    }
+                });
             }
             
-            const labels = hours.map(h => h + ":00");
+            // Get all hours from complete range (already sorted)
+            const allHours = Object.keys(completeHourlyData);
+            const labels = allHours.map(h => h + ":00");
             
             let datasets = [];
             let allDataPoints = [];
             
             // Collect all data points to determine best unit for auto mode
-            hours.forEach(hour => {
-                const stats = todayData.hourly_stats[hour];
-                if (stats) {
-                    allDataPoints.push(stats.upload || 0);
-                    allDataPoints.push(stats.download || 0);
-                    allDataPoints.push((stats.upload || 0) + (stats.download || 0));
-                }
+            allHours.forEach(hour => {
+                const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
+                allDataPoints.push(stats.upload || 0);
+                allDataPoints.push(stats.download || 0);
+                allDataPoints.push((stats.upload || 0) + (stats.download || 0));
             });
             
             // If auto unit is selected, determine the best unit
@@ -467,18 +451,18 @@ $todayTrafficChartHtml = '
             switch (chartType) {
                 case "combined":
                     // Default: Show upload, download, and total traffic
-                    const uploadData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const uploadData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         return (stats.upload || 0) / unitDivisor;
                     });
                     
-                    const downloadData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const downloadData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         return (stats.download || 0) / unitDivisor;
                     });
                     
-                    const totalData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const totalData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         return ((stats.upload || 0) + (stats.download || 0)) / unitDivisor;
                     });
                     
@@ -490,8 +474,8 @@ $todayTrafficChartHtml = '
                     break;
                     
                 case "hourly":
-                    const totalOnlyData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const totalOnlyData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         return ((stats.upload || 0) + (stats.download || 0)) / unitDivisor;
                     });
                     
@@ -504,14 +488,14 @@ $todayTrafficChartHtml = '
                     let cumulativeUpload = 0;
                     let cumulativeDownload = 0;
                     
-                    const cumulativeUploadData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const cumulativeUploadData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         cumulativeUpload += (stats.upload || 0);
                         return cumulativeUpload / unitDivisor;
                     });
                     
-                    const cumulativeDownloadData = hours.map(hour => {
-                        const stats = todayData.hourly_stats[hour];
+                    const cumulativeDownloadData = allHours.map(hour => {
+                        const stats = completeHourlyData[hour] || { upload: 0, download: 0 };
                         cumulativeDownload += (stats.download || 0);
                         return cumulativeDownload / unitDivisor;
                     });
