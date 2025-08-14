@@ -253,11 +253,11 @@ $realTimeMonitorHtml = '
             <!-- Independent Search Controls -->
             <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
                 <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 0 0 200px; min-width: auto;">
                         <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id_search') . ':</label>
                         <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 0 0 200px; min-width: auto;">
                         <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_period_search') . ':</label>
                         <select id="today-time-range" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>

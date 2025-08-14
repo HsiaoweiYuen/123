@@ -254,7 +254,7 @@ $nodeStatsHtml = '
             flex-wrap: nowrap;
         }
         .chart-controls-panel select {
-            min-width: 120px;
+            min-width: auto;
         }
         
         /* Responsive styles for mobile devices */
@@ -290,7 +290,7 @@ $nodeStatsHtml = '
                 justify-content: space-between;
             }
             .chart-controls-panel select {
-                min-width: 100px;
+                min-width: auto;
                 flex: 1;
                 margin-left: 8px;
             }

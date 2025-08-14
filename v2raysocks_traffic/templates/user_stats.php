@@ -58,7 +58,7 @@ $userStatsHtml = '
         }
         .form-group { 
             flex: 1;
-            min-width: 150px;
+            min-width: auto;
         }
         .form-group label { 
             display: block; 
