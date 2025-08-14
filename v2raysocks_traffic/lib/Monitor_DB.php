@@ -1498,7 +1498,7 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                             // consistent time labels matching chart displays
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($row['t']),
                         'hour_label' => (function($timestamp) {
                             // hour labels matching chart displays  
@@ -1563,10 +1563,10 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                             return $date->format('Y-m-d H:i:s');
                         })($row['t']),
                         (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($row['t']),
                         (function($timestamp) {
                             // hour label matching chart displays (H:i format)
@@ -3312,10 +3312,10 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($node['last_online']),
                         'last_online_date_label' => (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($node['last_online']),
                         'last_online_time_label' => (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3387,10 +3387,10 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($node['last_online']),
                         (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($node['last_online']),
                         (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3457,10 +3457,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['first_usage']) : '',
                         'first_usage_date_label' => $user['first_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['first_usage']) : '',
                         'first_usage_time_label' => $user['first_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3475,10 +3475,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['last_usage']) : '',
                         'last_usage_date_label' => $user['last_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['last_usage']) : '',
                         'last_usage_time_label' => $user['last_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3552,10 +3552,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['first_usage']) : '',
                         $user['first_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['first_usage']) : '',
                         $user['first_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3570,10 +3570,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['last_usage']) : '',
                         $user['last_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['last_usage']) : '',
                         $user['last_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3661,7 +3661,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                             if ($timestamp !== false) {
                                 $date = new DateTime();
                                 $date->setTimestamp($timestamp);
-                                return $date->format('m/d');
+                                return $date->format('Y/m/d');
                             }
                             return '';
                         })($record['formatted_time']) : '',
@@ -3739,7 +3739,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                         if ($timestamp !== false) {
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            $dateLabel = $date->format('m/d');
+                            $dateLabel = $date->format('Y/m/d');
                             $timeLabel = $date->format('H:i');
                         }
                     }
@@ -3793,11 +3793,11 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
             // For today, group by hour with proper time display
             $timeKey = $date->format('H') . ':00';
         } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
-            // For weekly/bi-weekly/monthly ranges, use MM/DD/YYYY format for compatibility
-            $timeKey = $date->format('m/d/Y');
+            // For weekly/bi-weekly/monthly ranges, use YYYY/MM/DD format for compatibility
+            $timeKey = $date->format('Y/m/d');
         } else {
-            // For longer ranges, use MM/DD/YYYY format
-            $timeKey = $date->format('m/d/Y');
+            // For longer ranges, use YYYY/MM/DD format
+            $timeKey = $date->format('Y/m/d');
         }
         
         if (!isset($timeData[$timeKey])) {
