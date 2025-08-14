@@ -800,37 +800,140 @@ $serviceSearchHtml = '
         
         // Generate default time labels for empty charts - using server local time (not UTC)
         function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            // For empty charts, create minimal consistent placeholder labels
+            const now = new Date();
             const labels = [];
             
             switch (timeRange) {
+                case "5min":
+                    // Generate 5-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 5 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "10min":
+                    // Generate 10-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 10 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "30min":
+                    // Generate 30-minute interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 30 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        const minute = time.getMinutes().toString().padStart(2, "0");
+                        labels.push(hour + ":" + minute);
+                    }
+                    break;
+                case "1hour":
+                    // Generate hourly interval labels
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
+                    }
+                    break;
                 case "today":
-                    // Generate hour labels for today
-                    for (let i = 0; i < Math.min(points, 24); i++) {
-                        labels.push(String(i).padStart(2, "0") + ":00");
+                    // Generate 3-hour interval labels like real_time_monitor.php
+                    for (let i = points - 1; i >= 0; i--) {
+                        const time = new Date(now.getTime() - (i * 3 * 60 * 60 * 1000));
+                        const hour = time.getHours().toString().padStart(2, "0");
+                        labels.push(hour + ":00");
                     }
                     break;
                 case "week":
                 case "halfmonth":
                 case "month_including_today":
                     // Generate date labels for multi-day ranges
-                    const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
-                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
                         labels.push(month + "/" + day);
                     }
                     break;
                 default:
-                    // Fallback: simple numeric labels
-                    for (let i = 1; i <= points; i++) {
-                        labels.push(String(i));
+                    // Generate date labels for multi-day ranges
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
                     }
                     break;
             }
             
             return labels;
+        }
+
+        // Generate continuous time labels between two time points to fill gaps
+        function generateContinuousTimeLabels(firstLabel, lastLabel, timeRange) {
+            const labels = [];
+            
+            if (!firstLabel || !lastLabel) {
+                return [firstLabel, lastLabel].filter(Boolean);
+            }
+            
+            // For time format (HH:MM)
+            if (firstLabel.includes(":") && !firstLabel.includes("/") && !firstLabel.includes("-")) {
+                const [startHour, startMin] = firstLabel.split(":").map(Number);
+                const [endHour, endMin] = lastLabel.split(":").map(Number);
+                
+                const startMinutes = startHour * 60 + (startMin || 0);
+                const endMinutes = endHour * 60 + (endMin || 0);
+                
+                let interval;
+                switch (timeRange) {
+                    case "5min": interval = 5; break;
+                    case "10min": interval = 10; break;
+                    case "30min": interval = 30; break;
+                    case "1hour": interval = 60; break;
+                    default: interval = 180; // 3 hours for today
+                }
+                
+                for (let minutes = startMinutes; minutes <= endMinutes; minutes += interval) {
+                    const hour = Math.floor(minutes / 60) % 24;
+                    const min = minutes % 60;
+                    labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                }
+            }
+            // For date format (MM/DD)
+            else if (firstLabel.includes("/")) {
+                const firstParts = firstLabel.split("/").map(Number);
+                const lastParts = lastLabel.split("/").map(Number);
+                
+                if (firstParts.length >= 2 && lastParts.length >= 2) {
+                    const startDate = new Date(firstParts[2] || 2024, firstParts[0] - 1, firstParts[1]);
+                    const endDate = new Date(lastParts[2] || 2024, lastParts[0] - 1, lastParts[1]);
+                    
+                    const currentDate = new Date(startDate);
+                    while (currentDate <= endDate) {
+                        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+                        const day = String(currentDate.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                }
+            }
+            // For YYYY-MM-DD format
+            else if (firstLabel.includes("-")) {
+                const startDate = new Date(firstLabel);
+                const endDate = new Date(lastLabel);
+                
+                const currentDate = new Date(startDate);
+                while (currentDate <= endDate) {
+                    labels.push(currentDate.toISOString().split('T')[0]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            }
+            
+            return labels.length > 0 ? labels : [firstLabel, lastLabel].filter(Boolean);
         }
         
         function updateServiceTrafficChart(data) {
@@ -971,9 +1074,58 @@ $serviceSearchHtml = '
             });
             
             // Sort labels chronologically instead of alphabetically
-            const labels = timeKeys.sort((a, b) => {
+            const sortedLabels = timeKeys.sort((a, b) => {
                 return timeData[a].timestamp - timeData[b].timestamp;
             });
+            
+            // Add gap filling and data point limiting for better chart continuity
+            let finalLabels, finalTimeData;
+            if (sortedLabels.length === 0) {
+                // Use default labels for empty data (already handled above)
+                const timeRange = $("#time_range").val();
+                finalLabels = generateDefaultTimeLabels(timeRange, 8);
+                finalTimeData = {};
+                finalLabels.forEach(label => {
+                    finalTimeData[label] = { upload: 0, download: 0, timestamp: Date.now() / 1000 };
+                });
+            } else {
+                // Fill missing time points with zero data for continuous time axis
+                const firstLabel = sortedLabels[0];
+                const lastLabel = sortedLabels[sortedLabels.length - 1];
+                const timeRange = $("#time_range").val();
+                
+                // Generate continuous time labels from first to last data point
+                const continuousLabels = generateContinuousTimeLabels(firstLabel, lastLabel, timeRange);
+                
+                // Fill missing time points with zero data
+                finalTimeData = {};
+                continuousLabels.forEach(label => {
+                    if (timeData[label]) {
+                        finalTimeData[label] = timeData[label];
+                    } else {
+                        // Add zero data for missing time points
+                        finalTimeData[label] = { upload: 0, download: 0, timestamp: Date.now() / 1000 };
+                    }
+                });
+                
+                finalLabels = continuousLabels;
+            }
+            
+            // Limit data points to prevent chart performance issues
+            const maxDataPoints = 100;
+            if (finalLabels.length > maxDataPoints) {
+                const startIndex = finalLabels.length - maxDataPoints;
+                finalLabels = finalLabels.slice(startIndex);
+                
+                // Update finalTimeData to only include limited labels
+                const limitedTimeData = {};
+                finalLabels.forEach(label => {
+                    limitedTimeData[label] = finalTimeData[label];
+                });
+                finalTimeData = limitedTimeData;
+            }
+            
+            const labels = finalLabels;
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();
             
@@ -988,13 +1140,13 @@ $serviceSearchHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (timeData[time].upload / unitDivisor))),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (timeData[time].download / unitDivisor)))
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (finalTimeData[time].upload / unitDivisor))),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (finalTimeData[time].download / unitDivisor)))
                     ];
                     break;
                 case "total":
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, labels.map(time => ((timeData[time].upload + timeData[time].download) / unitDivisor)), {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, labels.map(time => ((finalTimeData[time].upload + finalTimeData[time].download) / unitDivisor)), {fill: true})
                     ];
                     break;
                 case "cumulative":
@@ -1002,11 +1154,11 @@ $serviceSearchHtml = '
                     let cumulativeDownload = 0;
                     datasets = [
                         getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => {
-                            cumulativeUpload += timeData[time].upload;
+                            cumulativeUpload += finalTimeData[time].upload;
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
                         getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => {
-                            cumulativeDownload += timeData[time].download;
+                            cumulativeDownload += finalTimeData[time].download;
                             return cumulativeDownload / unitDivisor;
                         }), {fill: false})
                     ];
@@ -1015,7 +1167,7 @@ $serviceSearchHtml = '
                     let cumulativeTotal = 0;
                     datasets = [
                         getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, labels.map(time => {
-                            cumulativeTotal += timeData[time].upload + timeData[time].download;
+                            cumulativeTotal += finalTimeData[time].upload + finalTimeData[time].download;
                             return cumulativeTotal / unitDivisor;
                         }), {fill: true})
                     ];
