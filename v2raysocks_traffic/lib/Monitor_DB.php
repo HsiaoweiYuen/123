@@ -3457,10 +3457,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['first_usage']) : '',
                         'first_usage_date_label' => $user['first_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['first_usage']) : '',
                         'first_usage_time_label' => $user['first_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3475,10 +3475,10 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                             return $date->format('Y-m-d H:i:s');
                         })($user['last_usage']) : '',
                         'last_usage_date_label' => $user['last_usage'] ? (function($timestamp) {
-                            // date label matching chart displays (m/d format)
+                            // date label matching chart displays (Y/m/d format)
                             $date = new DateTime();
                             $date->setTimestamp($timestamp);
-                            return $date->format('m/d');
+                            return $date->format('Y/m/d');
                         })($user['last_usage']) : '',
                         'last_usage_time_label' => $user['last_usage'] ? (function($timestamp) {
                             // time label matching chart displays (H:i format)
@@ -3656,12 +3656,12 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                     return [
                         'formatted_time' => $record['formatted_time'] ?? '',
                         'time_date_label' => isset($record['formatted_time']) ? (function($formattedTime) {
-                            // extract date and format as m/d from Y-m-d H:i:s
+                            // extract date and format as Y/m/d from Y-m-d H:i:s
                             $timestamp = strtotime($formattedTime);
                             if ($timestamp !== false) {
                                 $date = new DateTime();
                                 $date->setTimestamp($timestamp);
-                                return $date->format('m/d');
+                                return $date->format('Y/m/d');
                             }
                             return '';
                         })($record['formatted_time']) : '',

@@ -923,9 +923,10 @@ $trafficDashboardHtml = '
                     const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
                         const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        labels.push(year + "/" + month + "/" + day);
                     }
                     break;
             }
@@ -1054,14 +1055,14 @@ $trafficDashboardHtml = '
                     const [bHour, bMin] = b.split(":").map(Number);
                     return (aHour * 60 + aMin) - (bHour * 60 + bMin);
                 } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
+                    // Date format sorting (YYYY/MM/DD or MM/DD)
                     const aParts = a.split("/").map(Number);
                     const bParts = b.split("/").map(Number);
                     
                     if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
+                        // Format: YYYY/MM/DD
+                        const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
+                        const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
                         return aDate - bDate;
                     } else if (aParts.length === 2 && bParts.length === 2) {
                         // Format: MM/DD (assume same year)
