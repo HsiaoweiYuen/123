@@ -612,65 +612,88 @@ $realTimeMonitorHtml = '
             return { labels, hours };
         }
 
+        function generateCompleteHourlyTimeSeries(existingData = {}) {
+            // Generate complete hourly time series for today to fill gaps
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const timeSeries = {};
+            
+            // Generate complete hourly series for today
+            for (let hour = 0; hour <= now.getHours(); hour++) {
+                const timeKey = hour.toString();
+                const timestamp = new Date(start.getTime() + (hour * 60 * 60 * 1000)).getTime();
+                
+                if (existingData[timeKey]) {
+                    timeSeries[timeKey] = existingData[timeKey];
+                } else {
+                    timeSeries[timeKey] = { upload: 0, download: 0, timestamp: timestamp };
+                }
+            }
+            
+            return timeSeries;
+        }
+
         function updateTodayTrafficChart(data) {
             if (!todayTrafficChart) return;
             
             const mode = $("#chart-display-mode").val();
             let unit = $("#chart-unit-select").val() || "GB";
-            // Sort hours chronologically instead of alphabetically
-            const hours = Object.keys(data.hourly_stats || {}).sort((a, b) => {
-                if (a.includes(":") && !a.includes("/")) {
-                    // Time format sorting (HH:MM)
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format sorting (YYYY-MM-DD)
-                    return new Date(a) - new Date(b);
-                } else {
-                    // For numeric hour strings (0, 1, 2, ..., 23)
-                    return parseInt(a) - parseInt(b);
-                }
-            });
-            
-            let labels, limitedHours;
             
             // Handle empty data case - generate default time labels
-            if (hours.length === 0) {
+            if (!data || !data.hourly_stats || Object.keys(data.hourly_stats).length === 0) {
                 const defaultTime = generateDefaultHourlyLabels(8);
-                labels = defaultTime.labels;
-                limitedHours = defaultTime.hours;
-            } else {
-                labels = hours.map(h => h + ":00");
-                // Limit chart data points to prevent infinite extension (max 24 hours for today)
-                const maxDataPoints = 24;
-                const limitedLabels = labels.slice(-maxDataPoints);
-                limitedHours = hours.slice(-maxDataPoints);
-                labels = limitedLabels;
+                const labels = defaultTime.labels;
+                const emptyData = new Array(labels.length).fill(0);
+                
+                let datasets = [];
+                switch (mode) {
+                    case "separate":
+                        datasets = [
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", emptyData),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", emptyData)
+                        ];
+                        break;
+                    case "total":
+                        datasets = [
+                            getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", emptyData, {fill: true})
+                        ];
+                        break;
+                    case "total_cumulative":
+                        datasets = [
+                            getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (" + unit + ")", emptyData, {fill: true})
+                        ];
+                        break;
+                }
+                
+                todayTrafficChart.data.labels = labels;
+                todayTrafficChart.data.datasets = datasets;
+                todayTrafficChart.options.scales.y.title.text = "' . v2raysocks_traffic_lang('traffic') . ' (" + unit + ")";
+                todayTrafficChart.update();
+                return;
             }
+            
+            // Generate complete time series to fill gaps
+            const completeTimeSeries = generateCompleteHourlyTimeSeries(data.hourly_stats);
+            
+            // Sort hours chronologically using timestamps
+            const hours = Object.keys(completeTimeSeries).sort((a, b) => {
+                if (completeTimeSeries[a].timestamp && completeTimeSeries[b].timestamp) {
+                    return completeTimeSeries[a].timestamp - completeTimeSeries[b].timestamp;
+                }
+                return parseInt(a) - parseInt(b);
+            });
+            
+            const labels = hours.map(h => h + ":00");
+            // Limit chart data points to prevent performance issues (max 24 hours for today)
+            const maxDataPoints = 24;
+            const limitedLabels = labels.slice(-maxDataPoints);
+            const limitedHours = hours.slice(-maxDataPoints);
             
             // Collect all data points for auto unit determination
             let allDataPoints = [];
             if (unit === "auto") {
                 limitedHours.forEach(h => {
-                    const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                    const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                     allDataPoints.push(stats.upload || 0);
                     allDataPoints.push(stats.download || 0);
                     allDataPoints.push((stats.upload || 0) + (stats.download || 0));
@@ -685,11 +708,11 @@ $realTimeMonitorHtml = '
                 case "separate":
                     datasets = [
                         getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             return (stats.upload || 0) / unitDivisor;
                         })),
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             return (stats.download || 0) / unitDivisor;
                         }))
                     ];
@@ -697,7 +720,7 @@ $realTimeMonitorHtml = '
                 case "total":
                     datasets = [
                         getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             return ((stats.upload || 0) + (stats.download || 0)) / unitDivisor;
                         }), {fill: true})
                     ];
@@ -707,12 +730,12 @@ $realTimeMonitorHtml = '
                     let cumulativeDownload = 0;
                     datasets = [
                         getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             cumulativeUpload += stats.upload || 0;
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             cumulativeDownload += stats.download || 0;
                             return cumulativeDownload / unitDivisor;
                         }), {fill: false})
@@ -722,7 +745,7 @@ $realTimeMonitorHtml = '
                     let cumulativeTotal = 0;
                     datasets = [
                         getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (" + unit + ")", limitedHours.map(h => {
-                            const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
+                            const stats = completeTimeSeries[h] || { upload: 0, download: 0 };
                             cumulativeTotal += (stats.upload || 0) + (stats.download || 0);
                             return cumulativeTotal / unitDivisor;
                         }), {fill: true})
