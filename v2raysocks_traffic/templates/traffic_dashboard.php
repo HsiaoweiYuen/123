@@ -1079,16 +1079,13 @@ $trafficDashboardHtml = '
                 }
             });
             
-            // Limit data points to prevent chart performance issues
-            const maxDataPoints = 100;
-            const limitedLabels = labels.slice(-maxDataPoints);
             let datasets = [];
             
             // Create datasets based on chart type
             switch (chartType) {
                 case "combined":
-                    const uploadData = limitedLabels.map(time => parseFloat((timeData[time].upload / unitDivisor).toFixed(3)));
-                    const downloadData = limitedLabels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
+                    const uploadData = labels.map(time => parseFloat((timeData[time].upload / unitDivisor).toFixed(3)));
+                    const downloadData = labels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
                     
                     datasets = [
                         getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData),
@@ -1097,7 +1094,7 @@ $trafficDashboardHtml = '
                     break;
                     
                 case "total":
-                    const totalData = limitedLabels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
+                    const totalData = labels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
                     
                     datasets = [
                         getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, totalData, {fill: true})
@@ -1108,12 +1105,12 @@ $trafficDashboardHtml = '
                     let cumulativeUpload = 0;
                     let cumulativeDownload = 0;
                     
-                    const cumulativeUploadData = limitedLabels.map(time => {
+                    const cumulativeUploadData = labels.map(time => {
                         cumulativeUpload += timeData[time].upload;
                         return parseFloat((cumulativeUpload / unitDivisor).toFixed(3));
                     });
                     
-                    const cumulativeDownloadData = limitedLabels.map(time => {
+                    const cumulativeDownloadData = labels.map(time => {
                         cumulativeDownload += timeData[time].download;
                         return parseFloat((cumulativeDownload / unitDivisor).toFixed(3));
                     });
@@ -1127,7 +1124,7 @@ $trafficDashboardHtml = '
                 case "total_cumulative":
                     let cumulativeTotal = 0;
                     
-                    const cumulativeTotalData = limitedLabels.map(time => {
+                    const cumulativeTotalData = labels.map(time => {
                         cumulativeTotal += (timeData[time].upload + timeData[time].download);
                         return parseFloat((cumulativeTotal / unitDivisor).toFixed(3));
                     });
@@ -1138,12 +1135,12 @@ $trafficDashboardHtml = '
                     break;
             }
             
-            trafficChart.data.labels = limitedLabels;
+            trafficChart.data.labels = labels;
             trafficChart.data.datasets = datasets;
             trafficChart.options.scales.y.title.text = `' . v2raysocks_traffic_lang('traffic') . ' (${unit})`;
             trafficChart.update();
             
-            console.log("Traffic chart updated with", limitedLabels.length, "data points in", chartType, "mode using", unit, "units");
+            console.log("Traffic chart updated with", labels.length, "data points in", chartType, "mode using", unit, "units");
         }
         
         function formatBytes(bytes, forceUnit = null) {

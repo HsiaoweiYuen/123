@@ -650,26 +650,22 @@ $realTimeMonitorHtml = '
                 }
             });
             
-            let labels, limitedHours;
+            let labels, hoursToUse;
             
             // Handle empty data case - generate default time labels
             if (hours.length === 0) {
                 const defaultTime = generateDefaultHourlyLabels(8);
                 labels = defaultTime.labels;
-                limitedHours = defaultTime.hours;
+                hoursToUse = defaultTime.hours;
             } else {
-                labels = hours.map(h => h + ":00");
-                // Limit chart data points to prevent infinite extension (max 24 hours for today)
-                const maxDataPoints = 24;
-                const limitedLabels = labels.slice(-maxDataPoints);
-                limitedHours = hours.slice(-maxDataPoints);
-                labels = limitedLabels;
+                hoursToUse = hours;
+                labels = hoursToUse.map(h => h + ":00");
             }
             
             // Collect all data points for auto unit determination
             let allDataPoints = [];
             if (unit === "auto") {
-                limitedHours.forEach(h => {
+                hoursToUse.forEach(h => {
                     const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                     allDataPoints.push(stats.upload || 0);
                     allDataPoints.push(stats.download || 0);
@@ -684,11 +680,11 @@ $realTimeMonitorHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             return (stats.upload || 0) / unitDivisor;
                         })),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             return (stats.download || 0) / unitDivisor;
                         }))
@@ -696,7 +692,7 @@ $realTimeMonitorHtml = '
                     break;
                 case "total":
                     datasets = [
-                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             return ((stats.upload || 0) + (stats.download || 0)) / unitDivisor;
                         }), {fill: true})
@@ -706,12 +702,12 @@ $realTimeMonitorHtml = '
                     let cumulativeUpload = 0;
                     let cumulativeDownload = 0;
                     datasets = [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             cumulativeUpload += stats.upload || 0;
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             cumulativeDownload += stats.download || 0;
                             return cumulativeDownload / unitDivisor;
@@ -721,7 +717,7 @@ $realTimeMonitorHtml = '
                 case "total_cumulative":
                     let cumulativeTotal = 0;
                     datasets = [
-                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (" + unit + ")", limitedHours.map(h => {
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (" + unit + ")", hoursToUse.map(h => {
                             const stats = (data.hourly_stats && data.hourly_stats[h]) || { upload: 0, download: 0 };
                             cumulativeTotal += (stats.upload || 0) + (stats.download || 0);
                             return cumulativeTotal / unitDivisor;
