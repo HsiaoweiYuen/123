@@ -230,6 +230,9 @@ $trafficDashboardHtml = '
         // Include standardized chart colors
         ' . file_get_contents(__DIR__ . '/chart_colors.js') . '
         
+        // Include unified chart utilities
+        ' . file_get_contents(__DIR__ . '/unified_chart_utils.js') . '
+        
         // Function to get main page time range for export validation
         function getMainPageTimeRange() {
             const timeRange = document.getElementById("time-range").value;
@@ -724,6 +727,12 @@ $trafficDashboardHtml = '
         
         function initializeChart() {
             const ctx = document.getElementById("traffic-chart").getContext("2d");
+            const options = getUnifiedChartOptions("GB");
+            options.plugins.title = {
+                display: true,
+                text: "' . v2raysocks_traffic_lang('traffic_usage_over_time') . '"
+            };
+            
             trafficChart = new Chart(ctx, {
                 type: "line",
                 data: {
@@ -733,43 +742,7 @@ $trafficDashboardHtml = '
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", [])
                     ]
                 },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: "' . v2raysocks_traffic_lang('total_traffic') . '"
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: "' . v2raysocks_traffic_lang('time') . '"
-                            }
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: "' . v2raysocks_traffic_lang('traffic_usage_over_time') . '"
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.dataset.label || "";
-                                    const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
-                                    // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
-                                }
-                            }
-                        }
-                    }
-                }
+                options: options
             });
         }
         
@@ -902,248 +875,46 @@ $trafficDashboardHtml = '
             $("#traffic-data").html(html);
         }
         
-        // Generate default time labels for empty charts - using server local time (not UTC)
-        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            // For empty charts, create minimal consistent placeholder labels
-            const labels = [];
-            
-            switch (timeRange) {
-                case "5min":
-                case "10min":
-                case "30min":
-                case "1hour":
-                case "today":
-                    // Generate hour labels for today and short ranges
-                    for (let i = 0; i < Math.min(points, 24); i++) {
-                        labels.push(String(i).padStart(2, "0") + ":00");
-                    }
-                    break;
-                default:
-                    // Generate date labels for multi-day ranges
-                    const today = new Date();
-                    for (let i = points - 1; i >= 0; i--) {
-                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
-                    }
-                    break;
-            }
-            
-            return labels;
-        }
-
         function updateTrafficChart(data, groupedData) {
             // Store data for chart type changes
             currentTrafficData = data;
             currentGroupedData = groupedData;
             
-            // Group data by time periods based on selected range
+            // Get chart settings
             const timeRange = $("#time-range").val();
             const chartType = $("#traffic-chart-type").val();
             let unit = $("#traffic-chart-unit").val();
-            let timeData = {};
             
-            // Validate input data
+            // Handle empty data case
             if (!data || !Array.isArray(data) || data.length === 0) {
                 console.log("No traffic data available for chart");
-                // Generate default time labels for proper time axis
-                const timeRange = $("#time-range").val() || "today";
-                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
-                
-                trafficChart.data.labels = defaultLabels;
-                trafficChart.data.datasets = [
-                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0)),
-                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0))
-                ];
-                trafficChart.update();
+                // Use unified utilities to create empty chart with continuous time axis
+                updateChartWithContinuousTimeAxis(trafficChart, [], timeRange, "combined", unit || "GB", null);
                 hideCustomTimeRangeSummary();
                 return;
             }
             
-            // Sort data by timestamp to ensure proper order (newest first)
-            data.sort((a, b) => (b.t || 0) - (a.t || 0));
-            
             // Calculate totals for custom time range summary
             let totalUpload = 0;
             let totalDownload = 0;
-            let recordCount = data.length;
-            let allDataPoints = [];
-            
-            // Use server-side grouped data if available (PR#37 pattern)
-            if (groupedData) {
-                // Use pre-grouped data from server (avoids client-side timezone issues)
-                Object.keys(groupedData).forEach(function(timeKey) {
-                    const groupData = groupedData[timeKey];
-                    timeData[timeKey] = {
-                        upload: groupData.upload || 0,
-                        download: groupData.download || 0
-                    };
-                    allDataPoints.push(groupData.upload || 0);
-                    allDataPoints.push(groupData.download || 0);
-                    allDataPoints.push(groupData.total || 0);
-                });
-                
-                // Calculate totals from raw data
-                data.forEach(function(row) {
-                    const upload = parseFloat(row.u) || 0;
-                    const download = parseFloat(row.d) || 0;
-                    totalUpload += upload;
-                    totalDownload += download;
-                });
-            } else {
-                // Fallback to client-side grouping if no server grouping available
-                data.forEach(function(row) {
-                    // Validate row data
-                    if (!row || !row.t) {
-                        console.warn("Invalid data row:", row);
-                        return;
-                    }
-                    
-                    const date = new Date(row.t * 1000);
-                    let timeKey;
-                    
-                    // Add to totals
-                    const upload = parseFloat(row.u) || 0;
-                    const download = parseFloat(row.d) || 0;
-                    totalUpload += upload;
-                    totalDownload += download;
-                    allDataPoints.push(upload);
-                    allDataPoints.push(download);
-                    allDataPoints.push(upload + download);
-                    
-                    // Time grouping using server local time (not UTC)
-                    if (timeRange === "today") {
-                        // For today, group by hour with proper time display
-                        timeKey = date.getHours().toString().padStart(2, "0") + ":00";
-                    } else if (["week", "halfmonth"].includes(timeRange)) {
-                        // For weekly/bi-weekly ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                 date.getDate().toString().padStart(2, "0");
-                    } else {
-                        // For longer ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                 date.getDate().toString().padStart(2, "0");
-                    }
-                    
-                    if (!timeData[timeKey]) {
-                        timeData[timeKey] = { upload: 0, download: 0 };
-                    }
-                    timeData[timeKey].upload += upload;
-                    timeData[timeKey].download += download;
-                });
-            }
+            data.forEach(function(row) {
+                totalUpload += parseFloat(row.u) || 0;
+                totalDownload += parseFloat(row.d) || 0;
+            });
             
             // Auto unit detection
             if (unit === "auto") {
+                const allDataPoints = data.flatMap(row => [parseFloat(row.u) || 0, parseFloat(row.d) || 0, (parseFloat(row.u) || 0) + (parseFloat(row.d) || 0)]);
                 unit = getBestUnitForData(allDataPoints);
             }
-            const unitDivisor = getUnitDivisor(unit);
             
             // Update custom time range summary
-            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
+            updateCustomTimeRangeSummary(totalUpload, totalDownload, data.length);
             
-            // Improved sorting for different time formats
-            const labels = Object.keys(timeData).sort((a, b) => {
-                // Handle different time formats properly
-                if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
-                    // Hour:minute format
-                    const [aHour, aMin] = a.split(":").map(Number);
-                    const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-                } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
-                    const aParts = a.split("/").map(Number);
-                    const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
-                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format YYYY-MM-DD
-                    return new Date(a) - new Date(b);
-                } else {
-                    // Default string sort
-                    return a.localeCompare(b);
-                }
-            });
+            // Use unified chart utilities to update chart with continuous time axis
+            updateChartWithContinuousTimeAxis(trafficChart, data, timeRange, chartType, unit, groupedData);
             
-            // Limit data points to prevent chart performance issues
-            const maxDataPoints = 100;
-            const limitedLabels = labels.slice(-maxDataPoints);
-            let datasets = [];
-            
-            // Create datasets based on chart type
-            switch (chartType) {
-                case "combined":
-                    const uploadData = limitedLabels.map(time => parseFloat((timeData[time].upload / unitDivisor).toFixed(3)));
-                    const downloadData = limitedLabels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
-                    
-                    datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, downloadData)
-                    ];
-                    break;
-                    
-                case "total":
-                    const totalData = limitedLabels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
-                    
-                    datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, totalData, {fill: true})
-                    ];
-                    break;
-                    
-                case "cumulative":
-                    let cumulativeUpload = 0;
-                    let cumulativeDownload = 0;
-                    
-                    const cumulativeUploadData = limitedLabels.map(time => {
-                        cumulativeUpload += timeData[time].upload;
-                        return parseFloat((cumulativeUpload / unitDivisor).toFixed(3));
-                    });
-                    
-                    const cumulativeDownloadData = limitedLabels.map(time => {
-                        cumulativeDownload += timeData[time].download;
-                        return parseFloat((cumulativeDownload / unitDivisor).toFixed(3));
-                    });
-                    
-                    datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . ' (${unit})`, cumulativeUploadData, {fill: false}),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . ' (${unit})`, cumulativeDownloadData, {fill: false})
-                    ];
-                    break;
-                    
-                case "total_cumulative":
-                    let cumulativeTotal = 0;
-                    
-                    const cumulativeTotalData = limitedLabels.map(time => {
-                        cumulativeTotal += (timeData[time].upload + timeData[time].download);
-                        return parseFloat((cumulativeTotal / unitDivisor).toFixed(3));
-                    });
-                    
-                    datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, cumulativeTotalData, {fill: true})
-                    ];
-                    break;
-            }
-            
-            trafficChart.data.labels = limitedLabels;
-            trafficChart.data.datasets = datasets;
-            trafficChart.options.scales.y.title.text = `' . v2raysocks_traffic_lang('traffic') . ' (${unit})`;
-            trafficChart.update();
-            
-            console.log("Traffic chart updated with", limitedLabels.length, "data points in", chartType, "mode using", unit, "units");
+            console.log("Traffic chart updated with continuous time axis in", chartType, "mode using", unit, "units");
         }
         
         function formatBytes(bytes, forceUnit = null) {
