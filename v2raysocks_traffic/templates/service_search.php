@@ -833,6 +833,56 @@ $serviceSearchHtml = '
             return labels;
         }
         
+        // Generate complete time series to prevent chart discontinuity
+        function generateCompleteTimeSeriesForServiceChart(timeRange) {
+            const labels = [];
+            const now = new Date();
+            
+            switch (timeRange) {
+                case "today":
+                    // Generate all 24 hours for today
+                    for (let hour = 0; hour < 24; hour++) {
+                        labels.push(hour + ":00");
+                    }
+                    break;
+                    
+                case "week":
+                case "halfmonth":
+                case "month_including_today":
+                    // Determine the number of days based on time range
+                    let days;
+                    switch (timeRange) {
+                        case "week": days = 7; break;
+                        case "halfmonth": days = 15; break;
+                        case "month_including_today": days = 30; break;
+                        default: days = 7; break;
+                    }
+                    
+                    // Generate all days for the selected range
+                    for (let i = days - 1; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(year + "/" + month + "/" + day);
+                    }
+                    break;
+                    
+                default:
+                    // Default to weekly range
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(year + "/" + month + "/" + day);
+                    }
+                    break;
+            }
+            
+            return labels;
+        }
+        
         function updateServiceTrafficChart(data) {
             // Handle empty data case - generate default time labels
             if (!data || data.length === 0) {
@@ -971,9 +1021,15 @@ $serviceSearchHtml = '
                 allDataPoints.push(upload + download);
             });
             
-            // Sort labels chronologically instead of alphabetically
-            const labels = timeKeys.sort((a, b) => {
-                return timeData[a].timestamp - timeData[b].timestamp;
+            // Generate complete time series to avoid time gaps in chart
+            const timeRange = $("#time_range").val();
+            const labels = generateCompleteTimeSeriesForServiceChart(timeRange);
+            
+            // Fill missing time points with zero values  
+            labels.forEach(timeKey => {
+                if (!timeData[timeKey]) {
+                    timeData[timeKey] = { upload: 0, download: 0, timestamp: Date.now() / 1000 };
+                }
             });
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();
