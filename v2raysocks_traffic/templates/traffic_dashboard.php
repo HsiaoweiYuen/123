@@ -913,8 +913,10 @@ $trafficDashboardHtml = '
                 case "30min":
                 case "1hour":
                 case "today":
-                    // Generate hour labels for today and short ranges
-                    for (let i = 0; i < Math.min(points, 24); i++) {
+                    // Generate hour labels for today and short ranges - only up to current hour for "today"
+                    const currentHour = new Date().getHours();
+                    const maxHours = timeRange === "today" ? Math.min(currentHour + 1, 24) : 24;
+                    for (let i = 0; i < Math.min(points, maxHours); i++) {
                         labels.push(String(i).padStart(2, "0") + ":00");
                     }
                     break;
@@ -940,8 +942,9 @@ $trafficDashboardHtml = '
             
             switch (timeRange) {
                 case "today":
-                    // Generate all 24 hours for today
-                    for (let hour = 0; hour < 24; hour++) {
+                    // Generate hours up to current time only
+                    const currentHour = now.getHours();
+                    for (let hour = 0; hour <= currentHour; hour++) {
                         labels.push(hour.toString().padStart(2, "0") + ":00");
                     }
                     break;

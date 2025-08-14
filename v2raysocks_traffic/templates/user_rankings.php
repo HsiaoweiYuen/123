@@ -1448,8 +1448,10 @@ $userRankingsHtml = '
             
             switch (timeRange) {
                 case "today":
-                    // Generate hour labels for today
-                    for (let i = 0; i < Math.min(points, 24); i++) {
+                    // Generate hour labels for today - only up to current hour
+                    const currentHour = new Date().getHours();
+                    const maxHours = Math.min(currentHour + 1, 24);
+                    for (let i = 0; i < Math.min(points, maxHours); i++) {
                         labels.push(String(i).padStart(2, "0") + ":00");
                     }
                     break;
@@ -1485,8 +1487,9 @@ $userRankingsHtml = '
             
             switch (timeRange) {
                 case "today":
-                    // Generate all 24 hours for today
-                    for (let hour = 0; hour < 24; hour++) {
+                    // Generate hours up to current time only
+                    const currentHour = now.getHours();
+                    for (let hour = 0; hour <= currentHour; hour++) {
                         labels.push(hour.toString().padStart(2, "0") + ":00");
                     }
                     break;

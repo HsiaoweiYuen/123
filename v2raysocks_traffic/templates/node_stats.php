@@ -1258,6 +1258,12 @@ $nodeStatsHtml = '
             
             for (let i = 0; i < points; i++) {
                 const timestamp = new Date(start.getTime() + (i * interval));
+                
+                // For "today" type ranges, do not generate future time points
+                if (timeRange === "today" && timestamp > now) {
+                    break;
+                }
+                
                 if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
                     // Use consistent time formatting like service_search.php
                     labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
@@ -1280,8 +1286,9 @@ $nodeStatsHtml = '
             switch (timeRange) {
                 case "today":
                 default:
-                    // Generate all 24 hours for today
-                    for (let hour = 0; hour < 24; hour++) {
+                    // Generate hours up to current time only
+                    const currentHour = now.getHours();
+                    for (let hour = 0; hour <= currentHour; hour++) {
                         labels.push(hour.toString().padStart(2, "0") + ":00");
                     }
                     break;
