@@ -1682,6 +1682,124 @@ function v2raysocks_traffic_generateDefaultTimeLabels($range, $points = 10)
 }
 
 /**
+ * Generate complete time range with all expected time periods filled with 0 values
+ * This ensures charts show continuous time series without gaps
+ */
+function v2raysocks_traffic_generateCompleteTimeRange($range, $startDate = null, $endDate = null)
+{
+    $timeData = [];
+    
+    // Calculate time range based on the range parameter
+    switch ($range) {
+        case '5min':
+            $startTime = time() - 300;
+            $endTime = time();
+            $interval = 60; // 1 minute intervals
+            break;
+        case '10min':
+            $startTime = time() - 600;
+            $endTime = time();
+            $interval = 60; // 1 minute intervals
+            break;
+        case '30min':
+            $startTime = time() - 1800;
+            $endTime = time();
+            $interval = 300; // 5 minute intervals
+            break;
+        case '1hour':
+            $startTime = time() - 3600;
+            $endTime = time();
+            $interval = 300; // 5 minute intervals
+            break;
+        case '2hours':
+            $startTime = time() - 7200;
+            $endTime = time();
+            $interval = 600; // 10 minute intervals
+            break;
+        case '6hours':
+            $startTime = time() - 21600;
+            $endTime = time();
+            $interval = 1800; // 30 minute intervals
+            break;
+        case '12hours':
+            $startTime = time() - 43200;
+            $endTime = time();
+            $interval = 3600; // 1 hour intervals
+            break;
+        case 'today':
+            $startTime = strtotime('today');
+            $endTime = time();
+            $interval = 3600; // 1 hour intervals
+            break;
+        case 'week':
+        case '7days':
+            $startTime = strtotime('-6 days', strtotime('today'));
+            $endTime = strtotime('tomorrow') - 1;
+            $interval = 86400; // 1 day intervals
+            break;
+        case 'halfmonth':
+        case '15days':
+            $startTime = strtotime('-14 days', strtotime('today'));
+            $endTime = strtotime('tomorrow') - 1;
+            $interval = 86400; // 1 day intervals
+            break;
+        case 'month':
+        case '30days':
+        case 'month_including_today':
+            $startTime = strtotime('-29 days', strtotime('today'));
+            $endTime = strtotime('tomorrow') - 1;
+            $interval = 86400; // 1 day intervals
+            break;
+        case 'custom':
+            if ($startDate && $endDate) {
+                $startTime = strtotime($startDate . ' 00:00:00');
+                $endTime = strtotime($endDate . ' 23:59:59');
+                $daysDiff = ($endTime - $startTime) / 86400;
+                $interval = ($daysDiff <= 1) ? 3600 : 86400; // 1 hour for 1 day, 1 day for longer
+            } else {
+                $startTime = strtotime('today');
+                $endTime = time();
+                $interval = 3600;
+            }
+            break;
+        default:
+            $startTime = strtotime('today');
+            $endTime = time();
+            $interval = 3600;
+    }
+    
+    // Generate all time periods in the range
+    for ($timestamp = $startTime; $timestamp <= $endTime; $timestamp += $interval) {
+        $date = new DateTime();
+        $date->setTimestamp($timestamp);
+        
+        // Format time key based on interval
+        if ($interval >= 86400) {
+            // Daily intervals - use format consistent with existing grouping
+            if (in_array($range, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
+                $timeKey = $date->format('m/d/Y');
+            } else {
+                $timeKey = $date->format('Y-m-d');
+            }
+        } else {
+            // Hourly/sub-hourly intervals
+            $timeKey = $date->format('H') . ':00';
+        }
+        
+        // Initialize with 0 values
+        $timeData[$timeKey] = [
+            'upload' => 0,
+            'download' => 0,
+            'total' => 0,
+            'timeKey' => $timeKey,
+            'timestamp' => $timestamp
+        ];
+    }
+    
+    return $timeData;
+}
+
+/**
  * Convert bytes to human readable format - uses decimal system only
  * Aligned with nodes module approach: simple conversion using / 1000000000 for GB
  */
@@ -2808,7 +2926,8 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Group data by time periods using actual timestamps (server local time, not UTC)
-        $timeData = [];
+        // Start with complete time range filled with 0 values
+        $timeData = v2raysocks_traffic_generateCompleteTimeRange($timeRange);
         
         foreach ($results as $row) {
             // Use actual data timestamp like traffic dashboard
@@ -2828,13 +2947,17 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 $timeKey = $date->format('Y-m-d');
             }
             
-            if (!isset($timeData[$timeKey])) {
-                $timeData[$timeKey] = ['upload' => 0, 'download' => 0, 'users' => []];
+            // Only update if this time key exists in our complete range
+            if (isset($timeData[$timeKey])) {
+                $timeData[$timeKey]['upload'] += floatval($row['upload']);
+                $timeData[$timeKey]['download'] += floatval($row['download']);
+                $timeData[$timeKey]['total'] += floatval($row['total']);
+                // Keep track of users for this time period
+                if (!isset($timeData[$timeKey]['users'])) {
+                    $timeData[$timeKey]['users'] = [];
+                }
+                $timeData[$timeKey]['users'][] = $row['user_id'];
             }
-            
-            $timeData[$timeKey]['upload'] += floatval($row['upload']);
-            $timeData[$timeKey]['download'] += floatval($row['download']);
-            $timeData[$timeKey]['users'][] = $row['user_id'];
         }
         
         // Sort time keys properly
@@ -2852,7 +2975,7 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
             $downloadData[] = $data['download'] / 1000000000; // Convert to GB
             $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
-            $userCounts[] = count(array_unique($data['users']));
+            $userCounts[] = isset($data['users']) ? count(array_unique($data['users'])) : 0;
         }
         
         $chartData = [
@@ -2988,7 +3111,8 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Group data by time periods using actual timestamps (server local time, not UTC)
-        $timeData = [];
+        // Start with complete time range filled with 0 values
+        $timeData = v2raysocks_traffic_generateCompleteTimeRange($timeRange, $startDate, $endDate);
         
         foreach ($results as $row) {
             // Use actual data timestamp like traffic dashboard
@@ -3008,13 +3132,17 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                 $timeKey = $date->format('Y-m-d');
             }
             
-            if (!isset($timeData[$timeKey])) {
-                $timeData[$timeKey] = ['upload' => 0, 'download' => 0, 'nodes' => []];
+            // Only update if this time key exists in our complete range
+            if (isset($timeData[$timeKey])) {
+                $timeData[$timeKey]['upload'] += floatval($row['upload']);
+                $timeData[$timeKey]['download'] += floatval($row['download']);
+                $timeData[$timeKey]['total'] += floatval($row['upload'] + $row['download']);
+                // Keep track of nodes for this time period
+                if (!isset($timeData[$timeKey]['nodes'])) {
+                    $timeData[$timeKey]['nodes'] = [];
+                }
+                $timeData[$timeKey]['nodes'][] = $row['node'];
             }
-            
-            $timeData[$timeKey]['upload'] += floatval($row['upload']);
-            $timeData[$timeKey]['download'] += floatval($row['download']);
-            $timeData[$timeKey]['nodes'][] = $row['node'];
         }
         
         // Sort time keys properly
@@ -3032,7 +3160,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             $uploadData[] = $data['upload'] / 1000000000; // Convert to GB
             $downloadData[] = $data['download'] / 1000000000; // Convert to GB
             $totalData[] = ($data['upload'] + $data['download']) / 1000000000; // Convert to GB
-            $nodeCounts[] = count(array_unique($data['nodes']));
+            $nodeCounts[] = isset($data['nodes']) ? count(array_unique($data['nodes'])) : 0;
         }
         
         $chartData = [
@@ -3780,7 +3908,8 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
  * @return array Grouped data with server-side time keys
  */
 function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
-    $timeData = [];
+    // Start with complete time range filled with 0 values
+    $timeData = v2raysocks_traffic_generateCompleteTimeRange($timeRange);
     
     foreach ($data as $row) {
         // Use actual data timestamp like PR#37 pattern
@@ -3800,22 +3929,15 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
             $timeKey = $date->format('m/d/Y');
         }
         
-        if (!isset($timeData[$timeKey])) {
-            $timeData[$timeKey] = [
-                'upload' => 0, 
-                'download' => 0, 
-                'total' => 0,
-                'timeKey' => $timeKey,
-                'timestamp' => $timestamp
-            ];
+        // Only update if this time key exists in our complete range
+        if (isset($timeData[$timeKey])) {
+            $upload = floatval($row['u'] ?? 0);
+            $download = floatval($row['d'] ?? 0);
+            
+            $timeData[$timeKey]['upload'] += $upload;
+            $timeData[$timeKey]['download'] += $download;
+            $timeData[$timeKey]['total'] += ($upload + $download);
         }
-        
-        $upload = floatval($row['u'] ?? 0);
-        $download = floatval($row['d'] ?? 0);
-        
-        $timeData[$timeKey]['upload'] += $upload;
-        $timeData[$timeKey]['download'] += $download;
-        $timeData[$timeKey]['total'] += ($upload + $download);
     }
     
     // Sort time keys properly

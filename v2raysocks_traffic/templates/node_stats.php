@@ -1227,46 +1227,106 @@ $nodeStatsHtml = '
         }
         
         // Generate default time labels for empty charts
-        function generateDefaultTimeLabels(timeRange = "today", points = 10) {
+        // Generate complete time range for charts - ensures no gaps in time series
+        function generateCompleteTimeRange(timeRange = "today") {
+            const timeData = {};
             const now = new Date();
-            const labels = [];
+            let startTime, endTime, interval;
             
-            let start, interval;
             switch (timeRange) {
                 case "5min":
-                    start = new Date(now.getTime() - 5 * 60 * 1000);
-                    interval = (5 * 60 * 1000) / (points - 1);
+                    startTime = new Date(now.getTime() - 5 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 1000; // 1 minute
                     break;
                 case "10min":
-                    start = new Date(now.getTime() - 10 * 60 * 1000);
-                    interval = (10 * 60 * 1000) / (points - 1);
+                    startTime = new Date(now.getTime() - 10 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 1000; // 1 minute
                     break;
                 case "30min":
-                    start = new Date(now.getTime() - 30 * 60 * 1000);
-                    interval = (30 * 60 * 1000) / (points - 1);
+                    startTime = new Date(now.getTime() - 30 * 60 * 1000);
+                    endTime = now;
+                    interval = 5 * 60 * 1000; // 5 minutes
                     break;
                 case "1hour":
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    interval = (60 * 60 * 1000) / (points - 1);
+                case "last_1_hour":
+                    startTime = new Date(now.getTime() - 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    break;
+                case "last_3_hours":
+                    startTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 10 * 60 * 1000; // 10 minutes
+                    break;
+                case "last_6_hours":
+                    startTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 30 * 60 * 1000; // 30 minutes
+                    break;
+                case "last_12_hours":
+                    startTime = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
                     break;
                 case "today":
-                default:
-                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    interval = (24 * 60 * 60 * 1000) / (points - 1);
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
                     break;
+                case "week":
+                case "last_week":
+                    startTime = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    break;
+                case "month":
+                case "last_month":
+                    startTime = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    break;
+                default:
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
             }
             
-            for (let i = 0; i < points; i++) {
-                const timestamp = new Date(start.getTime() + (i * interval));
-                if (timeRange === "today" || timeRange.includes("hour") || timeRange.includes("min")) {
-                    // Use consistent time formatting like service_search.php
-                    labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
+            // Generate all time periods in the range
+            for (let timestamp = startTime.getTime(); timestamp <= endTime.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                let timeKey;
+                
+                // Format time key based on interval
+                if (interval >= 24 * 60 * 60 * 1000) {
+                    // Daily intervals - use format consistent with backend
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    timeKey = month + "/" + day;
                 } else {
-                    // Use consistent date formatting like service_search.php
-                    const month = String(timestamp.getMonth() + 1).padStart(2, "0");
-                    const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
+                    // Hourly/sub-hourly intervals
+                    timeKey = String(date.getHours()).padStart(2, "0") + ":00";
                 }
+                
+                // Initialize with 0 values
+                timeData[timeKey] = { upload: 0, download: 0, total: 0 };
+            }
+            
+            return timeData;
+        }
+
+        function generateDefaultTimeLabels(timeRange = "today", points = 10) {
+            // Use complete time range instead of minimal placeholder
+            const completeTimeData = generateCompleteTimeRange(timeRange);
+            const labels = Object.keys(completeTimeData);
+            
+            // For large ranges, limit to reasonable number of points
+            if (labels.length > points * 2) {
+                const step = Math.ceil(labels.length / points);
+                return labels.filter((_, index) => index % step === 0);
             }
             
             return labels;

@@ -902,32 +902,121 @@ $trafficDashboardHtml = '
             $("#traffic-data").html(html);
         }
         
-        // Generate default time labels for empty charts - using server local time (not UTC)
-        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
-            // For empty charts, create minimal consistent placeholder labels
-            const labels = [];
+        // Generate complete time range for charts - ensures no gaps in time series
+        function generateCompleteTimeRange(timeRange = "today") {
+            const timeData = {};
+            const now = new Date();
+            let startTime, endTime, interval;
             
             switch (timeRange) {
                 case "5min":
+                    startTime = new Date(now.getTime() - 5 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 1000; // 1 minute
+                    break;
                 case "10min":
+                    startTime = new Date(now.getTime() - 10 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 1000; // 1 minute
+                    break;
                 case "30min":
+                    startTime = new Date(now.getTime() - 30 * 60 * 1000);
+                    endTime = now;
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    break;
                 case "1hour":
+                    startTime = new Date(now.getTime() - 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    break;
+                case "2hours":
+                    startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 10 * 60 * 1000; // 10 minutes
+                    break;
+                case "6hours":
+                    startTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 30 * 60 * 1000; // 30 minutes
+                    break;
+                case "12hours":
+                    startTime = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
+                    break;
                 case "today":
-                    // Generate hour labels for today and short ranges
-                    for (let i = 0; i < Math.min(points, 24); i++) {
-                        labels.push(String(i).padStart(2, "0") + ":00");
-                    }
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
+                    break;
+                case "week":
+                case "7days":
+                    startTime = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    break;
+                case "halfmonth":
+                case "15days":
+                    startTime = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    break;
+                case "month":
+                case "30days":
+                case "month_including_today":
+                    startTime = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+                    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), 0, 0, 0);
+                    endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
                     break;
                 default:
-                    // Generate date labels for multi-day ranges
-                    const today = new Date();
-                    for (let i = points - 1; i >= 0; i--) {
-                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    endTime = now;
+                    interval = 60 * 60 * 1000; // 1 hour
+            }
+            
+            // Generate all time periods in the range
+            for (let timestamp = startTime.getTime(); timestamp <= endTime.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                let timeKey;
+                
+                // Format time key based on interval
+                if (interval >= 24 * 60 * 60 * 1000) {
+                    // Daily intervals - use format consistent with backend
+                    if (["week", "7days", "15days", "month", "30days", "month_including_today"].includes(timeRange)) {
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const year = date.getFullYear();
+                        timeKey = month + "/" + day + "/" + year;
+                    } else {
+                        timeKey = date.getFullYear() + "-" + 
+                                 String(date.getMonth() + 1).padStart(2, "0") + "-" + 
+                                 String(date.getDate()).padStart(2, "0");
                     }
-                    break;
+                } else {
+                    // Hourly/sub-hourly intervals
+                    timeKey = String(date.getHours()).padStart(2, "0") + ":00";
+                }
+                
+                // Initialize with 0 values
+                timeData[timeKey] = { upload: 0, download: 0 };
+            }
+            
+            return timeData;
+        }
+
+        // Generate default time labels for empty charts - using server local time (not UTC)
+        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
+            // Use complete time range instead of minimal placeholder
+            const completeTimeData = generateCompleteTimeRange(timeRange);
+            const labels = Object.keys(completeTimeData);
+            
+            // For large ranges, limit to reasonable number of points
+            if (labels.length > points * 2) {
+                const step = Math.ceil(labels.length / points);
+                return labels.filter((_, index) => index % step === 0);
             }
             
             return labels;
@@ -972,13 +1061,19 @@ $trafficDashboardHtml = '
             
             // Use server-side grouped data if available (PR#37 pattern)
             if (groupedData) {
+                // Start with complete time range and overlay grouped data
+                timeData = generateCompleteTimeRange(timeRange);
+                
                 // Use pre-grouped data from server (avoids client-side timezone issues)
                 Object.keys(groupedData).forEach(function(timeKey) {
                     const groupData = groupedData[timeKey];
-                    timeData[timeKey] = {
-                        upload: groupData.upload || 0,
-                        download: groupData.download || 0
-                    };
+                    // Only update if this time key exists in our complete range
+                    if (timeData[timeKey]) {
+                        timeData[timeKey] = {
+                            upload: groupData.upload || 0,
+                            download: groupData.download || 0
+                        };
+                    }
                     allDataPoints.push(groupData.upload || 0);
                     allDataPoints.push(groupData.download || 0);
                     allDataPoints.push(groupData.total || 0);
@@ -993,6 +1088,9 @@ $trafficDashboardHtml = '
                 });
             } else {
                 // Fallback to client-side grouping if no server grouping available
+                // Start with complete time range
+                timeData = generateCompleteTimeRange(timeRange);
+                
                 data.forEach(function(row) {
                     // Validate row data
                     if (!row || !row.t) {
@@ -1016,11 +1114,12 @@ $trafficDashboardHtml = '
                     if (timeRange === "today") {
                         // For today, group by hour with proper time display
                         timeKey = date.getHours().toString().padStart(2, "0") + ":00";
-                    } else if (["week", "halfmonth"].includes(timeRange)) {
-                        // For weekly/bi-weekly ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                 date.getDate().toString().padStart(2, "0");
+                    } else if (["week", "7days", "15days", "month", "30days", "month_including_today"].includes(timeRange)) {
+                        // For multi-day ranges, use MM/DD/YYYY format consistent with backend
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        const year = date.getFullYear();
+                        timeKey = month + "/" + day + "/" + year;
                     } else {
                         // For longer ranges, group by day using local time
                         timeKey = date.getFullYear() + "-" + 
@@ -1028,11 +1127,11 @@ $trafficDashboardHtml = '
                                  date.getDate().toString().padStart(2, "0");
                     }
                     
-                    if (!timeData[timeKey]) {
-                        timeData[timeKey] = { upload: 0, download: 0 };
+                    // Only update if this time key exists in our complete range
+                    if (timeData[timeKey]) {
+                        timeData[timeKey].upload += upload;
+                        timeData[timeKey].download += download;
                     }
-                    timeData[timeKey].upload += upload;
-                    timeData[timeKey].download += download;
                 });
             }
             
