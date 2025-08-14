@@ -1682,6 +1682,90 @@ function v2raysocks_traffic_generateDefaultTimeLabels($range, $points = 10)
 }
 
 /**
+ * Generate complete time series for charts to ensure continuous time axis
+ * Fills gaps in time data with zero values to prevent discontinuities
+ */
+function v2raysocks_traffic_generateCompleteTimeSeries($range, $existingData = [])
+{
+    $timestamps = v2raysocks_traffic_getTimeRangeTimestamps($range);
+    if (!$timestamps) {
+        return [];
+    }
+    
+    $start = $timestamps['start'];
+    $end = time();
+    $timeSeries = [];
+    
+    // Determine appropriate interval based on time range
+    switch ($range) {
+        case '5min':
+        case '10min':
+        case '30min':
+            $interval = 60; // 1 minute intervals
+            break;
+        case '1hour':
+        case '2hours':
+            $interval = 300; // 5 minute intervals
+            break;
+        case '6hours':
+            $interval = 900; // 15 minute intervals
+            break;
+        case '12hours':
+            $interval = 1800; // 30 minute intervals
+            break;
+        case 'today':
+            $interval = 3600; // 1 hour intervals
+            break;
+        case 'week':
+        case 'halfmonth':
+        case 'month':
+        case 'month_including_today':
+            $interval = 86400; // 1 day intervals
+            break;
+        default:
+            $interval = 3600; // 1 hour default
+    }
+    
+    // Generate complete time series
+    for ($timestamp = $start; $timestamp <= $end; $timestamp += $interval) {
+        // Format time key to match existing data format
+        switch ($range) {
+            case '5min':
+            case '10min':
+            case '30min':
+            case '1hour':
+            case '2hours':
+            case '6hours':
+            case '12hours':
+            case 'today':
+                $timeKey = date('H:i', $timestamp);
+                break;
+            case 'week':
+            case 'halfmonth':
+            case 'month':
+            case 'month_including_today':
+                $timeKey = date('m/d', $timestamp);
+                break;
+            default:
+                $timeKey = date('H:i', $timestamp);
+        }
+        
+        // Use existing data if available, otherwise fill with zeros
+        if (isset($existingData[$timeKey])) {
+            $timeSeries[$timeKey] = $existingData[$timeKey];
+        } else {
+            $timeSeries[$timeKey] = [
+                'upload' => 0,
+                'download' => 0,
+                'timestamp' => $timestamp
+            ];
+        }
+    }
+    
+    return $timeSeries;
+}
+
+/**
  * Convert bytes to human readable format - uses decimal system only
  * Aligned with nodes module approach: simple conversion using / 1000000000 for GB
  */

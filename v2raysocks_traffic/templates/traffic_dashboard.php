@@ -933,6 +933,75 @@ $trafficDashboardHtml = '
             return labels;
         }
 
+        function generateCompleteTimeSeries(timeRange, existingData = {}) {
+            // Generate complete time series to fill gaps and ensure continuous time axis
+            const now = new Date();
+            const timeSeries = {};
+            let start, interval, formatTime;
+            
+            switch (timeRange) {
+                case "5min":
+                    start = new Date(now.getTime() - 5 * 60 * 1000);
+                    interval = 60 * 1000; // 1 minute
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "10min":
+                    start = new Date(now.getTime() - 10 * 60 * 1000);
+                    interval = 60 * 1000; // 1 minute
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "30min":
+                    start = new Date(now.getTime() - 30 * 60 * 1000);
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "1hour":
+                    start = new Date(now.getTime() - 60 * 60 * 1000);
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "today":
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+                    break;
+                case "week":
+                    start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "halfmonth":
+                    start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "month":
+                case "month_including_today":
+                    start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                default:
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+            }
+            
+            // Generate complete time series
+            for (let timestamp = start.getTime(); timestamp <= now.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                const timeKey = formatTime(date);
+                
+                if (existingData[timeKey]) {
+                    timeSeries[timeKey] = existingData[timeKey];
+                } else {
+                    timeSeries[timeKey] = { upload: 0, download: 0, timestamp: timestamp };
+                }
+            }
+            
+            return timeSeries;
+        }
+
         function updateTrafficChart(data, groupedData) {
             // Store data for chart type changes
             currentTrafficData = data;
@@ -947,14 +1016,14 @@ $trafficDashboardHtml = '
             // Validate input data
             if (!data || !Array.isArray(data) || data.length === 0) {
                 console.log("No traffic data available for chart");
-                // Generate default time labels for proper time axis
-                const timeRange = $("#time-range").val() || "today";
-                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
+                // Generate complete time series with zero values for proper time axis
+                const completeTimeSeries = generateCompleteTimeSeries(timeRange, {});
+                const labels = Object.keys(completeTimeSeries);
                 
-                trafficChart.data.labels = defaultLabels;
+                trafficChart.data.labels = labels;
                 trafficChart.data.datasets = [
-                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0)),
-                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0))
+                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(labels.length).fill(0)),
+                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(labels.length).fill(0))
                 ];
                 trafficChart.update();
                 hideCustomTimeRangeSummary();
@@ -1016,16 +1085,12 @@ $trafficDashboardHtml = '
                     if (timeRange === "today") {
                         // For today, group by hour with proper time display
                         timeKey = date.getHours().toString().padStart(2, "0") + ":00";
-                    } else if (["week", "halfmonth"].includes(timeRange)) {
-                        // For weekly/bi-weekly ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                 date.getDate().toString().padStart(2, "0");
+                    } else if (["week", "halfmonth", "month", "month_including_today"].includes(timeRange)) {
+                        // For multi-day ranges, group by day using consistent format
+                        timeKey = (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
                     } else {
-                        // For longer ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                 date.getDate().toString().padStart(2, "0");
+                        // For shorter ranges, group by time
+                        timeKey = date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
                     }
                     
                     if (!timeData[timeKey]) {
@@ -1036,6 +1101,9 @@ $trafficDashboardHtml = '
                 });
             }
             
+            // Generate complete time series to fill gaps
+            const completeTimeSeries = generateCompleteTimeSeries(timeRange, timeData);
+            
             // Auto unit detection
             if (unit === "auto") {
                 unit = getBestUnitForData(allDataPoints);
@@ -1045,38 +1113,28 @@ $trafficDashboardHtml = '
             // Update custom time range summary
             updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
             
-            // Improved sorting for different time formats
-            const labels = Object.keys(timeData).sort((a, b) => {
-                // Handle different time formats properly
-                if (a.includes(":") && !a.includes("-") && !a.includes("/")) {
-                    // Hour:minute format
+            // Get sorted labels from complete time series
+            const labels = Object.keys(completeTimeSeries).sort((a, b) => {
+                if (completeTimeSeries[a].timestamp && completeTimeSeries[b].timestamp) {
+                    return completeTimeSeries[a].timestamp - completeTimeSeries[b].timestamp;
+                }
+                // Fallback to time format sorting if timestamps not available
+                if (a.includes(":") && !a.includes("/")) {
+                    // Time format sorting (HH:MM)
                     const [aHour, aMin] = a.split(":").map(Number);
                     const [bHour, bMin] = b.split(":").map(Number);
-                    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                    return (aHour * 60 + (aMin || 0)) - (bHour * 60 + (bMin || 0));
                 } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
+                    // Date format sorting (MM/DD)
                     const aParts = a.split("/").map(Number);
                     const bParts = b.split("/").map(Number);
-                    
-                    if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
-                    } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
+                    if (aParts.length === 2 && bParts.length === 2) {
                         const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
                         const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
                         return aDate - bDate;
                     }
-                    return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format YYYY-MM-DD
-                    return new Date(a) - new Date(b);
-                } else {
-                    // Default string sort
-                    return a.localeCompare(b);
                 }
+                return a.localeCompare(b);
             });
             
             // Limit data points to prevent chart performance issues
@@ -1084,11 +1142,11 @@ $trafficDashboardHtml = '
             const limitedLabels = labels.slice(-maxDataPoints);
             let datasets = [];
             
-            // Create datasets based on chart type
+            // Create datasets based on chart type using complete time series
             switch (chartType) {
                 case "combined":
-                    const uploadData = limitedLabels.map(time => parseFloat((timeData[time].upload / unitDivisor).toFixed(3)));
-                    const downloadData = limitedLabels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
+                    const uploadData = limitedLabels.map(time => parseFloat(((completeTimeSeries[time].upload || 0) / unitDivisor).toFixed(3)));
+                    const downloadData = limitedLabels.map(time => parseFloat(((completeTimeSeries[time].download || 0) / unitDivisor).toFixed(3)));
                     
                     datasets = [
                         getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData),
@@ -1097,7 +1155,7 @@ $trafficDashboardHtml = '
                     break;
                     
                 case "total":
-                    const totalData = limitedLabels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
+                    const totalData = limitedLabels.map(time => parseFloat((((completeTimeSeries[time].upload || 0) + (completeTimeSeries[time].download || 0)) / unitDivisor).toFixed(3)));
                     
                     datasets = [
                         getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, totalData, {fill: true})
@@ -1109,12 +1167,12 @@ $trafficDashboardHtml = '
                     let cumulativeDownload = 0;
                     
                     const cumulativeUploadData = limitedLabels.map(time => {
-                        cumulativeUpload += timeData[time].upload;
+                        cumulativeUpload += (completeTimeSeries[time].upload || 0);
                         return parseFloat((cumulativeUpload / unitDivisor).toFixed(3));
                     });
                     
                     const cumulativeDownloadData = limitedLabels.map(time => {
-                        cumulativeDownload += timeData[time].download;
+                        cumulativeDownload += (completeTimeSeries[time].download || 0);
                         return parseFloat((cumulativeDownload / unitDivisor).toFixed(3));
                     });
                     
@@ -1128,7 +1186,7 @@ $trafficDashboardHtml = '
                     let cumulativeTotal = 0;
                     
                     const cumulativeTotalData = limitedLabels.map(time => {
-                        cumulativeTotal += (timeData[time].upload + timeData[time].download);
+                        cumulativeTotal += ((completeTimeSeries[time].upload || 0) + (completeTimeSeries[time].download || 0));
                         return parseFloat((cumulativeTotal / unitDivisor).toFixed(3));
                     });
                     
