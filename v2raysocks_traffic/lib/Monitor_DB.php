@@ -1671,7 +1671,7 @@ function v2raysocks_traffic_generateDefaultTimeLabels($range, $points = 10)
             case 'halfmonth':
             case 'month':
             case 'month_including_today':
-                $labels[] = date('m-d', $timestamp);
+                $labels[] = date('Y/m/d', $timestamp);
                 break;
             default:
                 $labels[] = date('H:i', $timestamp);
