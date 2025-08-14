@@ -832,6 +832,54 @@ $serviceSearchHtml = '
             
             return labels;
         }
+
+        function generateCompleteTimeSeries(timeRange, existingData = {}) {
+            // Generate complete time series to fill gaps and ensure continuous time axis
+            const now = new Date();
+            const timeSeries = {};
+            let start, interval, formatTime;
+            
+            switch (timeRange) {
+                case "today":
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+                    break;
+                case "week":
+                    start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "halfmonth":
+                    start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "month_including_today":
+                    start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                default:
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+            }
+            
+            // Generate complete time series
+            for (let timestamp = start.getTime(); timestamp <= now.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                const timeKey = formatTime(date);
+                
+                if (existingData[timeKey]) {
+                    timeSeries[timeKey] = existingData[timeKey];
+                } else {
+                    timeSeries[timeKey] = { upload: 0, download: 0, timestamp: timestamp };
+                }
+            }
+            
+            return timeSeries;
+        }
         
         function updateServiceTrafficChart(data) {
             // Handle empty data case - generate default time labels
@@ -931,7 +979,6 @@ $serviceSearchHtml = '
             
             // Group data by time periods for chart
             const timeData = {};
-            const timeKeys = []; // Track insertion order for proper sorting
             let allDataPoints = [];
             
             data.forEach(function(row) {
@@ -942,7 +989,7 @@ $serviceSearchHtml = '
                 // Group by different time periods based on range - use consistent formatting
                 const timeRange = $("#time_range").val();
                 if (timeRange === "today") {
-                    timeKey = date.getHours() + ":00";
+                    timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                 } else {
                     // Format as MM/DD for consistency with default labels
                     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -952,7 +999,6 @@ $serviceSearchHtml = '
                 
                 if (!timeData[timeKey]) {
                     timeData[timeKey] = { upload: 0, download: 0, timestamp: row.t };
-                    timeKeys.push(timeKey);
                 }
                 const upload = (row.u || 0);
                 const download = (row.d || 0);
@@ -970,10 +1016,32 @@ $serviceSearchHtml = '
                 allDataPoints.push(upload + download);
             });
             
-            // Sort labels chronologically instead of alphabetically
-            const labels = timeKeys.sort((a, b) => {
-                return timeData[a].timestamp - timeData[b].timestamp;
+            // Generate complete time series to fill gaps
+            const timeRange = $("#time_range").val();
+            const completeTimeSeries = generateCompleteTimeSeries(timeRange, timeData);
+            
+            // Sort labels chronologically using timestamps
+            const labels = Object.keys(completeTimeSeries).sort((a, b) => {
+                if (completeTimeSeries[a].timestamp && completeTimeSeries[b].timestamp) {
+                    return completeTimeSeries[a].timestamp - completeTimeSeries[b].timestamp;
+                }
+                // Fallback sorting
+                if (a.includes(":") && !a.includes("/")) {
+                    const [aHour] = a.split(":").map(Number);
+                    const [bHour] = b.split(":").map(Number);
+                    return aHour - bHour;
+                } else if (a.includes("/")) {
+                    const aParts = a.split("/").map(Number);
+                    const bParts = b.split("/").map(Number);
+                    if (aParts.length === 2 && bParts.length === 2) {
+                        const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
+                        const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
+                        return aDate - bDate;
+                    }
+                }
+                return a.localeCompare(b);
             });
+            
             const mode = $("#service-chart-display-mode").val();
             let unit = $("#service-chart-unit").val();
             
@@ -988,13 +1056,13 @@ $serviceSearchHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (timeData[time].upload / unitDivisor))),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (timeData[time].download / unitDivisor)))
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => ((completeTimeSeries[time].upload || 0) / unitDivisor))),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => ((completeTimeSeries[time].download || 0) / unitDivisor)))
                     ];
                     break;
                 case "total":
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, labels.map(time => ((timeData[time].upload + timeData[time].download) / unitDivisor)), {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, labels.map(time => (((completeTimeSeries[time].upload || 0) + (completeTimeSeries[time].download || 0)) / unitDivisor)), {fill: true})
                     ];
                     break;
                 case "cumulative":
@@ -1002,11 +1070,11 @@ $serviceSearchHtml = '
                     let cumulativeDownload = 0;
                     datasets = [
                         getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => {
-                            cumulativeUpload += timeData[time].upload;
+                            cumulativeUpload += (completeTimeSeries[time].upload || 0);
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
                         getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => {
-                            cumulativeDownload += timeData[time].download;
+                            cumulativeDownload += (completeTimeSeries[time].download || 0);
                             return cumulativeDownload / unitDivisor;
                         }), {fill: false})
                     ];
@@ -1015,7 +1083,7 @@ $serviceSearchHtml = '
                     let cumulativeTotal = 0;
                     datasets = [
                         getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, labels.map(time => {
-                            cumulativeTotal += timeData[time].upload + timeData[time].download;
+                            cumulativeTotal += (completeTimeSeries[time].upload || 0) + (completeTimeSeries[time].download || 0);
                             return cumulativeTotal / unitDivisor;
                         }), {fill: true})
                     ];

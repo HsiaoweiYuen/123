@@ -1272,6 +1272,75 @@ $nodeStatsHtml = '
             return labels;
         }
 
+        function generateCompleteTimeSeries(timeRange, existingData = {}) {
+            // Generate complete time series to fill gaps and ensure continuous time axis
+            const now = new Date();
+            const timeSeries = {};
+            let start, interval, formatTime;
+            
+            switch (timeRange) {
+                case "5min":
+                    start = new Date(now.getTime() - 5 * 60 * 1000);
+                    interval = 60 * 1000; // 1 minute
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "10min":
+                    start = new Date(now.getTime() - 10 * 60 * 1000);
+                    interval = 60 * 1000; // 1 minute
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "30min":
+                    start = new Date(now.getTime() - 30 * 60 * 1000);
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "1hour":
+                    start = new Date(now.getTime() - 60 * 60 * 1000);
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+                    break;
+                case "today":
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+                    break;
+                case "week":
+                    start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "halfmonth":
+                    start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                case "month":
+                case "month_including_today":
+                    start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    formatTime = (date) => (date.getMonth() + 1).toString().padStart(2, "0") + "/" + date.getDate().toString().padStart(2, "0");
+                    break;
+                default:
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    interval = 60 * 60 * 1000; // 1 hour
+                    formatTime = (date) => date.getHours().toString().padStart(2, "0") + ":00";
+            }
+            
+            // Generate complete time series
+            for (let timestamp = start.getTime(); timestamp <= now.getTime(); timestamp += interval) {
+                const date = new Date(timestamp);
+                const timeKey = formatTime(date);
+                
+                if (existingData[timeKey]) {
+                    timeSeries[timeKey] = existingData[timeKey];
+                } else {
+                    timeSeries[timeKey] = { upload: 0, download: 0, total: 0, timestamp: timestamp };
+                }
+            }
+            
+            return timeSeries;
+        }
+
         function displayNodeChart(chartData) {
             const ctx = document.getElementById("node-traffic-chart").getContext("2d");
             
@@ -1281,14 +1350,50 @@ $nodeStatsHtml = '
             
             // Handle empty data case - use proper time labels instead of placeholder
             if (!chartData.labels || chartData.labels.length === 0) {
-                const defaultLabels = generateDefaultTimeLabels("today", 8);
+                const timeRange = document.getElementById("time-range").value || "today";
+                const completeTimeSeries = generateCompleteTimeSeries(timeRange, {});
+                const labels = Object.keys(completeTimeSeries).sort((a, b) => {
+                    if (completeTimeSeries[a].timestamp && completeTimeSeries[b].timestamp) {
+                        return completeTimeSeries[a].timestamp - completeTimeSeries[b].timestamp;
+                    }
+                    return a.localeCompare(b);
+                });
+                
                 chartData = {
-                    labels: defaultLabels,
-                    upload: new Array(defaultLabels.length).fill(0),
-                    download: new Array(defaultLabels.length).fill(0), 
-                    total: new Array(defaultLabels.length).fill(0),
+                    labels: labels,
+                    upload: new Array(labels.length).fill(0),
+                    download: new Array(labels.length).fill(0), 
+                    total: new Array(labels.length).fill(0),
                     node_id: chartData.node_id || "Unknown"
                 };
+            } else {
+                // Fill gaps in existing chart data to ensure continuous time axis
+                const timeRange = document.getElementById("time-range").value || "today";
+                
+                // Convert chart data to time series format
+                const existingData = {};
+                chartData.labels.forEach((label, index) => {
+                    existingData[label] = {
+                        upload: chartData.upload[index] || 0,
+                        download: chartData.download[index] || 0,
+                        total: chartData.total[index] || 0
+                    };
+                });
+                
+                // Generate complete time series
+                const completeTimeSeries = generateCompleteTimeSeries(timeRange, existingData);
+                const labels = Object.keys(completeTimeSeries).sort((a, b) => {
+                    if (completeTimeSeries[a].timestamp && completeTimeSeries[b].timestamp) {
+                        return completeTimeSeries[a].timestamp - completeTimeSeries[b].timestamp;
+                    }
+                    return a.localeCompare(b);
+                });
+                
+                // Update chart data with complete time series
+                chartData.labels = labels;
+                chartData.upload = labels.map(label => completeTimeSeries[label].upload || 0);
+                chartData.download = labels.map(label => completeTimeSeries[label].download || 0);
+                chartData.total = labels.map(label => completeTimeSeries[label].total || 0);
             }
             
             // Get current unit and mode settings
