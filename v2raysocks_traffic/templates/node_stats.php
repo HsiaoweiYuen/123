@@ -1262,10 +1262,11 @@ $nodeStatsHtml = '
                     // Use consistent time formatting like service_search.php
                     labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
                 } else {
-                    // Use consistent date formatting like service_search.php
+                    // Use consistent date formatting in YYYY/MM/DD format
+                    const year = timestamp.getFullYear();
                     const month = String(timestamp.getMonth() + 1).padStart(2, "0");
                     const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
+                    labels.push(year + "/" + month + "/" + day);
                 }
             }
             

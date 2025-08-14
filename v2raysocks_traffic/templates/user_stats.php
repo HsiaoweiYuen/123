@@ -482,7 +482,7 @@ $userStatsHtml = '
                     const month = String(date.getMonth() + 1).padStart(2, "0");
                     const day = String(date.getDate()).padStart(2, "0");
                     const year = date.getFullYear();
-                    const timeKey = month + "/" + day + "/" + year;
+                    const timeKey = year + "/" + month + "/" + day;
                     
                     if (!timeData[timeKey]) {
                         timeData[timeKey] = { upload: 0, download: 0 };
@@ -500,17 +500,25 @@ $userStatsHtml = '
                     const [bHour, bMin] = b.split(":").map(Number);
                     return (aHour * 60 + aMin) - (bHour * 60 + bMin);
                 } else if (a.includes("/")) {
-                    // Date format sorting (MM/DD or MM/DD/YYYY)
+                    // Date format sorting (YYYY/MM/DD or MM/DD/YYYY)
                     const aParts = a.split("/").map(Number);
                     const bParts = b.split("/").map(Number);
                     
                     if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: MM/DD/YYYY
-                        const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
-                        const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
-                        return aDate - bDate;
+                        // Check if it's YYYY/MM/DD format (year first)
+                        if (aParts[0] > 31) {
+                            // Format: YYYY/MM/DD
+                            const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
+                            const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
+                            return aDate - bDate;
+                        } else {
+                            // Format: MM/DD/YYYY (legacy)
+                            const aDate = new Date(aParts[2], aParts[0] - 1, aParts[1]);
+                            const bDate = new Date(bParts[2], bParts[0] - 1, bParts[1]);
+                            return aDate - bDate;
+                        }
                     } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (assume same year)
+                        // Format: MM/DD (assume same year) - legacy
                         const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
                         const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
                         return aDate - bDate;
