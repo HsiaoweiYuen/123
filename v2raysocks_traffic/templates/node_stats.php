@@ -1263,9 +1263,10 @@ $nodeStatsHtml = '
                     labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
                 } else {
                     // Use consistent date formatting like service_search.php
+                    const year = timestamp.getFullYear();
                     const month = String(timestamp.getMonth() + 1).padStart(2, "0");
                     const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(month + "/" + day);
+                    labels.push(year + "/" + month + "/" + day);
                 }
             }
             
