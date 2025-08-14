@@ -2910,7 +2910,16 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return ['labels' => [], 'data' => []];
+            logActivity("V2RaySocks Traffic Monitor getUserTrafficChart: Failed to create PDO connection for user $userId, timeRange $timeRange", 0);
+            return [
+                'labels' => [], 
+                'upload' => [], 
+                'download' => [], 
+                'total' => [], 
+                'nodes' => [], 
+                'user_id' => $userId, 
+                'time_range' => $timeRange
+            ];
         }
 
         // Calculate time range
@@ -2986,6 +2995,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
         ]);
         
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Debug logging for non-today ranges
+        if ($timeRange !== 'today') {
+            logActivity("V2RaySocks Traffic Monitor getUserTrafficChart debug: userId=$userId, timeRange=$timeRange, startTime=" . date('Y-m-d H:i:s', $startTime) . ", endTime=" . date('Y-m-d H:i:s', $endTime) . ", resultCount=" . count($results), 0);
+        }
         
         // Group data by time periods using actual timestamps (server local time, not UTC)
         $timeData = [];
@@ -3063,7 +3077,15 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficChart error: " . $e->getMessage(), 0);
-        return ['labels' => [], 'data' => []];
+        return [
+            'labels' => [], 
+            'upload' => [], 
+            'download' => [], 
+            'total' => [], 
+            'nodes' => [], 
+            'user_id' => $userId, 
+            'time_range' => $timeRange
+        ];
     }
 }
 

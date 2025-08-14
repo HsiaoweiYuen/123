@@ -1185,6 +1185,12 @@ $userRankingsHtml = '
                 })
             ])
             .then(([chartResponse, usageResponse]) => {
+                // Debug logging for non-today ranges
+                const timeRange = document.getElementById("time-range").value;
+                if (timeRange !== 'today') {
+                    console.log(`Debug: Loading data for timeRange=${timeRange}, chartResponse:`, chartResponse);
+                }
+                
                 // Process chart data
                 if (chartResponse.status === "success" && chartResponse.data) {
                     displayUserChart(chartResponse.data);
@@ -1192,7 +1198,8 @@ $userRankingsHtml = '
                 } else {
                     console.log("Chart API returned error:", chartResponse);
                     const userInfo = document.getElementById("user-info");
-                    userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
+                    const errorMsg = chartResponse.message ? ` (${chartResponse.message})` : '';
+                    userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")}${errorMsg}<br><small>Time range: ${timeRange}</small></div>`;
                     
                     // Display empty chart
                     displayUserChart({
