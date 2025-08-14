@@ -401,7 +401,7 @@ $todayTrafficChartHtml = '
             let unit = $("#data-unit").val();
             
             // Sort hours chronologically instead of alphabetically
-            const hours = Object.keys(todayData.hourly_stats).sort((a, b) => {
+            const availableHours = Object.keys(todayData.hourly_stats).sort((a, b) => {
                 if (a.includes(":") && !a.includes("/")) {
                     // Time format sorting (HH:MM)
                     const [aHour, aMin] = a.split(":").map(Number);
@@ -433,15 +433,21 @@ $todayTrafficChartHtml = '
                 }
             });
             
-            if (hours.length === 0) {
-                console.log("No hourly data available");
-                // Clear chart data
-                todayChart.data.labels = [];
-                todayChart.data.datasets = [];
-                todayChart.update();
-                return;
+            // Ensure continuous time axis by including all hours (0-23) even if they have no data
+            const allHours = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourStr = hour.toString();
+                allHours.push(hourStr);
+                // If this hour is not in the available data, ensure it exists with zero values
+                if (!todayData.hourly_stats[hourStr]) {
+                    todayData.hourly_stats[hourStr] = { upload: 0, download: 0 };
+                }
             }
             
+            // Use complete hour range to prevent time gaps
+            const hours = allHours;
+            
+            // Now hours.length will always be 24, so no need to check for empty data
             const labels = hours.map(h => h + ":00");
             
             let datasets = [];
