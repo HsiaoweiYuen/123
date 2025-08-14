@@ -391,14 +391,83 @@ $todayTrafficChartHtml = '
             $("#today-peak-hour").text(peakDisplayText);
         }
         
-        function updateTodayChart() {
-            if (!todayData || !todayData.hourly_stats) {
-                console.log("No today data available for chart");
-                return;
+        // Generate default time labels for empty charts - using server local time (not UTC)
+        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
+            // For empty charts, create minimal consistent placeholder labels
+            const labels = [];
+            
+            switch (timeRange) {
+                case "today":
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
+                    break;
+                case "7days":
+                case "30days":
+                    // Generate date labels for multi-day ranges
+                    const today = new Date();
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        labels.push(month + "/" + day);
+                    }
+                    break;
+                default:
+                    // Fallback: simple numeric labels
+                    for (let i = 1; i <= points; i++) {
+                        labels.push(String(i));
+                    }
+                    break;
             }
             
+            return labels;
+        }
+        
+        function updateTodayChart() {
             const chartType = $("#chart-type").val();
             let unit = $("#data-unit").val();
+            
+            // Handle empty data case - generate default time labels for proper time axis
+            if (!todayData || !todayData.hourly_stats || Object.keys(todayData.hourly_stats).length === 0) {
+                console.log("No today data available for chart");
+                const timeRange = $("#time-range").val() || "today";
+                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
+                
+                // Determine unit for empty chart
+                if (unit === "auto") {
+                    unit = "GB"; // Default unit for empty chart
+                }
+                
+                let datasets = [];
+                const emptyData = new Array(defaultLabels.length).fill(0);
+                
+                switch(chartType) {
+                    case "combined":
+                        datasets = [
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", emptyData),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", emptyData)
+                        ];
+                        break;
+                    case "hourly":
+                        datasets = [
+                            getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", emptyData, {fill: true})
+                        ];
+                        break;
+                    case "cumulative":
+                        datasets = [
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . ' (" + unit + ")", emptyData, {fill: true}),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", emptyData, {fill: true})
+                        ];
+                        break;
+                }
+                
+                todayChart.data.labels = defaultLabels;
+                todayChart.data.datasets = datasets;
+                todayChart.update();
+                return;
+            }
             
             // Sort hours chronologically instead of alphabetically
             const hours = Object.keys(todayData.hourly_stats).sort((a, b) => {
@@ -432,15 +501,6 @@ $todayTrafficChartHtml = '
                     return parseInt(a) - parseInt(b);
                 }
             });
-            
-            if (hours.length === 0) {
-                console.log("No hourly data available");
-                // Clear chart data
-                todayChart.data.labels = [];
-                todayChart.data.datasets = [];
-                todayChart.update();
-                return;
-            }
             
             const labels = hours.map(h => h + ":00");
             

@@ -460,6 +460,42 @@ $userStatsHtml = '
             $("#user-traffic-history").html(html);
         }
         
+        // Generate default time labels for empty charts - using server local time (not UTC)
+        function generateDefaultTimeLabels(timeRange = "today", points = 8) {
+            // For empty charts, create minimal consistent placeholder labels
+            const labels = [];
+            
+            switch (timeRange) {
+                case "today":
+                    // Generate hour labels for today
+                    for (let i = 0; i < Math.min(points, 24); i++) {
+                        labels.push(String(i).padStart(2, "0") + ":00");
+                    }
+                    break;
+                case "week":
+                case "month":
+                case "custom":
+                    // Generate date labels for multi-day ranges
+                    const today = new Date();
+                    for (let i = points - 1; i >= 0; i--) {
+                        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                        const day = String(date.getDate()).padStart(2, "0");
+                        const year = date.getFullYear();
+                        labels.push(year + "/" + month + "/" + day);
+                    }
+                    break;
+                default:
+                    // Fallback: simple numeric labels
+                    for (let i = 1; i <= points; i++) {
+                        labels.push(String(i));
+                    }
+                    break;
+            }
+            
+            return labels;
+        }
+        
         function updateUserTrafficChart(data, groupedData) {
             // Use server-side grouped data if available (PR#37 pattern)
             let timeData = {};
@@ -490,6 +526,64 @@ $userStatsHtml = '
                     timeData[timeKey].upload += (row.u || 0);
                     timeData[timeKey].download += (row.d || 0);
                 });
+            }
+            
+            // Handle empty data case - generate default time labels for proper time axis
+            if (!timeData || Object.keys(timeData).length === 0) {
+                console.log("No user traffic data available for chart");
+                // Generate default time labels based on search time range
+                const timeRange = $("#time-range").val() || "week";
+                const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
+                
+                if (userChart) {
+                    userChart.destroy();
+                }
+                
+                const ctx = document.getElementById("user-traffic-chart").getContext("2d");
+                userChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: defaultLabels,
+                        datasets: [
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", new Array(defaultLabels.length).fill(0)),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", new Array(defaultLabels.length).fill(0))
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: "' . v2raysocks_traffic_lang('traffic') . ' (GB)"
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: "Date"
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.dataset.label || "";
+                                        const value = context.parsed.y;
+                                        const unit = label.match(/\\(([^)]+)\\)/);
+                                        const unitText = unit ? unit[1] : "GB";
+                                        // Format: "下载：100 GB" instead of "下载 (GB)：100"
+                                        const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                        return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
             }
             
             // Sort labels chronologically instead of alphabetically
