@@ -45,7 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => '時間範圍',
-    'user_id' => '服務ID',
+    'user_id' => '用戶ID',
     'service_id' => '服務ID',
     'node_id' => '節點ID',
     'start_date' => '開始日期',
