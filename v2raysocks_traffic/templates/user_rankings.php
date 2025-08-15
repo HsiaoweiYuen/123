@@ -1293,7 +1293,27 @@ $userRankingsHtml = '
         
         function fetchUserRecentTrafficData() {
             // Fetch user ranking data to get recent traffic information
-            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            const timeRange = document.getElementById("time-range").value;
+            let rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=${timeRange}&limit=10000`;
+            
+            // Add custom date range parameters if applicable
+            if (timeRange === "custom") {
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                
+                // Validate date format and values
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                
+                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    // Only add dates if they are valid and start <= end
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                        rankingsUrl += "&start_date=" + startDate + "&end_date=" + endDate;
+                    }
+                }
+            }
             
             fetch(rankingsUrl)
                 .then(response => {
