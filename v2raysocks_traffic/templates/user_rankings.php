@@ -420,6 +420,7 @@ $userRankingsHtml = '
             "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
             "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
             "user_traffic_usage_trends": "' . v2raysocks_traffic_lang('user_traffic_usage_trends') . '",
+            "service_traffic_usage_trends": "' . v2raysocks_traffic_lang('service_traffic_usage_trends') . '",
             "no_user_selected": "' . v2raysocks_traffic_lang('no_user_selected') . '",
             "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
             "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
@@ -604,7 +605,7 @@ $userRankingsHtml = '
     <div id="user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">' . v2raysocks_traffic_lang('user_details') . '</h3>
+                <h3 class="modal-title">' . v2raysocks_traffic_lang('service_details') . '</h3>
                 <span class="close" onclick="closeUserModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -1293,7 +1294,8 @@ $userRankingsHtml = '
         
         function fetchUserRecentTrafficData() {
             // Fetch user ranking data to get recent traffic information
-            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            const timeRange = document.getElementById("time-range").value;
+            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=${timeRange}&limit=10000`;
             
             fetch(rankingsUrl)
                 .then(response => {
@@ -1766,7 +1768,7 @@ $userRankingsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("user_traffic_usage_trends", {user_id: currentUserId}),
+                            text: t("service_traffic_usage_trends", {user_id: currentUserId}),
                             font: {
                                 size: 16,
                                 weight: "bold"

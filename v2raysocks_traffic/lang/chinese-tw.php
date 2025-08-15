@@ -277,6 +277,7 @@ $_LANG = [
     'download_traffic' => '下載流量',
     'total_traffic_label' => '總流量',
     'user_traffic_usage_trends' => '用戶 {user_id} 流量使用趨勢',
+    'service_traffic_usage_trends' => '服務 {user_id} 流量使用趨勢',
     'upload_traffic_unit' => '上傳流量 ({unit})',
     'download_traffic_unit' => '下載流量 ({unit})',
     'total_traffic_unit' => '總流量 ({unit})',
