@@ -460,8 +460,8 @@ $userRankingsHtml = '
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="time-range" name="time_range" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
-                            <option value="week">' . v2raysocks_traffic_lang('near_7_days') . '</option>
-                            <option value="15days">' . v2raysocks_traffic_lang('15_days') . '</option>
+                            <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
+                            <option value="15days">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
                         </select>
@@ -520,8 +520,8 @@ $userRankingsHtml = '
                                 ' . v2raysocks_traffic_lang('remaining_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
-                                ' . v2raysocks_traffic_lang('today_traffic') . '
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="period_traffic">
+                                ' . v2raysocks_traffic_lang('used_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 120px;" class="sortable-header" data-sort="usage_rate">
