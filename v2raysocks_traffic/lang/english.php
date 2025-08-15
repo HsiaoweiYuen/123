@@ -82,6 +82,7 @@ $_LANG = [
     'last_7_days' => 'Last 7 Days',
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
+    'to' => 'to',
     
     // Common Table Headers
     'timestamp' => 'Timestamp',

@@ -2009,9 +2009,9 @@ $userRankingsHtml = '
         function getTimeRangeText(timeRange) {
             switch (timeRange) {
                 case "today": return t("today_range");
-                case "week": return t("last_7_days_range");
-                case "15days": return t("last_15_days_range");
-                case "month": return t("last_30_days_range");
+                case "week": return t("last_7_days");
+                case "15days": return t("last_15_days");
+                case "month": return t("last_30_days");
                 case "custom": return t("custom_range_option");
                 default: return timeRange;
             }
