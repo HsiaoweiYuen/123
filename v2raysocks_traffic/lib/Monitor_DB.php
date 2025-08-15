@@ -2821,11 +2821,11 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 // For today, group by hour with proper time display
                 $timeKey = $date->format('H') . ':00';
             } else if (in_array($timeRange, ['week', 'month'])) {
-                // For weekly/monthly ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For weekly/monthly ranges, group by day using Y/m/d format for frontend compatibility
+                $timeKey = $date->format('Y/m/d');
             } else {
-                // For other ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For other ranges, group by day using Y/m/d format for frontend compatibility
+                $timeKey = $date->format('Y/m/d');
             }
             
             if (!isset($timeData[$timeKey])) {
@@ -3001,11 +3001,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                 // For today, group by hour with proper time display
                 $timeKey = $date->format('H') . ':00';
             } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days'])) {
-                // For weekly/bi-weekly/monthly ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For weekly/bi-weekly/monthly ranges, group by day using Y/m/d format for frontend compatibility
+                $timeKey = $date->format('Y/m/d');
             } else {
-                // For longer ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For longer ranges, group by day using Y/m/d format for frontend compatibility
+                $timeKey = $date->format('Y/m/d');
             }
             
             if (!isset($timeData[$timeKey])) {

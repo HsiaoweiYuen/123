@@ -1464,9 +1464,10 @@ $userRankingsHtml = '
                     const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
                         const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const timeKey = date.getFullYear() + "/" + 
+                                       String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                       String(date.getDate()).padStart(2, "0");
+                        labels.push(timeKey);
                     }
                     break;
                 default:
@@ -1499,9 +1500,10 @@ $userRankingsHtml = '
                     // Generate all 7 days for the past week
                     for (let i = 6; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const timeKey = date.getFullYear() + "/" + 
+                                       String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                       String(date.getDate()).padStart(2, "0");
+                        labels.push(timeKey);
                     }
                     break;
                     
@@ -1509,9 +1511,10 @@ $userRankingsHtml = '
                     // Generate all 15 days for the past 15 days
                     for (let i = 14; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const timeKey = date.getFullYear() + "/" + 
+                                       String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                       String(date.getDate()).padStart(2, "0");
+                        labels.push(timeKey);
                     }
                     break;
                     
@@ -1520,9 +1523,10 @@ $userRankingsHtml = '
                     // Generate all 30 days for the past month
                     for (let i = 29; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const timeKey = date.getFullYear() + "/" + 
+                                       String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                       String(date.getDate()).padStart(2, "0");
+                        labels.push(timeKey);
                     }
                     break;
                     
@@ -1537,18 +1541,20 @@ $userRankingsHtml = '
                         const current = new Date(start);
                         
                         while (current <= end) {
-                            const month = String(current.getMonth() + 1).padStart(2, "0");
-                            const day = String(current.getDate()).padStart(2, "0");
-                            labels.push(month + "/" + day);
+                            const timeKey = current.getFullYear() + "/" + 
+                                           String(current.getMonth() + 1).padStart(2, "0") + "/" + 
+                                           String(current.getDate()).padStart(2, "0");
+                            labels.push(timeKey);
                             current.setDate(current.getDate() + 1);
                         }
                     } else {
                         // Fallback to 30 days
                         for (let i = 29; i >= 0; i--) {
                             const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                            const month = String(date.getMonth() + 1).padStart(2, "0");
-                            const day = String(date.getDate()).padStart(2, "0");
-                            labels.push(month + "/" + day);
+                            const timeKey = date.getFullYear() + "/" + 
+                                           String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                           String(date.getDate()).padStart(2, "0");
+                            labels.push(timeKey);
                         }
                     }
                     break;
@@ -1557,9 +1563,10 @@ $userRankingsHtml = '
                     // Default to 7 days
                     for (let i = 6; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                        const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        const timeKey = date.getFullYear() + "/" + 
+                                       String(date.getMonth() + 1).padStart(2, "0") + "/" + 
+                                       String(date.getDate()).padStart(2, "0");
+                        labels.push(timeKey);
                     }
                     break;
             }
