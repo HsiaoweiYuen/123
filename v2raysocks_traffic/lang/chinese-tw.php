@@ -45,7 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => '時間範圍',
-    'user_id' => '用戶ID',
+    'user_id' => '服務ID',
     'service_id' => '服務ID',
     'node_id' => '節點ID',
     'start_date' => '開始日期',
@@ -271,12 +271,12 @@ $_LANG = [
     'transfer_quota' => '傳輸配額',
     'used_quota' => '已用配額',
     'remaining_quota' => '剩餘配額',
-    'user_id_label' => '用戶ID',
+    'user_id_label' => '服務ID',
     'time_range_label' => '時間範圍',
     'upload_traffic' => '上傳流量',
     'download_traffic' => '下載流量',
     'total_traffic_label' => '總流量',
-    'user_traffic_usage_trends' => '用戶 {user_id} 流量使用趨勢',
+    'user_traffic_usage_trends' => '服務 {user_id} 流量使用趨勢',
     'upload_traffic_unit' => '上傳流量 ({unit})',
     'download_traffic_unit' => '下載流量 ({unit})',
     'total_traffic_unit' => '總流量 ({unit})',
