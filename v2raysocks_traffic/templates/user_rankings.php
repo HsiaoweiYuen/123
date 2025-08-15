@@ -382,6 +382,28 @@ $userRankingsHtml = '
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        
+        /* Desktop layout enforcement - force horizontal layout, never vertical */
+        @media (min-width: 769px) {
+            #custom-date-range {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+            #custom-date-range label {
+                white-space: nowrap !important;
+                margin-bottom: 0 !important;
+                margin-right: 8px !important;
+            }
+            #custom-date-range input {
+                min-width: 140px !important;
+                width: auto !important;
+                margin-bottom: 0 !important;
+                margin-right: 10px !important;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
