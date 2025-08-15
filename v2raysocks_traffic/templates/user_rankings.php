@@ -257,6 +257,107 @@ $userRankingsHtml = '
             min-width: 120px;
         }
         
+        /* Responsive styles for desktop devices */
+        @media (min-width: 1025px) {
+            /* Desktop: maintain horizontal layout */
+            #custom-date-range {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            #custom-date-range > div {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                white-space: nowrap;
+            }
+            
+            #custom-date-range label {
+                margin-bottom: 0;
+                margin-right: 8px;
+                font-weight: bold;
+                display: inline;
+                white-space: nowrap;
+            }
+            
+            #custom-date-range input {
+                width: 160px; /* Fixed width for desktop to maintain compact layout */
+                margin-right: 0;
+                margin-bottom: 0;
+            }
+            
+            /* Desktop controls maintain horizontal flow */
+            .controls-row {
+                display: flex;
+                flex-direction: row;
+                gap: 15px;
+                align-items: end;
+                flex-wrap: wrap;
+            }
+            
+            .control-group {
+                flex: 1;
+                min-width: auto;
+                display: block;
+            }
+            
+            .control-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+        }
+        
+        /* Responsive styles for tablet devices */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            /* Tablet-specific layouts: vertical layout with labels above inputs */
+            #custom-date-range {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 15px !important;
+            }
+            
+            #custom-date-range > div {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            #custom-date-range label {
+                margin-bottom: 5px;
+                margin-right: 0;
+                font-weight: bold;
+                display: block;
+            }
+            
+            #custom-date-range input {
+                width: 100% !important;
+                margin-right: 0 !important;
+                margin-bottom: 0;
+            }
+            
+            /* Service ID field also gets vertical layout on tablet */
+            .controls-row {
+                flex-direction: column !important;
+                gap: 15px !important;
+            }
+            
+            .control-group {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .control-group label {
+                margin-bottom: 5px;
+                font-weight: bold;
+                display: block;
+            }
+        }
+        
         /* Responsive styles for mobile devices */
         @media (max-width: 768px) {
             .rank-badge {
@@ -312,22 +413,50 @@ $userRankingsHtml = '
                 max-width: 240px; /* 缩小手机版UUID列宽度但保持可读性 */
             }
             
-            /* Custom date range styling for mobile */
+            /* Custom date range styling for mobile - vertical layout with labels above */
             #custom-date-range {
-                flex-direction: row !important;
-                align-items: center !important;
-                flex-wrap: wrap !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 15px !important;
             }
+            
+            #custom-date-range > div {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
             #custom-date-range label {
-                margin-bottom: 0;
-                margin-right: 8px;
-                white-space: nowrap;
+                margin-bottom: 5px;
+                margin-right: 0;
+                font-weight: bold;
+                display: block;
+                white-space: normal;
             }
+            
             #custom-date-range input {
-                width: auto;
+                width: 100% !important;
+                margin-right: 0 !important;
                 margin-bottom: 0;
-                margin-right: 10px !important;
-                min-width: 120px;
+                min-width: auto;
+            }
+            
+            /* Mobile control groups - full vertical layout */
+            .controls-row {
+                flex-direction: column !important;
+                gap: 15px !important;
+            }
+            
+            .control-group {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .control-group label {
+                margin-bottom: 5px;
+                font-weight: bold;
+                display: block;
             }
             
             /* Mobile responsive search controls for user records */
@@ -378,9 +507,15 @@ $userRankingsHtml = '
             gap: 10px;
         }
         #custom-date-range input {
-            padding: 5px 8px;
-            border: 1px solid #ccc;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
             border-radius: 4px;
+        }
+        
+        /* Ensure all control inputs are fully adaptive */
+        .control-group input, .control-group select {
+            width: 100%;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -470,14 +605,18 @@ $userRankingsHtml = '
                         </select>
                     </div>
                     <div class="control-group" id="custom-date-range" style="display: none;">
-                        <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start-date" name="start_date" style="width: 140px; margin-right: 10px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                        <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 140px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <div>
+                            <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
+                            <input type="date" id="start-date" name="start_date">
+                        </div>
+                        <div>
+                            <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
+                            <input type="date" id="end-date" name="end_date">
+                        </div>
                     </div>
                     <div class="control-group">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '">
                     </div>
                     <div class="control-group">
                         <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px;">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
