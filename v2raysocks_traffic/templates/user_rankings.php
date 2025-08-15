@@ -376,6 +376,11 @@ $userRankingsHtml = '
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
+        }
+        #custom-date-range label {
+            margin-bottom: 0;
+            white-space: nowrap;
         }
         #custom-date-range input {
             padding: 5px 8px;
@@ -473,11 +478,9 @@ $userRankingsHtml = '
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
                         <input type="date" id="start-date" name="start_date" style="width: 140px; margin-right: 10px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 140px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                    </div>
-                    <div class="control-group">
+                        <input type="date" id="end-date" name="end_date" style="width: 140px; margin-right: 10px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 140px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="control-group">
                         <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px;">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
