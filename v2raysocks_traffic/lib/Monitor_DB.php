@@ -58,13 +58,12 @@ function v2raysocks_traffic_loadLanguage()
         
         $langLoaded = true;
         
-        // Try to cache the language data for 10 minutes (configuration data)
+        // Try to cache the language data using unified cache function
         if (!empty($lang)) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($lang),
-                    'ttl' => 600 // 10 minutes for language configuration
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($lang), [
+                    'data_type' => 'configuration',
+                    'time_range' => 'static'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -114,13 +113,12 @@ function v2raysocks_traffic_serverInfo()
         $v2raysocksServerId = Capsule::table('tbladdonmodules')->where('module', 'v2raysocks_traffic')->where('setting', 'v2raysocks_server')->value('value');
         $v2raysocksServer = Capsule::table('tblservers')->where('type', 'V2RaySocks')->where('id', $v2raysocksServerId)->first();
         
-        // Try to cache the result for 10 minutes (configuration data)
+        // Try to cache the result using unified cache function
         if ($v2raysocksServer) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($v2raysocksServer),
-                    'ttl' => 600 // 10 minutes for configuration data
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($v2raysocksServer), [
+                    'data_type' => 'configuration',
+                    'time_range' => 'static'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -269,20 +267,23 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         // Validate and clean the traffic data to prevent extreme values
         v2raysocks_traffic_validateTrafficData($results);
         
-        // Cache with optimized TTL based on data recency
-        $cacheTime = 300; // Default 5 minutes
+        // Cache with optimized TTL based on data recency using unified cache function
+        $isHistorical = false;
+        $timeRangeForCache = 'historical';
         if (!empty($filters['start']) && strtotime($filters['start']) > strtotime('-1 day')) {
-            $cacheTime = 120; // 2 minutes for recent data
+            $isHistorical = false;
+            $timeRangeForCache = 'today';
         } elseif (!empty($filters['start']) && strtotime($filters['start']) > strtotime('-1 hour')) {
-            $cacheTime = 60; // 1 minute for very recent data
+            $isHistorical = false;
+            $timeRangeForCache = 'today';
         }
         
         if (!empty($results)) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($results),
-                    'ttl' => $cacheTime
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($results), [
+                    'data_type' => 'traffic_data',
+                    'time_range' => $timeRangeForCache,
+                    'is_historical' => $isHistorical
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -482,24 +483,34 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         }
         unset($row); // Break reference
         
-        // Try to cache with shorter time for real-time data - but don't fail if caching fails
+        // Try to cache with shorter time for real-time data using unified cache function
         try {
-            $cacheTime = 60; // 1 minute default
+            $timeRangeForCache = 'historical';
+            $isRealTime = false;
+            
             if (isset($filters['time_range'])) {
                 switch ($filters['time_range']) {
                     case 'today':
-                        $cacheTime = 120; // 2 minutes for today's data
+                        $timeRangeForCache = 'today';
+                        $isRealTime = true;
+                        break;
+                    case 'last_1_hour':
+                    case 'last_3_hours':
+                    case 'last_6_hours':
+                    case 'last_12_hours':
+                        $timeRangeForCache = 'today';
+                        $isRealTime = true;
                         break;
                     default:
-                        $cacheTime = 300; // 5 minutes for longer periods
+                        $timeRangeForCache = 'historical';
                         break;
                 }
             }
             
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($data),
-                'ttl' => $cacheTime
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+                'data_type' => 'traffic_data',
+                'time_range' => $timeRangeForCache,
+                'is_historical' => !$isRealTime
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -762,13 +773,28 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
         }
         unset($row); // Break reference
         
-        // Try to cache the results
+        // Try to cache the results using unified cache function
         try {
-            $cacheTime = 120; // 2 minutes for enhanced data
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($allData),
-                'ttl' => $cacheTime
+            $timeRangeForCache = 'historical';
+            if (isset($filters['time_range'])) {
+                switch ($filters['time_range']) {
+                    case 'today':
+                    case 'last_1_hour':
+                    case 'last_3_hours':
+                    case 'last_6_hours':
+                    case 'last_12_hours':
+                        $timeRangeForCache = 'today';
+                        break;
+                    default:
+                        $timeRangeForCache = 'historical';
+                        break;
+                }
+            }
+            
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
+                'data_type' => 'enhanced_traffic',
+                'time_range' => $timeRangeForCache,
+                'is_historical' => ($timeRangeForCache === 'historical')
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -890,13 +916,12 @@ function v2raysocks_traffic_getAllNode()
         
         $nodes = $stmt->fetchAll(PDO::FETCH_OBJ);
         
-        // Try to cache for 5 minutes, but don't fail if caching fails
+        // Try to cache using unified cache function
         if (!empty($nodes)) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($nodes),
-                    'ttl' => 300
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodes), [
+                    'data_type' => 'node_list',
+                    'time_range' => 'static'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -1084,19 +1109,19 @@ function v2raysocks_traffic_getLiveStats()
             'last_updated' => time(),
         ];
         
-        // Cache for 60 seconds for live stats (real-time data)
-        $cacheTime = 60;
+        // Cache using unified cache function with shorter TTL for live stats
+        $cacheTimeRange = 'today';
         if (!$activeUsers5min && !$activeUsers1hour) {
-            // If we couldn't get active user counts, cache for shorter time
-            $cacheTime = 30; 
+            // If we couldn't get active user counts, treat as less reliable data
+            $cacheTimeRange = 'today';
         }
         
         // Try to cache with error handling
         try {
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($stats),
-                'ttl' => $cacheTime
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($stats), [
+                'data_type' => 'live_stats',
+                'time_range' => $cacheTimeRange,
+                'is_historical' => false
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -1202,11 +1227,10 @@ function v2raysocks_traffic_getUserDetails($userID)
             'traffic_history' => $trafficHistory,
         ];
         
-        // Cache for 5 minutes
-        v2raysocks_traffic_redisOperate('set', [
-            'key' => $cacheKey,
-            'value' => json_encode($details),
-            'ttl' => 300
+        // Cache using unified cache function
+        v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($details), [
+            'data_type' => 'user_details',
+            'time_range' => 'current'
         ]);
         
         return $details;
@@ -1321,12 +1345,11 @@ function v2raysocks_traffic_getNodeDetails($nodeID)
             'traffic_stats' => $trafficStats,
         ];
         
-        // Try to cache for 5 minutes, but don't fail if caching fails
+        // Try to cache using unified cache function
         try {
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($details),
-                'ttl' => 300
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($details), [
+                'data_type' => 'node_details',
+                'time_range' => 'current'
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -1375,10 +1398,9 @@ function v2raysocks_traffic_serverOptions()
         // Try to cache server options for 10 minutes (configuration data)
         if (!empty($options)) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($options),
-                    'ttl' => 600 // 10 minutes for server configuration
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($options), [
+                    'data_type' => 'configuration',
+                    'time_range' => 'static'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -1873,10 +1895,9 @@ function v2raysocks_traffic_getTodayTrafficData()
         ];
         
         // Cache for 5 minutes
-        v2raysocks_traffic_redisOperate('set', [
-            'key' => $cacheKey,
-            'value' => json_encode($data),
-            'ttl' => 300
+        v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+            'data_type' => 'traffic_data',
+            'time_range' => 'today'
         ]);
         
         return $data;
@@ -1974,11 +1995,10 @@ function v2raysocks_traffic_getTotalTrafficSinceLaunch()
             'last_updated' => time()
         ];
         
-        // Cache for 10 minutes
-        v2raysocks_traffic_redisOperate('set', [
-            'key' => $cacheKey,
-            'value' => json_encode($data),
-            'ttl' => 600
+        // Cache using unified cache function
+        v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+            'data_type' => 'rankings',
+            'time_range' => $onlyToday ? 'today' : 'historical'
         ]);
         
         return $data;
@@ -2215,13 +2235,12 @@ function v2raysocks_traffic_getAllNodes()
             return $b['total_traffic'] <=> $a['total_traffic'];
         });
         
-        // Cache for 5 minutes - only cache if we have results
+        // Cache using unified cache function - only cache if we have results
         if (!empty($nodeList)) {
             try {
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($nodeList),
-                    'ttl' => 300
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodeList), [
+                    'data_type' => 'node_list',
+                    'time_range' => 'static'
                 ]);
             } catch (\Exception $e) {
                 // Don't fail if caching fails
@@ -2491,15 +2510,12 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $node['avg_traffic_per_user'] = $node['unique_users'] > 0 ? $node['total_traffic'] / $node['unique_users'] : 0;
         }
         
-        // Try to cache for optimized duration based on data type
+        // Try to cache using unified cache function
         if (!empty($nodes)) {
             try {
-                // Use shorter TTL for node rankings as this is frequently accessed real-time data
-                $cacheTTL = $onlyToday ? 180 : 300; // 3 minutes for today, 5 minutes for all-time
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($nodes),
-                    'ttl' => $cacheTTL
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodes), [
+                    'data_type' => 'rankings',
+                    'time_range' => $onlyToday ? 'today' : 'historical'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -2705,15 +2721,12 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }
         
-        // Try to cache with optimized TTL based on time range
+        // Try to cache with optimized TTL using unified cache function
         if (!empty($users)) {
             try {
-                // Use shorter TTL for real-time rankings, longer for historical data
-                $cacheTTL = ($timeRange === 'today' || $timeRange === 'custom') ? 180 : 600; // 3 min for today, 10 min for historical
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($users),
-                    'ttl' => $cacheTTL
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
+                    'data_type' => 'rankings',
+                    'time_range' => $timeRange
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
@@ -2865,14 +2878,11 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             'time_range' => $timeRange
         ];
         
-        // Try to cache with optimized TTL for chart data
+        // Try to cache with optimized TTL using unified cache function
         try {
-            // Use shorter TTL for chart data as it's frequently updated and viewed
-            $cacheTTL = ($timeRange === 'today') ? 120 : 300; // 2 min for today, 5 min for historical
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($chartData),
-                'ttl' => $cacheTTL
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($chartData), [
+                'data_type' => 'chart',
+                'time_range' => $timeRange
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -3045,14 +3055,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             'time_range' => $timeRange
         ];
         
-        // Try to cache with optimized TTL for chart data
+        // Try to cache with optimized TTL using unified cache function
         try {
-            // Use shorter TTL for chart data as it's frequently updated and viewed
-            $cacheTTL = ($timeRange === 'today') ? 120 : 300; // 2 min for today, 5 min for historical
-            v2raysocks_traffic_redisOperate('set', [
-                'key' => $cacheKey,
-                'value' => json_encode($chartData),
-                'ttl' => $cacheTTL
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($chartData), [
+                'data_type' => 'chart',
+                'time_range' => $timeRange
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -3237,14 +3244,12 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
         }
         
-        // Try to cache for 5 minutes, but don't fail if caching fails
+        // Try to cache using unified cache function
         if (!empty($records)) {
             try {
-                // Use 5-minute TTL for usage records
-                v2raysocks_traffic_redisOperate('set', [
-                    'key' => $cacheKey,
-                    'value' => json_encode($records),
-                    'ttl' => 300
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
+                    'data_type' => 'usage_records',
+                    'time_range' => $timeRange === 'today' ? 'today' : 'historical'
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data
