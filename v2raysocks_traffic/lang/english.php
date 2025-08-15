@@ -278,6 +278,7 @@ $_LANG = [
     'download_traffic' => 'Download Traffic',
     'total_traffic_label' => 'Total Traffic',
     'user_traffic_usage_trends' => 'User {user_id} traffic usage trends',
+    'service_traffic_usage_trends' => 'Service {user_id} traffic usage trends',
     'upload_traffic_unit' => 'Upload traffic ({unit})',
     'download_traffic_unit' => 'Download traffic ({unit})',
     'total_traffic_unit' => 'Total traffic ({unit})',

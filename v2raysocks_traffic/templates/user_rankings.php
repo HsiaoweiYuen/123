@@ -399,6 +399,7 @@ $userRankingsHtml = '
             "network_error_retry": "' . v2raysocks_traffic_lang('network_error_retry') . '",
             "loading": "' . v2raysocks_traffic_lang('loading') . '",
             "user_id_label": "' . v2raysocks_traffic_lang('user_id_label') . '",
+            "service_id_label": "' . v2raysocks_traffic_lang('service_id') . '",
             "time_range_label": "' . v2raysocks_traffic_lang('time_range_label') . '",
             "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
             "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
@@ -420,6 +421,7 @@ $userRankingsHtml = '
             "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
             "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
             "user_traffic_usage_trends": "' . v2raysocks_traffic_lang('user_traffic_usage_trends') . '",
+            "service_traffic_usage_trends": "' . v2raysocks_traffic_lang('service_traffic_usage_trends') . '",
             "no_user_selected": "' . v2raysocks_traffic_lang('no_user_selected') . '",
             "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
             "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
@@ -1253,7 +1255,7 @@ $userRankingsHtml = '
             userInfo.innerHTML = `
                 <div class="info-grid">
                     <div class="info-item">
-                        <div class="info-label">${t("user_id_label")}</div>
+                        <div class="info-label">${t("service_id_label")}</div>
                         <div class="info-value">${currentUserId}</div>
                     </div>
                     <div class="info-item">
@@ -1671,7 +1673,7 @@ $userRankingsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("user_traffic_usage_trends", {user_id: currentUserId}),
+                            text: t("service_traffic_usage_trends", {user_id: currentUserId}),
                             font: {
                                 size: 16,
                                 weight: "bold"
