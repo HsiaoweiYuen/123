@@ -764,6 +764,26 @@ $userRankingsHtml = '
                 } else {
                     customDateRange.style.display = "none";
                 }
+                
+                // Reload modal data if a user is currently selected
+                if (currentUserId) {
+                    loadUserModalData();
+                }
+            });
+            
+            // Add event listeners for custom date range inputs
+            document.getElementById("start-date").addEventListener("change", function() {
+                // Reload modal data if a user is currently selected and custom range is active
+                if (currentUserId && document.getElementById("time-range").value === "custom") {
+                    loadUserModalData();
+                }
+            });
+            
+            document.getElementById("end-date").addEventListener("change", function() {
+                // Reload modal data if a user is currently selected and custom range is active
+                if (currentUserId && document.getElementById("time-range").value === "custom") {
+                    loadUserModalData();
+                }
             });
             
             // Form submission handler (similar to traffic dashboard)
