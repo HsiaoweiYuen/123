@@ -2830,7 +2830,7 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             if ($timeRange === 'today') {
                 // For today, group by hour with proper time display
                 $timeKey = $date->format('H') . ':00';
-            } else if (in_array($timeRange, ['week', 'month'])) {
+            } else if (in_array($timeRange, ['week', '15days', 'month'])) {
                 // For weekly/monthly ranges, group by day using local time
                 $timeKey = $date->format('Y-m-d');
             } else {
