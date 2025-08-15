@@ -81,19 +81,6 @@ $_LANG = [
     'last_7_days' => 'Last 7 Days',
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
-    'custom_range' => 'Custom Range',
-    'last_1_hour' => 'Last 1 hour',
-    'last_3_hours' => 'Last 3 hours',
-    'last_6_hours' => 'Last 6 hours',
-    'last_12_hours' => 'Last 12 hours',
-    'custom_time_range' => 'Custom time range',
-    'today_range' => 'Today',
-    'last_7_days_range' => 'Last 7 days',
-    'last_15_days_range' => '15 days',
-    'last_30_days_range' => '30 days',
-    'custom_range_option' => 'Custom range',
-    '15_days' => '15 days',
-    'near_7_days' => 'Last 7 days',
     
     // Common Table Headers
     'timestamp' => 'Timestamp',
@@ -185,7 +172,6 @@ $_LANG = [
     'cancel_button' => 'Cancel',
     'confirm_export' => 'Confirm export',
     'export_usage_records' => 'Export usage records',
-    'custom_time_range_option' => 'Custom time range',
     
     // Date/Time Validation
     'select_start_end_dates' => 'Please select start and end dates',

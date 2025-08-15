@@ -81,19 +81,6 @@ $_LANG = [
     'last_7_days' => '最近7天',
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
-    'custom_range' => '自訂範圍',
-    'last_1_hour' => '最近一小時',
-    'last_3_hours' => '最近三小時',
-    'last_6_hours' => '最近六小時',
-    'last_12_hours' => '最近十二小時',
-    'custom_time_range' => '自定義時間段',
-    'today_range' => '今天',
-    'last_7_days_range' => '近七天',
-    'last_15_days_range' => '15天',
-    'last_30_days_range' => '30天',
-    'custom_range_option' => '自定義範圍',
-    '15_days' => '15天',
-    'near_7_days' => '近七天',
     
     // Common Table Headers
     'timestamp' => '時間戳',
@@ -185,7 +172,6 @@ $_LANG = [
     'cancel_button' => '取消',
     'confirm_export' => '確認導出',
     'export_usage_records' => '導出使用記錄',
-    'custom_time_range_option' => '自定義時間段',
     
     // Date/Time Validation
     'select_start_end_dates' => '請選擇開始和結束日期',
