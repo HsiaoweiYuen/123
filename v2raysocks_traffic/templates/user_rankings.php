@@ -398,7 +398,7 @@ $userRankingsHtml = '
             "unknown_error": "' . v2raysocks_traffic_lang('unknown_error') . '",
             "network_error_retry": "' . v2raysocks_traffic_lang('network_error_retry') . '",
             "loading": "' . v2raysocks_traffic_lang('loading') . '",
-            "user_id_label": "' . v2raysocks_traffic_lang('user_id_label') . '",
+            "user_id_label": "' . v2raysocks_traffic_lang('service_id') . '",
             "time_range_label": "' . v2raysocks_traffic_lang('time_range_label') . '",
             "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
             "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
@@ -419,7 +419,7 @@ $userRankingsHtml = '
             "total_cumulative_traffic_unit": "' . v2raysocks_traffic_lang('total_cumulative_traffic_unit') . '",
             "traffic_unit": "' . v2raysocks_traffic_lang('traffic_unit') . '",
             "time_axis": "' . v2raysocks_traffic_lang('time_axis') . '",
-            "user_traffic_usage_trends": "' . v2raysocks_traffic_lang('user_traffic_usage_trends') . '",
+            "user_traffic_usage_trends": "' . v2raysocks_traffic_lang('traffic_usage_over_time') . '",
             "no_user_selected": "' . v2raysocks_traffic_lang('no_user_selected') . '",
             "no_usage_records": "' . v2raysocks_traffic_lang('no_usage_records') . '",
             "failed_load_usage_records": "' . v2raysocks_traffic_lang('failed_load_usage_records') . '",
@@ -604,7 +604,7 @@ $userRankingsHtml = '
     <div id="user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">' . v2raysocks_traffic_lang('user_details') . '</h3>
+                <h3 class="modal-title">' . v2raysocks_traffic_lang('service_details') . '</h3>
                 <span class="close" onclick="closeUserModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -1671,7 +1671,7 @@ $userRankingsHtml = '
                     plugins: {
                         title: {
                             display: true,
-                            text: t("user_traffic_usage_trends", {user_id: currentUserId}),
+                            text: t("user_traffic_usage_trends"),
                             font: {
                                 size: 16,
                                 weight: "bold"
