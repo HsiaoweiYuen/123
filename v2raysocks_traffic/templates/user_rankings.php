@@ -1293,7 +1293,8 @@ $userRankingsHtml = '
         
         function fetchUserRecentTrafficData() {
             // Fetch user ranking data to get recent traffic information
-            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            const timeRange = document.getElementById("time-range").value;
+            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=${timeRange}&limit=10000`;
             
             fetch(rankingsUrl)
                 .then(response => {
