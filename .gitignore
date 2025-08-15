@@ -12,4 +12,5 @@ test_mobile_layout.html
 *.tmp
 *.log
 .DS_Store
-Thumbs.db
+Thumbs.dbtest_cache_optimization.php
+validate_optimization.php
