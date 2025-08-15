@@ -2574,12 +2574,14 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 $endTime = strtotime('tomorrow') - 1; // End of today
                 break;
             case '15days':
+            case 'halfmonth':
                 // Fix: Use exactly 15 complete days from 15 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-14 days', strtotime('today')); // Start of 15 days ago (today - 14 = 15 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today
                 break;
             case 'month':
             case '30days':
+            case 'month_including_today':
                 // Fix: Use exactly 30 complete days from 30 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-29 days', strtotime('today')); // Start of 30 days ago (today - 29 = 30 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today
@@ -2928,6 +2930,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                 $interval = 86400; // 1 day intervals
                 break;
             case '15days':
+            case 'halfmonth':
                 // Fix: Use exactly 15 complete days from 15 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-14 days', strtotime('today')); // Start of 15 days ago (today - 14 = 15 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today
@@ -2935,6 +2938,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                 break;
             case 'month':
             case '30days':
+            case 'month_including_today':
                 // Fix: Use exactly 30 complete days from 30 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-29 days', strtotime('today')); // Start of 30 days ago (today - 29 = 30 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today
@@ -3000,7 +3004,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             if ($timeRange === 'today') {
                 // For today, group by hour with proper time display - format: HH:00
                 $timeKey = sprintf('%02d:00', intval($date->format('H')));
-            } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'custom'])) {
+            } else if (in_array($timeRange, ['week', '7days', '15days', 'halfmonth', 'month', '30days', 'month_including_today', 'custom'])) {
                 // For multi-day ranges, group by day using MM/dd format with zero-padding to match frontend expectations
                 $timeKey = sprintf('%02d/%02d', intval($date->format('m')), intval($date->format('d')));
             } else {
@@ -3122,12 +3126,14 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
                 $endTime = strtotime('tomorrow') - 1; // End of today
                 break;
             case '15days':
+            case 'halfmonth':
                 // Fix: Use exactly 15 complete days from 15 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-14 days', strtotime('today')); // Start of 15 days ago (today - 14 = 15 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today
                 break;
             case 'month':
             case '30days':
+            case 'month_including_today':
                 // Fix: Use exactly 30 complete days from 30 days ago at 00:00:00 to end of today
                 $startTime = strtotime('-29 days', strtotime('today')); // Start of 30 days ago (today - 29 = 30 days total)
                 $endTime = strtotime('tomorrow') - 1; // End of today

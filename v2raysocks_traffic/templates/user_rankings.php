@@ -1458,8 +1458,10 @@ $userRankingsHtml = '
                 case "week":
                 case "7days":
                 case "15days":
+                case "halfmonth":
                 case "month":
                 case "30days":
+                case "month_including_today":
                     // Generate date labels for multi-day ranges
                     const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
@@ -1506,6 +1508,7 @@ $userRankingsHtml = '
                     break;
                     
                 case "15days":
+                case "halfmonth":
                     // Generate all 15 days for the past 15 days
                     for (let i = 14; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -1517,6 +1520,7 @@ $userRankingsHtml = '
                     
                 case "month":
                 case "30days":
+                case "month_including_today":
                     // Generate all 30 days for the past month
                     for (let i = 29; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
