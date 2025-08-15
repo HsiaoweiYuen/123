@@ -441,6 +441,30 @@ function v2raysocks_traffic_output($vars)
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
             
+        case 'memory_info':
+            try {
+                // Get memory optimization information
+                $memoryInfo = function_exists('v2raysocks_traffic_getMemoryInfo') 
+                    ? v2raysocks_traffic_getMemoryInfo() 
+                    : ['available' => false, 'error' => 'Memory optimization not available'];
+                
+                $result = [
+                    'status' => 'success',
+                    'data' => $memoryInfo,
+                    'timestamp' => time()
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis memory_info error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get memory info: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+            
         case 'cache_stats':
             try {
                 $cacheStats = v2raysocks_traffic_getCacheStats();

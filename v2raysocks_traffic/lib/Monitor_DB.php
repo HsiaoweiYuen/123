@@ -2256,11 +2256,18 @@ function v2raysocks_traffic_getAllNodes()
 }
 
 /**
- * Get cache performance statistics
+ * Get cache statistics with optimization metrics
+ * Enhanced to use new optimization features
  */
 function v2raysocks_traffic_getCacheStats()
 {
     try {
+        // Use the enhanced cache stats if available
+        if (function_exists('v2raysocks_traffic_getEnhancedCacheStats')) {
+            return v2raysocks_traffic_getEnhancedCacheStats();
+        }
+        
+        // Fallback to basic stats
         $stats = v2raysocks_traffic_redisOperate('stats', []);
         if (!$stats) {
             return [

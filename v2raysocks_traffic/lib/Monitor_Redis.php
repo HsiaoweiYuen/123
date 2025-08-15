@@ -118,7 +118,7 @@ function v2raysocks_traffic_getRedisInstance()
 
 function v2raysocks_traffic_redisOperate($act, $data)
 {
-    static $cacheStats = ['hits' => 0, 'misses' => 0, 'sets' => 0, 'errors' => 0];
+    static $cacheStats = ['hits' => 0, 'misses' => 0, 'sets' => 0, 'errors' => 0, 'compression_saves' => 0];
     static $cacheVersion = 'v1'; // Version for cache invalidation
     
     $redis = v2raysocks_traffic_getRedisInstance();
@@ -143,7 +143,69 @@ function v2raysocks_traffic_redisOperate($act, $data)
                     ? (int)$data['ttl']
                     : $defaultTTL;
                 
-                $result = $redis->setex($fullKey, $ttl, $data['value']);
+                // Optimize data storage based on type and size
+                $value = $data['value'];
+                $useCompression = false;
+                $useHash = false;
+                
+                // Check if we should use hash structure for complex objects
+                if (isset($data['use_hash']) && $data['use_hash']) {
+                    $useHash = true;
+                } elseif (is_array(json_decode($value, true)) && strlen($value) > 500) {
+                    // Auto-detect: use hash for large JSON objects
+                    $useHash = true;
+                }
+                
+                // Check if we should compress large values
+                if (strlen($value) > 1024 && function_exists('gzcompress')) {
+                    $compressed = gzcompress($value, 6); // Level 6 compression - good balance
+                    if (strlen($compressed) < strlen($value) * 0.8) { // Only use if 20%+ savings
+                        $value = $compressed;
+                        $useCompression = true;
+                        $cacheStats['compression_saves']++;
+                    }
+                }
+                
+                if ($useHash) {
+                    // Store as hash structure
+                    $hashKey = $fullKey . ':hash';
+                    $decodedValue = json_decode($data['value'], true);
+                    if (is_array($decodedValue)) {
+                        $redis->del($hashKey); // Clear existing hash
+                        foreach ($decodedValue as $field => $fieldValue) {
+                            $redis->hSet($hashKey, $field, is_array($fieldValue) ? json_encode($fieldValue) : $fieldValue);
+                        }
+                        $redis->expire($hashKey, $ttl);
+                        // Store metadata about hash structure
+                        $redis->setex($fullKey . ':meta', $ttl, json_encode([
+                            'type' => 'hash',
+                            'compressed' => false,
+                            'created' => time()
+                        ]));
+                        $result = true;
+                    } else {
+                        // Fallback to regular string storage
+                        $result = $redis->setex($fullKey, $ttl, $value);
+                        if ($useCompression) {
+                            $redis->setex($fullKey . ':meta', $ttl, json_encode([
+                                'type' => 'string',
+                                'compressed' => true,
+                                'created' => time()
+                            ]));
+                        }
+                    }
+                } else {
+                    // Regular string storage with optional compression
+                    $result = $redis->setex($fullKey, $ttl, $value);
+                    if ($useCompression) {
+                        $redis->setex($fullKey . ':meta', $ttl, json_encode([
+                            'type' => 'string', 
+                            'compressed' => true,
+                            'created' => time()
+                        ]));
+                    }
+                }
+                
                 if ($result) {
                     $cacheStats['sets']++;
                 } else {
@@ -157,8 +219,39 @@ function v2raysocks_traffic_redisOperate($act, $data)
                     logActivity("V2RaySocks Traffic Monitor: Redis GET operation missing key", 0);
                     return false;
                 }
+                
+                // Check if data is stored as hash
+                $metaKey = $fullKey . ':meta';
+                $meta = $redis->get($metaKey);
+                $metaData = $meta ? json_decode($meta, true) : null;
+                
+                if ($metaData && $metaData['type'] === 'hash') {
+                    // Retrieve from hash structure
+                    $hashKey = $fullKey . ':hash';
+                    $hashData = $redis->hGetAll($hashKey);
+                    if (!empty($hashData)) {
+                        // Reconstruct JSON from hash
+                        $reconstructed = [];
+                        foreach ($hashData as $field => $fieldValue) {
+                            $decoded = json_decode($fieldValue, true);
+                            $reconstructed[$field] = $decoded !== null ? $decoded : $fieldValue;
+                        }
+                        $result = json_encode($reconstructed);
+                        $cacheStats['hits']++;
+                        return $result;
+                    }
+                }
+                
+                // Regular string retrieval
                 $result = $redis->get($fullKey);
                 if ($result !== false) {
+                    // Check if data is compressed
+                    if ($metaData && $metaData['compressed']) {
+                        $decompressed = gzuncompress($result);
+                        if ($decompressed !== false) {
+                            $result = $decompressed;
+                        }
+                    }
                     $cacheStats['hits']++;
                 } else {
                     $cacheStats['misses']++;
@@ -170,7 +263,12 @@ function v2raysocks_traffic_redisOperate($act, $data)
                     logActivity("V2RaySocks Traffic Monitor: Redis DEL operation missing key", 0);
                     return false;
                 }
-                return $redis->del($fullKey);
+                // Delete both main key and potential hash/meta keys
+                $deleted = 0;
+                $deleted += $redis->del($fullKey);
+                $deleted += $redis->del($fullKey . ':hash');
+                $deleted += $redis->del($fullKey . ':meta');
+                return $deleted > 0;
 
             case 'ping':
                 return $redis->ping();
@@ -196,6 +294,100 @@ function v2raysocks_traffic_redisOperate($act, $data)
                     return $redis->del($keys);
                 }
                 return true;
+                
+            case 'pipeline_set':
+                // Batch set operations using pipeline
+                if (!isset($data['items']) || !is_array($data['items'])) {
+                    return false;
+                }
+                $pipe = $redis->pipeline();
+                $count = 0;
+                foreach ($data['items'] as $item) {
+                    if (isset($item['key']) && isset($item['value'])) {
+                        $itemFullKey = 'v2raysocks_traffic:' . $cacheVersion . ':' . $item['key'];
+                        $itemTTL = isset($item['ttl']) ? (int)$item['ttl'] : $defaultTTL;
+                        $pipe->setex($itemFullKey, $itemTTL, $item['value']);
+                        $count++;
+                    }
+                }
+                $results = $pipe->exec();
+                $cacheStats['sets'] += $count;
+                return $results;
+                
+            case 'pipeline_get':
+                // Batch get operations using pipeline
+                if (!isset($data['keys']) || !is_array($data['keys'])) {
+                    return false;
+                }
+                $pipe = $redis->pipeline();
+                $fullKeys = [];
+                foreach ($data['keys'] as $key) {
+                    $fullKey = 'v2raysocks_traffic:' . $cacheVersion . ':' . $key;
+                    $fullKeys[] = $fullKey;
+                    $pipe->get($fullKey);
+                }
+                $results = $pipe->exec();
+                $hitCount = 0;
+                $finalResults = [];
+                foreach ($results as $i => $result) {
+                    if ($result !== false) {
+                        $hitCount++;
+                    }
+                    $finalResults[$data['keys'][$i]] = $result;
+                }
+                $cacheStats['hits'] += $hitCount;
+                $cacheStats['misses'] += (count($data['keys']) - $hitCount);
+                return $finalResults;
+                
+            case 'memory_info':
+                // Get memory usage and fragmentation info
+                try {
+                    $info = $redis->info('memory');
+                    $memoryInfo = [];
+                    foreach (explode("\r\n", $info) as $line) {
+                        if (strpos($line, ':') !== false) {
+                            list($key, $value) = explode(':', $line, 2);
+                            $memoryInfo[trim($key)] = trim($value);
+                        }
+                    }
+                    return $memoryInfo;
+                } catch (\Exception $e) {
+                    return ['error' => $e->getMessage()];
+                }
+                
+            case 'defrag':
+                // Trigger memory defragmentation if supported
+                try {
+                    $redis->config('SET', 'activedefrag', 'yes');
+                    return true;
+                } catch (\Exception $e) {
+                    logActivity("V2RaySocks Traffic Monitor: Memory defrag not supported: " . $e->getMessage(), 0);
+                    return false;
+                }
+                
+            case 'cache_warm':
+                // Cache warming functionality
+                if (!isset($data['warm_keys']) || !is_array($data['warm_keys'])) {
+                    return false;
+                }
+                $warmed = 0;
+                foreach ($data['warm_keys'] as $warmKey => $warmData) {
+                    if (isset($warmData['generator']) && is_callable($warmData['generator'])) {
+                        try {
+                            $value = call_user_func($warmData['generator']);
+                            if ($value !== null) {
+                                $warmTTL = $warmData['ttl'] ?? $defaultTTL;
+                                $warmFullKey = 'v2raysocks_traffic:' . $cacheVersion . ':' . $warmKey;
+                                if ($redis->setex($warmFullKey, $warmTTL, $value)) {
+                                    $warmed++;
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            logActivity("V2RaySocks Traffic Monitor: Cache warm failed for {$warmKey}: " . $e->getMessage(), 0);
+                        }
+                    }
+                }
+                return $warmed;
 
             default:
                 logActivity("V2RaySocks Traffic Monitor: Unknown Redis operation: " . $act, 0);
@@ -240,9 +432,9 @@ function v2raysocks_traffic_setCacheWithTTL($key, $value, $context = [])
 }
 
 /**
- * Enhanced cache getter with consistent error handling
+ * Enhanced cache getter with consistent error handling and penetration protection
  */
-function v2raysocks_traffic_getCacheWithFallback($key, $defaultValue = null)
+function v2raysocks_traffic_getCacheWithFallback($key, $defaultValue = null, $options = [])
 {
     try {
         $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $key]);
@@ -252,6 +444,26 @@ function v2raysocks_traffic_getCacheWithFallback($key, $defaultValue = null)
                 return $decodedData;
             }
         }
+        
+        // Cache penetration protection: if we have a data generator, use it and cache the result
+        if (isset($options['generator']) && is_callable($options['generator'])) {
+            try {
+                $generatedData = call_user_func($options['generator']);
+                if ($generatedData !== null) {
+                    // Cache the generated data to prevent repeated calls
+                    $cacheTTL = $options['ttl'] ?? v2raysocks_traffic_getDefaultTTL($key, $options['context'] ?? []);
+                    v2raysocks_traffic_redisOperate('set', [
+                        'key' => $key,
+                        'value' => json_encode($generatedData),
+                        'ttl' => $cacheTTL
+                    ]);
+                    return $generatedData;
+                }
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Monitor: Cache generator failed for key '{$key}': " . $e->getMessage(), 0);
+            }
+        }
+        
         return $defaultValue;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor: getCacheWithFallback failed for key '{$key}': " . $e->getMessage(), 0);
@@ -361,4 +573,173 @@ function v2raysocks_traffic_clearRelatedCache($dataType)
     }
     
     return true;
+}
+
+/**
+ * Batch set operations for improved performance
+ * Reduces network round trips and improves cache efficiency
+ */
+function v2raysocks_traffic_batchSet($items)
+{
+    try {
+        return v2raysocks_traffic_redisOperate('pipeline_set', ['items' => $items]);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: batchSet failed: " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Batch get operations for improved performance
+ * Reduces network round trips and improves cache efficiency
+ */
+function v2raysocks_traffic_batchGet($keys)
+{
+    try {
+        $result = v2raysocks_traffic_redisOperate('pipeline_get', ['keys' => $keys]);
+        return is_array($result) ? $result : [];
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: batchGet failed: " . $e->getMessage(), 0);
+        return [];
+    }
+}
+
+/**
+ * Enhanced cache setter with automatic optimization
+ * Automatically chooses best storage method based on data characteristics
+ */
+function v2raysocks_traffic_setOptimizedCache($key, $value, $context = [])
+{
+    try {
+        $ttl = v2raysocks_traffic_getDefaultTTL($key, $context);
+        
+        // Auto-optimize based on value characteristics
+        $optimizedData = [
+            'key' => $key,
+            'value' => $value,
+            'ttl' => $ttl,
+            'context' => $context
+        ];
+        
+        // Determine if we should use hash structure
+        if (isset($context['prefer_hash']) && $context['prefer_hash']) {
+            $optimizedData['use_hash'] = true;
+        } elseif (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && count($decoded) > 3 && strlen($value) > 500) {
+                $optimizedData['use_hash'] = true;
+            }
+        }
+        
+        return v2raysocks_traffic_redisOperate('set', $optimizedData);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: setOptimizedCache failed for key '{$key}': " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Get Redis memory information and fragmentation statistics
+ */
+function v2raysocks_traffic_getMemoryInfo()
+{
+    try {
+        $memInfo = v2raysocks_traffic_redisOperate('memory_info', []);
+        if (!$memInfo || isset($memInfo['error'])) {
+            return [
+                'available' => false,
+                'error' => $memInfo['error'] ?? 'Memory info not available'
+            ];
+        }
+        
+        $usedMemory = isset($memInfo['used_memory']) ? (int)$memInfo['used_memory'] : 0;
+        $usedMemoryRss = isset($memInfo['used_memory_rss']) ? (int)$memInfo['used_memory_rss'] : 0;
+        $maxMemory = isset($memInfo['maxmemory']) ? (int)$memInfo['maxmemory'] : 0;
+        
+        $fragmentation = 0;
+        if ($usedMemory > 0 && $usedMemoryRss > 0) {
+            $fragmentation = round(($usedMemoryRss / $usedMemory), 2);
+        }
+        
+        return [
+            'available' => true,
+            'used_memory_human' => $memInfo['used_memory_human'] ?? 'N/A',
+            'used_memory_rss_human' => $memInfo['used_memory_rss_human'] ?? 'N/A',
+            'used_memory_peak_human' => $memInfo['used_memory_peak_human'] ?? 'N/A',
+            'fragmentation_ratio' => $fragmentation,
+            'fragmentation_status' => $fragmentation > 1.5 ? 'high' : ($fragmentation > 1.2 ? 'moderate' : 'low'),
+            'max_memory_human' => $maxMemory > 0 ? number_format($maxMemory / 1024 / 1024, 2) . 'MB' : 'unlimited',
+            'raw_info' => $memInfo
+        ];
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: getMemoryInfo failed: " . $e->getMessage(), 0);
+        return [
+            'available' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Trigger memory defragmentation if Redis supports it
+ */
+function v2raysocks_traffic_defragMemory()
+{
+    try {
+        return v2raysocks_traffic_redisOperate('defrag', []);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: defragMemory failed: " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Cache warming functionality to preload frequently accessed data
+ */
+function v2raysocks_traffic_warmCache($warmConfig)
+{
+    try {
+        return v2raysocks_traffic_redisOperate('cache_warm', ['warm_keys' => $warmConfig]);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: warmCache failed: " . $e->getMessage(), 0);
+        return 0;
+    }
+}
+
+/**
+ * Enhanced cache statistics with memory optimization metrics
+ */
+function v2raysocks_traffic_getEnhancedCacheStats()
+{
+    try {
+        $basicStats = v2raysocks_traffic_redisOperate('stats', []);
+        if (!is_array($basicStats)) {
+            $basicStats = ['hits' => 0, 'misses' => 0, 'sets' => 0, 'errors' => 0, 'compression_saves' => 0];
+        }
+        
+        $memoryInfo = v2raysocks_traffic_getMemoryInfo();
+        
+        $totalRequests = ($basicStats['hits'] ?? 0) + ($basicStats['misses'] ?? 0);
+        $hitRate = $totalRequests > 0 ? (($basicStats['hits'] ?? 0) / $totalRequests) * 100 : 0;
+        
+        return array_merge($basicStats, [
+            'hit_rate' => round($hitRate, 2),
+            'total_requests' => $totalRequests,
+            'memory_info' => $memoryInfo,
+            'optimization_enabled' => true,
+            'compression_ratio' => ($basicStats['sets'] ?? 0) > 0 ? 
+                round((($basicStats['compression_saves'] ?? 0) / ($basicStats['sets'] ?? 1)) * 100, 2) : 0
+        ]);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: getEnhancedCacheStats failed: " . $e->getMessage(), 0);
+        return [
+            'hits' => 0,
+            'misses' => 0,
+            'sets' => 0,
+            'errors' => 0,
+            'hit_rate' => 0,
+            'optimization_enabled' => false,
+            'error' => $e->getMessage()
+        ];
+    }
 }
