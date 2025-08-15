@@ -92,6 +92,10 @@ function v2raysocks_traffic_getNavigationHTML($activeAction = '') {
         'service_search' => [
             'url' => 'addonmodules.php?module=v2raysocks_traffic&action=service_search',
             'label' => v2raysocks_traffic_lang('service_search')
+        ],
+        'performance_dashboard' => [
+            'url' => 'addonmodules.php?module=v2raysocks_traffic&action=performance_dashboard',
+            'label' => v2raysocks_traffic_lang('performance_dashboard')
         ]
     ];
     

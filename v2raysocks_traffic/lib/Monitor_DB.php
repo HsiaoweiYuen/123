@@ -1116,12 +1116,14 @@ function v2raysocks_traffic_getLiveStats()
             $cacheTimeRange = 'today';
         }
         
-        // Try to cache with error handling
+        // Try to cache with error handling and optimized TTL strategy
         try {
             v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($stats), [
                 'data_type' => 'live_stats',
                 'time_range' => $cacheTimeRange,
-                'is_historical' => false
+                'is_historical' => false,
+                'access_frequency' => 'high', // Live stats are frequently accessed
+                'priority' => 'high' // High priority for dashboard display
             ]);
         } catch (\Exception $e) {
             // Cache write failed, but we can still return the data
@@ -2261,6 +2263,12 @@ function v2raysocks_traffic_getAllNodes()
 function v2raysocks_traffic_getCacheStats()
 {
     try {
+        // Use enhanced cache stats if available
+        if (function_exists('v2raysocks_traffic_getEnhancedCacheStats')) {
+            return v2raysocks_traffic_getEnhancedCacheStats();
+        }
+        
+        // Fallback to basic stats
         $stats = v2raysocks_traffic_redisOperate('stats', []);
         if (!$stats) {
             return [
@@ -2295,7 +2303,81 @@ function v2raysocks_traffic_getCacheStats()
 }
 
 /**
- * Utility function to clear specific cache entries with improved strategy
+ * Optimized cache management with batch operations and smart prewarming
+ */
+function v2raysocks_traffic_optimizedCacheManager($action = 'status', $options = [])
+{
+    try {
+        switch ($action) {
+            case 'prewarm':
+                // Prewarm critical data using batch operations
+                $dataTypes = $options['data_types'] ?? ['live_stats', 'all_nodes'];
+                if (function_exists('v2raysocks_traffic_prewarmCache')) {
+                    return v2raysocks_traffic_prewarmCache($dataTypes);
+                }
+                return false;
+                
+            case 'optimize':
+                // Run optimization tasks
+                $results = [];
+                
+                // 1. Smart cache clearing
+                if (function_exists('v2raysocks_traffic_smartCacheClear')) {
+                    $clearType = $options['clear_type'] ?? 'selective';
+                    $results['cache_clear'] = v2raysocks_traffic_smartCacheClear($clearType);
+                }
+                
+                // 2. Memory analysis
+                $memoryInfo = v2raysocks_traffic_redisOperate('memory_info', []);
+                if ($memoryInfo) {
+                    $results['memory_info'] = $memoryInfo;
+                    
+                    // Recommend actions based on fragmentation
+                    if (isset($memoryInfo['mem_fragmentation_ratio'])) {
+                        $ratio = $memoryInfo['mem_fragmentation_ratio'];
+                        if ($ratio > 1.5) {
+                            $results['recommendations'][] = 'High memory fragmentation detected. Consider using batch operations.';
+                        }
+                        if ($ratio > 2.0) {
+                            $results['recommendations'][] = 'Critical fragmentation. Immediate optimization recommended.';
+                        }
+                    }
+                }
+                
+                // 3. Key analysis
+                $keyAnalysis = v2raysocks_traffic_redisOperate('key_analysis', []);
+                if ($keyAnalysis) {
+                    $results['key_analysis'] = $keyAnalysis;
+                }
+                
+                return $results;
+                
+            case 'batch_update':
+                // Batch update multiple cache entries efficiently
+                $operations = $options['operations'] ?? [];
+                if (!empty($operations) && function_exists('v2raysocks_traffic_batchCacheOperations')) {
+                    return v2raysocks_traffic_batchCacheOperations($operations);
+                }
+                return false;
+                
+            case 'status':
+            default:
+                // Return comprehensive cache status
+                if (function_exists('v2raysocks_traffic_getEnhancedCacheStats')) {
+                    return v2raysocks_traffic_getEnhancedCacheStats();
+                } else {
+                    return v2raysocks_traffic_getCacheStats();
+                }
+        }
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Optimized cache manager failed: " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Enhanced cache clearing with protection for critical data
  */
 function v2raysocks_traffic_clearCache($cacheKeys = [], $clearPattern = null)
 {
@@ -2510,12 +2592,14 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $node['avg_traffic_per_user'] = $node['unique_users'] > 0 ? $node['total_traffic'] / $node['unique_users'] : 0;
         }
         
-        // Try to cache using unified cache function
+        // Try to cache using unified cache function with optimized TTL
         if (!empty($nodes)) {
             try {
                 v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodes), [
                     'data_type' => 'rankings',
-                    'time_range' => $onlyToday ? 'today' : 'historical'
+                    'time_range' => $onlyToday ? 'today' : 'historical',
+                    'access_frequency' => 'normal', // Rankings accessed moderately
+                    'priority' => $onlyToday ? 'high' : 'normal' // Today's rankings are higher priority
                 ]);
             } catch (\Exception $e) {
                 // Cache write failed, but we can still return the data

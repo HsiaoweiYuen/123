@@ -99,6 +99,24 @@ function v2raysocks_traffic_config()
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
             ],
+            'enable_cache_optimization' => [
+                'FriendlyName' => isset($lang['enable_cache_optimization']) ? $lang['enable_cache_optimization'] : 'Enable Cache Optimization',
+                'Type' => 'yesno',
+                'Default' => 'on',
+                'Description' => isset($lang['cache_optimization_description']) ? $lang['cache_optimization_description'] : 'Enable advanced Redis cache optimization features including pipeline operations and smart TTL management',
+            ],
+            'auto_prewarm_cache' => [
+                'FriendlyName' => isset($lang['auto_prewarm_cache']) ? $lang['auto_prewarm_cache'] : 'Auto Prewarm Cache',
+                'Type' => 'yesno',
+                'Default' => 'off',
+                'Description' => isset($lang['auto_prewarm_description']) ? $lang['auto_prewarm_description'] : 'Automatically prewarm frequently accessed cache data on system startup',
+            ],
+            'fragmentation_monitoring' => [
+                'FriendlyName' => isset($lang['fragmentation_monitoring']) ? $lang['fragmentation_monitoring'] : 'Memory Fragmentation Monitoring',
+                'Type' => 'yesno',
+                'Default' => 'on',
+                'Description' => isset($lang['fragmentation_monitoring_description']) ? $lang['fragmentation_monitoring_description'] : 'Monitor Redis memory fragmentation and provide optimization recommendations',
+            ],
         ]
     ];
 }
@@ -461,6 +479,127 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+            
+        case 'cache_performance_stats':
+            try {
+                // Get enhanced cache performance statistics
+                if (function_exists('v2raysocks_traffic_getEnhancedCacheStats')) {
+                    $stats = v2raysocks_traffic_getEnhancedCacheStats();
+                } else {
+                    $stats = v2raysocks_traffic_getCacheStats();
+                }
+                
+                header('Content-Type: application/json');
+                echo json_encode($stats, JSON_PRETTY_PRINT);
+                die();
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis cache_performance_stats error: " . $e->getMessage(), 0);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'redis_available' => false,
+                    'error' => $e->getMessage()
+                ], JSON_PRETTY_PRINT);
+                die();
+            }
+            
+        case 'prewarm_cache':
+            try {
+                if (function_exists('v2raysocks_traffic_prewarmCache')) {
+                    $result = v2raysocks_traffic_prewarmCache();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => !empty($result),
+                        'prewarmed' => $result ?: [],
+                        'message' => !empty($result) ? 'Cache prewarmed successfully' : 'Cache prewarming failed'
+                    ], JSON_PRETTY_PRINT);
+                } else {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Prewarm function not available'
+                    ], JSON_PRETTY_PRINT);
+                }
+                die();
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis prewarm_cache error: " . $e->getMessage(), 0);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Prewarm failed: ' . $e->getMessage()
+                ], JSON_PRETTY_PRINT);
+                die();
+            }
+            
+        case 'optimize_cache':
+            try {
+                if (function_exists('v2raysocks_traffic_optimizedCacheManager')) {
+                    $result = v2raysocks_traffic_optimizedCacheManager('optimize');
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => !empty($result),
+                        'result' => $result ?: [],
+                        'message' => !empty($result) ? 'Cache optimized successfully' : 'Cache optimization failed'
+                    ], JSON_PRETTY_PRINT);
+                } else {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Optimize function not available'
+                    ], JSON_PRETTY_PRINT);
+                }
+                die();
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis optimize_cache error: " . $e->getMessage(), 0);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Optimization failed: ' . $e->getMessage()
+                ], JSON_PRETTY_PRINT);
+                die();
+            }
+            
+        case 'smart_clear_cache':
+            try {
+                if (function_exists('v2raysocks_traffic_smartCacheClear')) {
+                    $result = v2raysocks_traffic_smartCacheClear('selective');
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => $result,
+                        'message' => $result ? 'Smart cache clear completed' : 'Smart cache clear failed'
+                    ], JSON_PRETTY_PRINT);
+                } else {
+                    // Fallback to regular cache clear
+                    v2raysocks_traffic_clearCache();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Basic cache clear completed'
+                    ], JSON_PRETTY_PRINT);
+                }
+                die();
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis smart_clear_cache error: " . $e->getMessage(), 0);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Smart clear failed: ' . $e->getMessage()
+                ], JSON_PRETTY_PRINT);
+                die();
+            }
+            
+        case 'performance_dashboard':
+            // Include performance monitoring dashboard
+            try {
+                require_once __DIR__ . '/lib/Monitor_Redis.php';
+                require_once __DIR__ . '/lib/Monitor_DB.php';
+                require_once __DIR__ . '/templates/performance_dashboard.php';
+                die();
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis performance_dashboard error: " . $e->getMessage(), 0);
+                echo "Error loading performance dashboard: " . $e->getMessage();
+                die();
+            }
+            
         case 'debug_info':
             try {
                 $cacheStats = v2raysocks_traffic_getCacheStats();

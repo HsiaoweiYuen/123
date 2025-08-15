@@ -31,6 +31,12 @@ $_LANG = [
     'default_unit_description' => 'Default unit for displaying traffic data',
     'chart_display_unit' => 'Chart Display Unit',
     'chart_unit_description' => 'Unit used in charts and graphs',
+    'enable_cache_optimization' => 'Enable Cache Optimization',
+    'cache_optimization_description' => 'Enable advanced Redis cache optimization features including pipeline operations and smart TTL management',
+    'auto_prewarm_cache' => 'Auto Prewarm Cache',
+    'auto_prewarm_description' => 'Automatically prewarm frequently accessed cache data on system startup',
+    'fragmentation_monitoring' => 'Memory Fragmentation Monitoring',
+    'fragmentation_monitoring_description' => 'Monitor Redis memory fragmentation and provide optimization recommendations',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)
@@ -351,4 +357,44 @@ $_LANG = [
     // TODAY TRAFFIC CHART (今日流量图表页面)
     // ========================================
     'today_traffic_history' => 'Today\'s Traffic History',
+    
+    // ========================================
+    // PERFORMANCE MONITORING (性能监控)
+    // ========================================
+    'performance_dashboard' => 'Performance Dashboard',
+    'cache_hit_rate' => 'Cache Hit Rate',
+    'total_requests' => 'Total Requests',
+    'memory_fragmentation' => 'Memory Fragmentation',
+    'total_cache_keys' => 'Total Cache Keys',
+    'redis_status' => 'Redis Status',
+    'memory_usage' => 'Memory Usage',
+    'used_memory' => 'Used Memory',
+    'peak_memory' => 'Peak Memory',
+    'cache_hits' => 'Cache Hits',
+    'cache_misses' => 'Cache Misses',
+    'cache_sets' => 'Cache Sets',
+    'cache_errors' => 'Cache Errors',
+    'optimization_actions' => 'Optimization Actions',
+    'prewarm_cache' => 'Prewarm Cache',
+    'optimize_cache' => 'Optimize Cache',
+    'smart_clear_cache' => 'Smart Clear Cache',
+    'refresh_stats' => 'Refresh Stats',
+    'cache_key_analysis' => 'Cache Key Analysis',
+    'loading' => 'Loading',
+    'connected' => 'Connected',
+    'disconnected' => 'Disconnected',
+    'prewarming_cache' => 'Prewarming cache',
+    'cache_prewarmed' => 'Cache prewarmed successfully',
+    'prewarm_failed' => 'Cache prewarming failed',
+    'optimizing_cache' => 'Optimizing cache',
+    'cache_optimized' => 'Cache optimized successfully',
+    'optimize_failed' => 'Cache optimization failed',
+    'clearing_cache' => 'Clearing cache',
+    'cache_cleared' => 'Cache cleared successfully',
+    'clear_failed' => 'Cache clearing failed',
+    'stats_refreshed' => 'Statistics refreshed',
+    'fragmentation_excellent' => 'Excellent',
+    'fragmentation_good' => 'Good',
+    'fragmentation_warning' => 'Warning',
+    'fragmentation_critical' => 'Critical',
 ];

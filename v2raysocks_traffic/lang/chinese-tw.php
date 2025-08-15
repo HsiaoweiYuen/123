@@ -31,6 +31,12 @@ $_LANG = [
     'default_unit_description' => '顯示流量數據的預設單位',
     'chart_display_unit' => '圖表顯示單位',
     'chart_unit_description' => '圖表和圖形中使用的單位',
+    'enable_cache_optimization' => '啟用快取優化',
+    'cache_optimization_description' => '啟用高級Redis快取優化功能，包括管道操作和智能TTL管理',
+    'auto_prewarm_cache' => '自動預熱快取',
+    'auto_prewarm_description' => '系統啟動時自動預熱常用快取數據',
+    'fragmentation_monitoring' => '記憶體碎片監控',
+    'fragmentation_monitoring_description' => '監控Redis記憶體碎片並提供優化建議',
     
     // ========================================
     // COMMON COMPONENTS (通用組件)
@@ -350,4 +356,44 @@ $_LANG = [
     // TODAY TRAFFIC CHART (今日流量圖表頁面)
     // ========================================
     'today_traffic_history' => '今日流量歷史',
+    
+    // ========================================
+    // PERFORMANCE MONITORING (性能監控)
+    // ========================================
+    'performance_dashboard' => '性能監控面板',
+    'cache_hit_rate' => '快取命中率',
+    'total_requests' => '總請求數',
+    'memory_fragmentation' => '記憶體碎片率',
+    'total_cache_keys' => '快取鍵總數',
+    'redis_status' => 'Redis狀態',
+    'memory_usage' => '記憶體使用情況',
+    'used_memory' => '已用記憶體',
+    'peak_memory' => '峰值記憶體',
+    'cache_hits' => '快取命中',
+    'cache_misses' => '快取未命中',
+    'cache_sets' => '快取設置',
+    'cache_errors' => '快取錯誤',
+    'optimization_actions' => '優化操作',
+    'prewarm_cache' => '預熱快取',
+    'optimize_cache' => '優化快取',
+    'smart_clear_cache' => '智能清理快取',
+    'refresh_stats' => '刷新統計',
+    'cache_key_analysis' => '快取鍵分析',
+    'loading' => '載入中',
+    'connected' => '已連接',
+    'disconnected' => '已斷開',
+    'prewarming_cache' => '正在預熱快取',
+    'cache_prewarmed' => '快取預熱成功',
+    'prewarm_failed' => '快取預熱失敗',
+    'optimizing_cache' => '正在優化快取',
+    'cache_optimized' => '快取優化成功',
+    'optimize_failed' => '快取優化失敗',
+    'clearing_cache' => '正在清理快取',
+    'cache_cleared' => '快取清理成功',
+    'clear_failed' => '快取清理失敗',
+    'stats_refreshed' => '統計已刷新',
+    'fragmentation_excellent' => '優秀',
+    'fragmentation_good' => '良好',
+    'fragmentation_warning' => '警告',
+    'fragmentation_critical' => '嚴重',
 ];
