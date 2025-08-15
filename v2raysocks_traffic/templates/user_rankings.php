@@ -314,17 +314,20 @@ $userRankingsHtml = '
             
             /* Custom date range styling for mobile */
             #custom-date-range {
-                flex-direction: column !important;
-                align-items: flex-start !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                flex-wrap: wrap !important;
             }
             #custom-date-range label {
-                margin-bottom: 5px;
-                margin-right: 0;
+                margin-bottom: 0;
+                margin-right: 8px;
+                white-space: nowrap;
             }
             #custom-date-range input {
-                width: 100%;
-                margin-bottom: 10px;
-                margin-right: 0 !important;
+                width: auto;
+                margin-bottom: 0;
+                margin-right: 10px !important;
+                min-width: 120px;
             }
             
             /* Mobile responsive search controls for user records */
