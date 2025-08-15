@@ -800,6 +800,8 @@ function v2raysocks_traffic_getTimeFilter($timeRange)
             return strtotime('-12 hours');
         case 'week':
             return strtotime('-6 days', strtotime('today'));
+        case '15days':
+            return strtotime('-14 days', strtotime('today'));
         case 'halfmonth':
             return strtotime('-14 days', strtotime('today'));
         case 'month':
@@ -2764,6 +2766,11 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 break;
             case 'week':
                 $startTime = strtotime('-6 days', strtotime('today'));
+                $endTime = time();
+                $interval = 86400; // 1 day intervals
+                break;
+            case '15days':
+                $startTime = strtotime('-14 days', strtotime('today'));
                 $endTime = time();
                 $interval = 86400; // 1 day intervals
                 break;
