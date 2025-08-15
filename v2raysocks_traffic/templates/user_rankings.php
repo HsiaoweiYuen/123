@@ -18,6 +18,43 @@ $userRankingsHtml = '
         ' . v2raysocks_traffic_getNavigationCSS() . '
         ' . v2raysocks_traffic_getUnifiedStyles() . '
         
+        /* Search form styles from service_search.php */
+        .search-form { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border: 1px solid #dee2e6; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+        .form-group { 
+            flex: 1;
+            min-width: 120px;
+        }
+        /* Compact layout for time inputs and search button */
+        .form-group#custom-dates,
+        .form-group#custom-dates-end {
+            flex: 1 1 auto;
+            min-width: auto;
+        }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+        }
+        .form-group input, .form-group select { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px; 
+        }
+        
         .rank-badge {
             display: inline-block;
             padding: 4px 8px;
@@ -259,6 +296,46 @@ $userRankingsHtml = '
         
         /* Responsive styles for mobile devices */
         @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+            .nav-links {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .nav-link {
+                text-align: center;
+                padding: 10px;
+            }
+            .search-form, .filter-panel, .navigation-bar {
+                padding: 15px;
+            }
+            .form-row {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start;
+            }
+            .form-group {
+                min-width: auto;
+                width: auto;
+                flex: 0 0 auto;
+            }
+            /* Optimize form layout for mobile - make inputs more compact */
+            .form-group:not(#custom-dates):not(#custom-dates-end) {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
+            }
+            .form-group#custom-dates,
+            .form-group#custom-dates-end {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
+            }
+            /* Search button should be full width on mobile */
+            .form-group:last-child {
+                flex: 1 1 100%;
+                margin-top: 5px;
+            }
             .rank-badge {
                 min-width: 25px;
                 padding: 2px 4px;
@@ -313,17 +390,20 @@ $userRankingsHtml = '
             }
             
             /* Custom date range styling for mobile */
-            #custom-date-range {
+            .form-group#custom-dates,
+            .form-group#custom-dates-end {
                 flex-direction: row !important;
                 align-items: center !important;
                 flex-wrap: wrap !important;
             }
-            #custom-date-range label {
+            .form-group#custom-dates label,
+            .form-group#custom-dates-end label {
                 margin-bottom: 0;
                 margin-right: 8px;
                 white-space: nowrap;
             }
-            #custom-date-range input {
+            .form-group#custom-dates input,
+            .form-group#custom-dates-end input {
                 width: auto;
                 margin-bottom: 0;
                 margin-right: 10px !important;
@@ -339,13 +419,55 @@ $userRankingsHtml = '
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
             }
+            .table-responsive {
+                font-size: 0.9em;
+            }
+            .table {
+                min-width: 300px; /* Reduced from 800px for mobile */
+            }
+            .table th, .table td {
+                padding: 8px 4px;
+                font-size: 0.9em;
+            }
         }
         
         /* Responsive styles for very small devices */
         @media (max-width: 480px) {
+            .dashboard-container {
+                padding: 5px;
+            }
+            .search-form, .filter-panel, .navigation-bar {
+                padding: 10px;
+            }
+            /* Stack form elements vertically on very small screens */
+            .form-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .form-group {
+                width: 100%;
+                flex: 1 1 auto;
+            }
+            .form-group#custom-dates,
+            .form-group#custom-dates-end {
+                flex: 1 1 auto;
+                min-width: auto;
+            }
+            .form-group#custom-dates input,
+            .form-group#custom-dates-end input {
+                width: 100%;
+            }
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.9em;
+            }
             /* Further adjust UUID column for very small devices */
             .uuid-column {
                 max-width: 200px; /* 超小屏幕进一步缩小UUID列宽度 */
+            }
+            .table th, .table td {
+                padding: 6px 2px;
+                font-size: 0.8em;
             }
         }
         
@@ -370,18 +492,7 @@ $userRankingsHtml = '
             text-overflow: ellipsis; /* 显示省略号 */
             font-family: monospace; /* 等宽字体便于查看 */
         }
-        
-        /* Custom date range styling */
-        #custom-date-range {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        #custom-date-range input {
-            padding: 5px 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -455,13 +566,13 @@ $userRankingsHtml = '
 
         <h1>' . v2raysocks_traffic_lang('user_rankings_title') . '</h1>
         
-        <!-- Controls Panel -->
-        <div class="controls-panel">
+        <!-- Time Search Form -->
+        <div class="search-form">
             <form id="user-rankings-filter">
-                <div class="controls-row">
-                    <div class="control-group">
+                <div class="form-row">
+                    <div class="form-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="time-range" name="time_range" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <select id="time-range" name="time_range">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
                             <option value="15days">' . v2raysocks_traffic_lang('last_15_days') . '</option>
@@ -469,18 +580,21 @@ $userRankingsHtml = '
                             <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
                         </select>
                     </div>
-                    <div class="control-group" id="custom-date-range" style="display: none;">
+                    <div class="form-group" id="custom-dates" style="display: none;">
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start-date" name="start_date" style="width: 140px; margin-right: 10px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="date" id="start-date" name="start_date">
+                    </div>
+                    <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 140px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="date" id="end-date" name="end_date">
                     </div>
-                    <div class="control-group">
+                    <div class="form-group">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '">
                     </div>
-                    <div class="control-group">
-                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px;">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
                     </div>
                 </div>
             </form>
@@ -760,12 +874,15 @@ $userRankingsHtml = '
             // Add event listener for time range change
             document.getElementById("time-range").addEventListener("change", function() {
                 const timeRange = this.value;
-                const customDateRange = document.getElementById("custom-date-range");
+                const customDates = document.getElementById("custom-dates");
+                const customDatesEnd = document.getElementById("custom-dates-end");
                 
                 if (timeRange === "custom") {
-                    customDateRange.style.display = "block";
+                    customDates.style.display = "block";
+                    customDatesEnd.style.display = "block";
                 } else {
-                    customDateRange.style.display = "none";
+                    customDates.style.display = "none";
+                    customDatesEnd.style.display = "none";
                 }
             });
             
