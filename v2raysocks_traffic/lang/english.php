@@ -45,7 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => 'Time Range',
-    'user_id' => 'Service ID',
+    'user_id' => 'User ID',
     'service_id' => 'Service ID',
     'node_id' => 'Node ID',
     'start_date' => 'Start Date',
