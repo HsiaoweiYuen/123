@@ -320,11 +320,13 @@ $nodeStatsHtml = '
                 min-width: 100% !important;
             }
             #node-custom-time-range div[style*="display: flex"] {
-                flex-direction: column !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
                 gap: 10px !important;
             }
             #node-custom-time-range div[style*="flex: 0 0"] {
-                flex: 1 1 100% !important;
+                flex: 0 0 auto !important;
+                min-width: 120px !important;
             }
         }
         
