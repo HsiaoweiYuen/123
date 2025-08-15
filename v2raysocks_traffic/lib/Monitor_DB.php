@@ -1624,6 +1624,8 @@ function v2raysocks_traffic_getTimeRangeTimestamps($range)
             return ['start' => strtotime('today')];
         case 'week':
             return ['start' => strtotime('-6 days', strtotime('today'))];
+        case '15days':
+            return ['start' => strtotime('-14 days', strtotime('today'))];
         case 'halfmonth':
             return ['start' => strtotime('-14 days', strtotime('today'))];
         case 'month':
@@ -1670,6 +1672,7 @@ function v2raysocks_traffic_generateDefaultTimeLabels($range, $points = 10)
                 $labels[] = date('H:i', $timestamp);
                 break;
             case 'week':
+            case '15days':
             case 'halfmonth':
             case 'month':
             case 'month_including_today':
