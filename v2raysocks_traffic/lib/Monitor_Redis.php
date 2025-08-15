@@ -128,7 +128,7 @@ function v2raysocks_traffic_redisOperate($act, $data)
     }
 
     // Default TTL values based on data type
-    $defaultTTL = v2raysocks_traffic_getDefaultTTL($data['key'] ?? '');
+    $defaultTTL = v2raysocks_traffic_getDefaultTTL($data['key'] ?? '', $data['context'] ?? []);
 
     try {
         $fullKey = 'v2raysocks_traffic:' . $cacheVersion . ':' . ($data['key'] ?? '');
@@ -213,45 +213,124 @@ function v2raysocks_traffic_redisOperate($act, $data)
 }
 
 /**
- * Get default TTL based on cache key type
+ * Unified cache operation with automatic TTL strategy application
+ * Reduces hardcoded TTL usage and provides consistent caching interface
  */
-function v2raysocks_traffic_getDefaultTTL($key)
+function v2raysocks_traffic_setCacheWithTTL($key, $value, $context = [])
 {
-    // Real-time data - short TTL
+    try {
+        // Get dynamic TTL based on key and context
+        $ttl = v2raysocks_traffic_getDefaultTTL($key, $context);
+        
+        // Log TTL decision for debugging (can be removed in production)
+        if (isset($context['debug']) && $context['debug']) {
+            logActivity("V2RaySocks Traffic Monitor: Using TTL {$ttl}s for key '{$key}' with context: " . json_encode($context), 0);
+        }
+        
+        // Use the existing redis operation function
+        return v2raysocks_traffic_redisOperate('set', [
+            'key' => $key,
+            'value' => $value,
+            'ttl' => $ttl
+        ]);
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: setCacheWithTTL failed for key '{$key}': " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Enhanced cache getter with consistent error handling
+ */
+function v2raysocks_traffic_getCacheWithFallback($key, $defaultValue = null)
+{
+    try {
+        $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $key]);
+        if ($cachedData !== false) {
+            $decodedData = json_decode($cachedData, true);
+            if ($decodedData !== null) {
+                return $decodedData;
+            }
+        }
+        return $defaultValue;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: getCacheWithFallback failed for key '{$key}': " . $e->getMessage(), 0);
+        return $defaultValue;
+    }
+}
+
+/**
+ * Get dynamic TTL based on cache key type and context
+ * Enhanced to support time range dynamic adjustment and better data type identification
+ */
+function v2raysocks_traffic_getDefaultTTL($key, $context = [])
+{
+    // Extract time range from context for dynamic adjustment
+    $timeRange = $context['time_range'] ?? '';
+    $dataType = $context['data_type'] ?? '';
+    $isHistorical = $context['is_historical'] ?? false;
+    
+    // Configuration data - longest TTL as it changes rarely
+    if (strpos($key, 'language_config') !== false || 
+        strpos($key, 'server_info_config') !== false ||
+        strpos($key, 'server_options') !== false) {
+        return 600; // 10 minutes for configuration data
+    }
+    
+    // Real-time/live data - shortest TTL for immediate updates
     if (strpos($key, 'live_stats') !== false || 
         strpos($key, 'traffic_5min') !== false ||
         strpos($key, 'real_time') !== false) {
-        return 60; // 1 minute
+        return 60; // 1 minute for real-time data
     }
     
-    // Traffic data - medium TTL
+    // Traffic data - dynamic TTL based on time range
     if (strpos($key, 'traffic_data') !== false || 
         strpos($key, 'day_traffic') !== false ||
         strpos($key, 'enhanced_traffic') !== false) {
-        return 120; // 2 minutes
+        // Shorter TTL for today's data, longer for historical
+        if ($timeRange === 'today' || (!$isHistorical && empty($timeRange))) {
+            return 120; // 2 minutes for current/today data
+        }
+        return 300; // 5 minutes for historical data
     }
     
-    // Chart data - shorter TTL for recent data
+    // Chart data - dynamic TTL based on time range
     if (strpos($key, 'chart') !== false || 
-        strpos($key, 'rankings') !== false) {
-        return 180; // 3 minutes
+        strpos($key, 'node_traffic_chart') !== false || 
+        strpos($key, 'user_traffic_chart') !== false) {
+        // Use the standardized 180 seconds for chart data
+        if ($timeRange === 'today') {
+            return 120; // 2 minutes for today's charts (more dynamic)
+        }
+        return 180; // 3 minutes for historical charts (standard)
     }
     
-    // User/Node details - medium TTL
+    // Rankings data - dynamic TTL based on time range
+    if (strpos($key, 'rankings') !== false || 
+        strpos($key, 'node_rankings') !== false || 
+        strpos($key, 'user_rankings') !== false) {
+        // Use the standardized 180 seconds for rankings
+        if ($timeRange === 'today' || $timeRange === 'custom') {
+            return 180; // 3 minutes for current rankings
+        }
+        return 300; // 5 minutes for historical rankings
+    }
+    
+    // User/Node details - dynamic TTL
     if (strpos($key, 'user_details') !== false || 
         strpos($key, 'node_details') !== false ||
         strpos($key, 'usage_records') !== false) {
-        return 300; // 5 minutes
+        return 300; // 5 minutes for details and usage records
     }
     
-    // Static data - longer TTL
-    if (strpos($key, 'all_nodes') !== false || 
-        strpos($key, 'server_info') !== false) {
-        return 600; // 10 minutes
+    // Static/slow-changing data - longer TTL
+    if (strpos($key, 'all_nodes') !== false) {
+        return 300; // 5 minutes for node lists (may change when nodes are added/removed)
     }
     
-    // Default TTL
-    return 300; // 5 minutes
+    // Default TTL - medium duration
+    return 300; // 5 minutes default
 }
 
 /**
