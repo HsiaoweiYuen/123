@@ -2996,16 +2996,16 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             $date = new DateTime();
             $date->setTimestamp($timestamp);
             
-            // Time grouping using server local time (not UTC) - consistent with traffic_dashboard.php
+            // Time grouping using server local time (not UTC) - consistent with frontend chart display
             if ($timeRange === 'today') {
-                // For today, group by hour with proper time display
-                $timeKey = $date->format('H') . ':00';
-            } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days'])) {
-                // For weekly/bi-weekly/monthly ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For today, group by hour with proper time display - format: HH:00
+                $timeKey = sprintf('%02d:00', intval($date->format('H')));
+            } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'custom'])) {
+                // For multi-day ranges, group by day using MM/dd format with zero-padding to match frontend expectations
+                $timeKey = sprintf('%02d/%02d', intval($date->format('m')), intval($date->format('d')));
             } else {
-                // For longer ranges, group by day using local time
-                $timeKey = $date->format('Y-m-d');
+                // For longer ranges, group by day using MM/dd format with zero-padding
+                $timeKey = sprintf('%02d/%02d', intval($date->format('m')), intval($date->format('d')));
             }
             
             if (!isset($timeData[$timeKey])) {
