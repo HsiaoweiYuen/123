@@ -82,6 +82,7 @@ $_LANG = [
     'last_7_days' => '最近7天',
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
+    'to' => '至',
     
     // Common Table Headers
     'timestamp' => '时间戳',

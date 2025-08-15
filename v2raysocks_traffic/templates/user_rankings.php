@@ -521,9 +521,9 @@ $userRankingsHtml = '
             "recent_1hour_traffic_label": "' . v2raysocks_traffic_lang('recent_1hour_traffic_label') . '",
             "recent_4hour_traffic_label": "' . v2raysocks_traffic_lang('recent_4hour_traffic_label') . '",
             "today_range": "' . v2raysocks_traffic_lang('today_range') . '",
-            "last_7_days_range": "' . v2raysocks_traffic_lang('last_7_days_range') . '",
-            "last_15_days_range": "' . v2raysocks_traffic_lang('last_15_days_range') . '",
-            "last_30_days_range": "' . v2raysocks_traffic_lang('last_30_days_range') . '",
+            "last_7_days": "' . v2raysocks_traffic_lang('last_7_days') . '",
+            "last_15_days": "' . v2raysocks_traffic_lang('last_15_days') . '",
+            "last_30_days": "' . v2raysocks_traffic_lang('last_30_days') . '",
             "custom_range_option": "' . v2raysocks_traffic_lang('custom_range_option') . '",
             "upload_traffic_unit": "' . v2raysocks_traffic_lang('upload_traffic_unit') . '",
             "download_traffic_unit": "' . v2raysocks_traffic_lang('download_traffic_unit') . '",
@@ -547,7 +547,8 @@ $userRankingsHtml = '
             "hours_ago": "' . v2raysocks_traffic_lang('hours_ago') . '",
             "days_ago": "' . v2raysocks_traffic_lang('days_ago') . '",
             "showing_records": "' . v2raysocks_traffic_lang('showing_records') . '",
-            "page_info": "' . v2raysocks_traffic_lang('page_info') . '"
+            "page_info": "' . v2raysocks_traffic_lang('page_info') . '",
+            "to": "' . v2raysocks_traffic_lang('to') . '"
         };
         
         function t(key, replacements = {}) {
@@ -2009,9 +2010,9 @@ $userRankingsHtml = '
         function getTimeRangeText(timeRange) {
             switch (timeRange) {
                 case "today": return t("today_range");
-                case "week": return t("last_7_days_range");
-                case "15days": return t("last_15_days_range");
-                case "month": return t("last_30_days_range");
+                case "week": return t("last_7_days");
+                case "15days": return t("last_15_days");
+                case "month": return t("last_30_days");
                 case "custom": return t("custom_range_option");
                 default: return timeRange;
             }
