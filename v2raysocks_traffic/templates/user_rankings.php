@@ -1293,7 +1293,20 @@ $userRankingsHtml = '
         
         function fetchUserRecentTrafficData() {
             // Fetch user ranking data to get recent traffic information
-            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            // Get the selected time range from dropdown
+            const timeRangeSelect = document.getElementById('time-range');
+            const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'today';
+
+            let rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=${selectedTimeRange}&limit=10000`;
+
+            // Handle custom date range
+            if (selectedTimeRange === 'custom') {
+                const startDate = document.getElementById('start-date');
+                const endDate = document.getElementById('end-date');
+                if (startDate && endDate && startDate.value && endDate.value) {
+                    rankingsUrl += `&start_date=${encodeURIComponent(startDate.value)}&end_date=${encodeURIComponent(endDate.value)}`;
+                }
+            }
             
             fetch(rankingsUrl)
                 .then(response => {
