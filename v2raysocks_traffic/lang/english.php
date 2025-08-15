@@ -45,7 +45,7 @@ $_LANG = [
     
     // Common Filters & Forms
     'time_range' => 'Time Range',
-    'user_id' => 'User ID',
+    'user_id' => 'Service ID',
     'service_id' => 'Service ID',
     'node_id' => 'Node ID',
     'start_date' => 'Start Date',
@@ -272,12 +272,12 @@ $_LANG = [
     'transfer_quota' => 'Transfer Quota',
     'used_quota' => 'Used Quota',
     'remaining_quota' => 'Remaining Quota',
-    'user_id_label' => 'User ID',
+    'user_id_label' => 'Service ID',
     'time_range_label' => 'Time Range',
     'upload_traffic' => 'Upload Traffic',
     'download_traffic' => 'Download Traffic',
     'total_traffic_label' => 'Total Traffic',
-    'user_traffic_usage_trends' => 'User {user_id} traffic usage trends',
+    'user_traffic_usage_trends' => 'Service {user_id} traffic usage trends',
     'upload_traffic_unit' => 'Upload traffic ({unit})',
     'download_traffic_unit' => 'Download traffic ({unit})',
     'total_traffic_unit' => 'Total traffic ({unit})',
