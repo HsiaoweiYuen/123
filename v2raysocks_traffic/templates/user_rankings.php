@@ -1148,10 +1148,15 @@ $userRankingsHtml = '
             let chartUrlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_chart&user_id=" + currentUserId + "&time_range=" + timeRange;
             let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=1000`;
             
+            // Debug logging
+            console.log("Loading user modal data for user:", currentUserId, "time range:", timeRange);
+            
             // Add custom date range parameters if applicable
             if (timeRange === "custom") {
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
+                
+                console.log("Custom date range:", startDate, "to", endDate);
                 
                 // Validate date format and values
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -1165,19 +1170,29 @@ $userRankingsHtml = '
                         const dateParams = "&start_date=" + startDate + "&end_date=" + endDate;
                         chartUrlParams += dateParams;
                         usageUrlParams += dateParams;
+                        console.log("Added custom date parameters:", dateParams);
+                    } else {
+                        console.error("Invalid custom date range:", startDate, endDate);
                     }
+                } else {
+                    console.error("Invalid date format for custom range:", startDate, endDate);
                 }
             }
+            
+            console.log("Chart URL:", chartUrlParams);
+            console.log("Usage URL:", usageUrlParams);
             
             // Load chart data and usage records atomically using Promise.all
             Promise.all([
                 fetch(chartUrlParams).then(response => {
+                    console.log("Chart API response status:", response.status, response.statusText);
                     if (!response.ok) {
                         throw new Error(`Chart API HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 }),
                 fetch(usageUrlParams).then(response => {
+                    console.log("Usage API response status:", response.status, response.statusText);
                     if (!response.ok) {
                         throw new Error(`Usage API HTTP ${response.status}: ${response.statusText}`);
                     }
@@ -1185,8 +1200,12 @@ $userRankingsHtml = '
                 })
             ])
             .then(([chartResponse, usageResponse]) => {
+                console.log("Chart response:", chartResponse);
+                console.log("Usage response:", usageResponse);
+                
                 // Process chart data
                 if (chartResponse.status === "success" && chartResponse.data) {
+                    console.log("Chart data received:", chartResponse.data);
                     displayUserChart(chartResponse.data);
                     updateUserInfoWithChartData(chartResponse.data);
                 } else {
@@ -1206,9 +1225,11 @@ $userRankingsHtml = '
                 
                 // Process usage records
                 if (usageResponse.status === "success") {
+                    console.log("Usage records received:", usageResponse.data?.length || 0, "records");
                     allUserUsageRecords = usageResponse.data || [];
                     filterAndUpdateUserUsageRecords();
                 } else {
+                    console.log("Usage API returned error:", usageResponse);
                     const recordsTbody = document.getElementById("user-records-tbody");
                     recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
                 }
@@ -1233,6 +1254,8 @@ $userRankingsHtml = '
         }
         
         function updateUserInfoWithChartData(chartData) {
+            console.log("updateUserInfoWithChartData called with:", chartData);
+            
             const userInfo = document.getElementById("user-info");
             const timeRange = document.getElementById("time-range").value;
             
@@ -1240,6 +1263,12 @@ $userRankingsHtml = '
             const totalUpload = chartData.upload ? chartData.upload.reduce((sum, val) => sum + (val || 0), 0) : 0;
             const totalDownload = chartData.download ? chartData.download.reduce((sum, val) => sum + (val || 0), 0) : 0;
             const totalTraffic = totalUpload + totalDownload;
+            
+            console.log("Calculated totals:", {
+                totalUpload: totalUpload + " GB",
+                totalDownload: totalDownload + " GB", 
+                totalTraffic: totalTraffic + " GB"
+            });
             
             // Convert GB to bytes for display
             const totalUploadBytes = totalUpload * 1000000000;
@@ -1572,6 +1601,8 @@ $userRankingsHtml = '
         }
 
         function displayUserChart(chartData) {
+            console.log("displayUserChart called with data:", chartData);
+            
             const ctx = document.getElementById("user-traffic-chart").getContext("2d");
             
             if (currentUserChart) {
@@ -1580,6 +1611,7 @@ $userRankingsHtml = '
             
             // Handle empty data case with proper fallback labels
             if (!chartData.labels || chartData.labels.length === 0) {
+                console.log("Chart data is empty, generating default labels");
                 const timeRange = document.getElementById("time-range").value;
                 const defaultLabels = generateDefaultTimeLabels(timeRange, 8);
                 chartData = {
@@ -1589,10 +1621,15 @@ $userRankingsHtml = '
                     total: new Array(defaultLabels.length).fill(0),
                     user_id: chartData.user_id || "Unknown"
                 };
+                console.log("Generated default chart data:", chartData);
             } else {
+                console.log("Chart data has", chartData.labels.length, "labels:", chartData.labels);
+                
                 // Ensure complete time series to prevent gaps
                 const timeRange = document.getElementById("time-range").value;
                 const completeLabels = generateCompleteTimeSeriesForUserChart(timeRange);
+                console.log("Generated complete time series:", completeLabels);
+                
                 const originalData = {
                     labels: [...chartData.labels],
                     upload: [...chartData.upload],
@@ -1607,13 +1644,25 @@ $userRankingsHtml = '
                 chartData.total = new Array(completeLabels.length).fill(0);
                 
                 // Fill in actual data where available
+                let matchedCount = 0;
                 originalData.labels.forEach((label, index) => {
                     const completeIndex = completeLabels.indexOf(label);
                     if (completeIndex !== -1) {
                         chartData.upload[completeIndex] = originalData.upload[index] || 0;
                         chartData.download[completeIndex] = originalData.download[index] || 0;
                         chartData.total[completeIndex] = originalData.total[index] || 0;
+                        matchedCount++;
+                    } else {
+                        console.warn("Could not match label:", label, "in complete series");
                     }
+                });
+                
+                console.log("Matched", matchedCount, "of", originalData.labels.length, "original labels");
+                console.log("Final chart data labels:", chartData.labels);
+                console.log("Final chart data sample (first 5):", {
+                    upload: chartData.upload.slice(0, 5),
+                    download: chartData.download.slice(0, 5),
+                    total: chartData.total.slice(0, 5)
                 });
             }
             
