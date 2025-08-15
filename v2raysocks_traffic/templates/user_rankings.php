@@ -398,7 +398,7 @@ $userRankingsHtml = '
             "unknown_error": "' . v2raysocks_traffic_lang('unknown_error') . '",
             "network_error_retry": "' . v2raysocks_traffic_lang('network_error_retry') . '",
             "loading": "' . v2raysocks_traffic_lang('loading') . '",
-            "user_id_label": "' . v2raysocks_traffic_lang('user_id_label') . '",
+            "service_id": "' . v2raysocks_traffic_lang('service_id') . '",
             "time_range_label": "' . v2raysocks_traffic_lang('time_range_label') . '",
             "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
             "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
@@ -604,7 +604,7 @@ $userRankingsHtml = '
     <div id="user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">' . v2raysocks_traffic_lang('user_details') . '</h3>
+                <h3 class="modal-title">' . v2raysocks_traffic_lang('service_details') . '</h3>
                 <span class="close" onclick="closeUserModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -1253,7 +1253,7 @@ $userRankingsHtml = '
             userInfo.innerHTML = `
                 <div class="info-grid">
                     <div class="info-item">
-                        <div class="info-label">${t("user_id_label")}</div>
+                        <div class="info-label">${t("service_id")}</div>
                         <div class="info-value">${currentUserId}</div>
                     </div>
                     <div class="info-item">
