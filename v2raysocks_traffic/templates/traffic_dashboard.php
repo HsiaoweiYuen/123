@@ -419,6 +419,22 @@ $trafficDashboardHtml = '
                 <div class="stat-value" id="custom-range-records">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('records_found') . '</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-peak-time">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_time') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-idle-time">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('idle_time') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-peak-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_traffic') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-idle-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('idle_traffic') . '</div>
+            </div>
         </div>
         
         <!-- Traffic Chart -->
@@ -1095,8 +1111,32 @@ $trafficDashboardHtml = '
             }
             const unitDivisor = getUnitDivisor(unit);
             
+            // Calculate peak time and idle time (following real_time_monitor.php pattern)
+            let peakTime = "";
+            let peakTraffic = 0;
+            let idleTime = "";
+            let idleTraffic = Number.MAX_VALUE;
+            
+            // Use timeData to calculate peaks (whether from grouped data or client-side grouping)
+            for (const [time, traffic] of Object.entries(timeData)) {
+                const totalTraffic = (traffic.upload || 0) + (traffic.download || 0);
+                if (totalTraffic > peakTraffic) {
+                    peakTraffic = totalTraffic;
+                    peakTime = time;
+                }
+                if (totalTraffic < idleTraffic && totalTraffic > 0) {
+                    idleTraffic = totalTraffic;
+                    idleTime = time;
+                }
+            }
+            
+            // If no valid idle traffic found, set to 0
+            if (idleTraffic === Number.MAX_VALUE) {
+                idleTraffic = 0;
+            }
+            
             // Update custom time range summary
-            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
+            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic);
             
             // Generate complete time series to avoid time gaps in chart
             const labels = generateCompleteTimeSeriesForTrafficChart(timeRange);
@@ -1266,15 +1306,24 @@ $trafficDashboardHtml = '
             return value.toFixed(2) + " " + unit;
         }
         
-        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount) {
+        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic) {
             $("#custom-range-upload").text(formatBytes(totalUpload));
             $("#custom-range-download").text(formatBytes(totalDownload));
             $("#custom-range-total").text(formatBytes(totalUpload + totalDownload));
             $("#custom-range-records").text(recordCount.toLocaleString());
+            
+            // Update peak/idle statistics
+            $("#custom-range-peak-time").text(peakTime || "--");
+            $("#custom-range-idle-time").text(idleTime || "--");
+            $("#custom-range-peak-traffic").text(formatBytes(peakTraffic || 0));
+            $("#custom-range-idle-traffic").text(formatBytes(idleTraffic || 0));
+            
             $("#custom-time-range-summary").show();
         }
         
         function hideCustomTimeRangeSummary() {
+            // Reset all values to default
+            $("#custom-range-upload, #custom-range-download, #custom-range-total, #custom-range-records, #custom-range-peak-time, #custom-range-idle-time, #custom-range-peak-traffic, #custom-range-idle-traffic").text("--");
             $("#custom-time-range-summary").hide();
         }
         
