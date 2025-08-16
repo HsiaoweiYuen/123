@@ -408,17 +408,18 @@ $todayTrafficChartHtml = '
                     const [bHour, bMin] = b.split(":").map(Number);
                     return (aHour * 60 + aMin) - (bHour * 60 + bMin);
                 } else if (a.includes("/")) {
-                    // Date format sorting (YYYY/MM/DD or MM/DD for legacy)
+                    // Legacy date format sorting (YYYY/MM/DD or MM/DD for backward compatibility only)
+                    // Note: Standard format is YYYY-MM-DD, this handles old data
                     const aParts = a.split("/").map(Number);
                     const bParts = b.split("/").map(Number);
                     
                     if (aParts.length === 3 && bParts.length === 3) {
-                        // Format: YYYY/MM/DD
+                        // Legacy Format: YYYY/MM/DD (use YYYY-MM-DD for new data)
                         const aDate = new Date(aParts[0], aParts[1] - 1, aParts[2]);
                         const bDate = new Date(bParts[0], bParts[1] - 1, bParts[2]);
                         return aDate - bDate;
                     } else if (aParts.length === 2 && bParts.length === 2) {
-                        // Format: MM/DD (legacy - assume same year)
+                        // Legacy Format: MM/DD (use YYYY-MM-DD for new data)
                         const aDate = new Date(2024, aParts[0] - 1, aParts[1]);
                         const bDate = new Date(2024, bParts[0] - 1, bParts[1]);
                         return aDate - bDate;
