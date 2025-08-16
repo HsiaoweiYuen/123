@@ -3828,3 +3828,78 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
     
     return $timeData;
 }
+
+/**
+ * Get historical peak traffic data - finds the date with highest total traffic across all dates
+ */
+function v2raysocks_traffic_getHistoricalPeakTraffic()
+{
+    try {
+        $cacheKey = 'historical_peak_traffic';
+        $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+        
+        if ($cachedData) {
+            return json_decode($cachedData, true);
+        }
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Database connection failed in getHistoricalPeakTraffic", 0);
+            return [
+                'peak_date' => null,
+                'peak_traffic' => 0,
+                'last_updated' => time()
+            ];
+        }
+        
+        // Group traffic by date and find the peak
+        // Use FROM_UNIXTIME to convert timestamp to date for grouping
+        $sql = 'SELECT 
+                    DATE(FROM_UNIXTIME(t)) as traffic_date,
+                    SUM(CAST(u AS DECIMAL(20,0))) + SUM(CAST(d AS DECIMAL(20,0))) as total_traffic
+                FROM user_usage 
+                WHERE (u > 0 OR d > 0)
+                GROUP BY DATE(FROM_UNIXTIME(t))
+                ORDER BY total_traffic DESC
+                LIMIT 1';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $peakDate = null;
+        $peakTraffic = 0;
+        
+        if ($result && $result['traffic_date']) {
+            $peakDate = $result['traffic_date'];
+            $peakTraffic = floatval($result['total_traffic'] ?? 0);
+            
+            // Format date as y/m/d format as requested
+            $dateObj = new DateTime($peakDate);
+            $peakDate = $dateObj->format('y/n/j'); // y = 2-digit year, n = month without leading zeros, j = day without leading zeros
+        }
+        
+        $data = [
+            'peak_date' => $peakDate,
+            'peak_traffic' => $peakTraffic,
+            'last_updated' => time()
+        ];
+        
+        // Cache using unified cache function
+        v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+            'data_type' => 'historical_peak',
+            'ttl' => 300 // 5 minutes cache
+        ]);
+        
+        return $data;
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error in getHistoricalPeakTraffic: " . $e->getMessage(), 0);
+        return [
+            'peak_date' => null,
+            'peak_traffic' => 0,
+            'last_updated' => time()
+        ];
+    }
+}
