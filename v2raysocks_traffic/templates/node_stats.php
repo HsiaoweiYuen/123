@@ -368,6 +368,10 @@ $nodeStatsHtml = '
             "recent_5min_traffic_label": "' . v2raysocks_traffic_lang('recent_5min_traffic_label') . '",
             "recent_1hour_traffic_label": "' . v2raysocks_traffic_lang('recent_1hour_traffic_label') . '",
             "recent_4hour_traffic_label": "' . v2raysocks_traffic_lang('recent_4hour_traffic_label') . '",
+            "peak_time": "' . v2raysocks_traffic_lang('peak_time') . '",
+            "idle_time": "' . v2raysocks_traffic_lang('idle_time') . '",
+            "peak_traffic": "' . v2raysocks_traffic_lang('peak_traffic') . '",
+            "idle_traffic": "' . v2raysocks_traffic_lang('idle_traffic') . '",
             "no_traffic_data": "' . v2raysocks_traffic_lang('no_traffic_data') . '",
             "no_traffic_records_period": "' . v2raysocks_traffic_lang('no_traffic_records_period') . '",
             "network_connection_error": "' . v2raysocks_traffic_lang('network_connection_error') . '",
@@ -1076,11 +1080,30 @@ $nodeStatsHtml = '
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
                         <div class="info-value text-warning" id="node-recent-4hour-traffic">-</div>
                     </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_time")}</div>
+                        <div class="info-value text-info" id="node-peak-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_time")}</div>
+                        <div class="info-value text-info" id="node-idle-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_traffic")}</div>
+                        <div class="info-value text-warning" id="node-peak-traffic">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_traffic")}</div>
+                        <div class="info-value text-warning" id="node-idle-traffic">-</div>
+                    </div>
                 </div>
             `;
             
             // Then fetch and update recent traffic data
             fetchNodeRecentTrafficData();
+            
+            // Also fetch peak/idle statistics
+            fetchNodePeakIdleStats();
         }
         
         function fetchNodeRecentTrafficData() {
@@ -1108,6 +1131,66 @@ $nodeStatsHtml = '
                 })
                 .catch(error => {
                     console.error("Error loading node recent traffic data:", error);
+                    // Keep "-" values on error
+                });
+        }
+        
+        function fetchNodePeakIdleStats() {
+            // Fetch detailed traffic data for peak/idle calculation
+            const today = new Date();
+            const todayStr = today.getFullYear() + "-" + 
+                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                            today.getDate().toString().padStart(2, "0");
+            
+            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&start_date=${todayStr}&end_date=${todayStr}&grouped=true&enhanced=true`;
+            
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Traffic data API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(response => {
+                    if (response.status === "success" && response.grouped_data) {
+                        // Calculate peak time and idle time using grouped data (PR#37 pattern)
+                        let peakTime = "";
+                        let peakTraffic = 0;
+                        let idleTime = "";
+                        let idleTraffic = Number.MAX_VALUE;
+                        
+                        // Use grouped data for peak/idle calculation
+                        Object.keys(response.grouped_data).forEach(function(timeKey) {
+                            const groupData = response.grouped_data[timeKey];
+                            const totalTraffic = groupData.total || 0;
+                            
+                            if (totalTraffic > peakTraffic) {
+                                peakTraffic = totalTraffic;
+                                peakTime = timeKey;
+                            }
+                            if (totalTraffic < idleTraffic && totalTraffic > 0) {
+                                idleTraffic = totalTraffic;
+                                idleTime = timeKey;
+                            }
+                        });
+                        
+                        // If no valid idle traffic found, set to 0
+                        if (idleTraffic === Number.MAX_VALUE) {
+                            idleTraffic = 0;
+                        }
+                        
+                        // Update the display elements
+                        document.getElementById("node-peak-time").textContent = peakTime || "-";
+                        document.getElementById("node-idle-time").textContent = idleTime || "-";
+                        document.getElementById("node-peak-traffic").innerHTML = formatBytes(peakTraffic);
+                        document.getElementById("node-idle-traffic").innerHTML = formatBytes(idleTraffic);
+                    } else {
+                        // No data available, keep default "-" values
+                        console.log("No grouped traffic data available for peak/idle calculation");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node peak/idle statistics:", error);
                     // Keep "-" values on error
                 });
         }
