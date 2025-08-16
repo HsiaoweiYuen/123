@@ -1136,43 +1136,43 @@ $nodeStatsHtml = '
         }
         
         function fetchNodePeakIdleStats() {
-            // Fetch detailed traffic data for peak/idle calculation
-            const today = new Date();
-            const todayStr = today.getFullYear() + "-" + 
-                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                            today.getDate().toString().padStart(2, "0");
-            
-            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&start_date=${todayStr}&end_date=${todayStr}&grouped=true&enhanced=true`;
+            // Fetch node chart data for peak/idle calculation
+            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`;
             
             fetch(apiUrl)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Traffic data API HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error(`Node chart API HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
                 .then(response => {
-                    if (response.status === "success" && response.grouped_data) {
-                        // Calculate peak time and idle time using grouped data (PR#37 pattern)
+                    if (response.status === "success" && response.data && response.data.labels && response.data.total) {
+                        // Calculate peak time and idle time using chart data
                         let peakTime = "";
                         let peakTraffic = 0;
                         let idleTime = "";
                         let idleTraffic = Number.MAX_VALUE;
                         
-                        // Use grouped data for peak/idle calculation
-                        Object.keys(response.grouped_data).forEach(function(timeKey) {
-                            const groupData = response.grouped_data[timeKey];
-                            const totalTraffic = groupData.total || 0;
+                        const labels = response.data.labels;
+                        const totalData = response.data.total;
+                        
+                        // Find peak and idle traffic from chart data
+                        for (let i = 0; i < labels.length && i < totalData.length; i++) {
+                            const timeLabel = labels[i];
+                            const totalTrafficGB = totalData[i] || 0;
+                            // Convert GB to bytes for consistent calculation
+                            const totalTrafficBytes = totalTrafficGB * 1000000000;
                             
-                            if (totalTraffic > peakTraffic) {
-                                peakTraffic = totalTraffic;
-                                peakTime = timeKey;
+                            if (totalTrafficBytes > peakTraffic) {
+                                peakTraffic = totalTrafficBytes;
+                                peakTime = timeLabel;
                             }
-                            if (totalTraffic < idleTraffic && totalTraffic > 0) {
-                                idleTraffic = totalTraffic;
-                                idleTime = timeKey;
+                            if (totalTrafficBytes < idleTraffic && totalTrafficBytes > 0) {
+                                idleTraffic = totalTrafficBytes;
+                                idleTime = timeLabel;
                             }
-                        });
+                        }
                         
                         // If no valid idle traffic found, set to 0
                         if (idleTraffic === Number.MAX_VALUE) {
@@ -1186,7 +1186,7 @@ $nodeStatsHtml = '
                         document.getElementById("node-idle-traffic").innerHTML = formatBytes(idleTraffic);
                     } else {
                         // No data available, keep default "-" values
-                        console.log("No grouped traffic data available for peak/idle calculation");
+                        console.log("No chart data available for peak/idle calculation");
                     }
                 })
                 .catch(error => {
