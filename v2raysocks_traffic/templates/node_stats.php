@@ -1138,7 +1138,8 @@ $nodeStatsHtml = '
         function fetchNodePeakIdleStats() {
             // Fetch detailed traffic data for peak/idle calculation
             // Use simple time_range parameter like the working user implementation
-            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&grouped=true&enhanced=true`;
+            // Exclude DAY traffic for node-specific hourly peak/idle calculations
+            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&grouped=true&enhanced=true&exclude_day_traffic=true`;
             
             fetch(apiUrl)
                 .then(response => {
