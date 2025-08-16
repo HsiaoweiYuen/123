@@ -1466,12 +1466,27 @@ $userRankingsHtml = '
         
         function fetchUserPeakIdleStats() {
             // Fetch detailed traffic data for peak/idle calculation
-            const today = new Date();
-            const todayStr = today.getFullYear() + "-" + 
-                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                            today.getDate().toString().padStart(2, "0");
+            const timeRange = document.getElementById("time-range").value;
+            let apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&user_id=${currentUserId}&time_range=${timeRange}&grouped=true&enhanced=true`;
             
-            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&user_id=${currentUserId}&time_range=today&start_date=${todayStr}&end_date=${todayStr}&grouped=true&enhanced=true`;
+            // Add custom date range parameters if applicable
+            if (timeRange === "custom") {
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                
+                // Validate date format and values
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                
+                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    // Only add dates if they are valid and start <= end
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                        apiUrl += "&start_date=" + startDate + "&end_date=" + endDate;
+                    }
+                }
+            }
             
             fetch(apiUrl)
                 .then(response => {
