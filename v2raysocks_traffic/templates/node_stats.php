@@ -1136,7 +1136,7 @@ $nodeStatsHtml = '
         }
         
         function fetchNodePeakIdleStats() {
-            // Fetch detailed traffic data for peak/idle calculation
+            // Use the node traffic chart API for peak/idle calculation (only for today's data)
             const today = new Date();
             const todayStr = today.getFullYear() + "-" + 
                             (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
