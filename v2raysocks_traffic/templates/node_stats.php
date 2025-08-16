@@ -1349,11 +1349,11 @@ $nodeStatsHtml = '
                     // Use consistent time formatting like service_search.php
                     labels.push(timestamp.getHours().toString().padStart(2, "0") + ":00");
                 } else {
-                    // Use consistent date formatting - YYYY-MM-DD format
+                    // Use consistent date formatting - YYYY/MM/DD format
                     const year = timestamp.getFullYear();
                     const month = String(timestamp.getMonth() + 1).padStart(2, "0");
                     const day = String(timestamp.getDate()).padStart(2, "0");
-                    labels.push(year + "-" + month + "-" + day);
+                    labels.push(year + "/" + month + "/" + day);
                 }
             }
             
@@ -1376,24 +1376,24 @@ $nodeStatsHtml = '
                     break;
                     
                 case "week":
-                    // Generate all 7 days for the past week - use YYYY-MM-DD format  
+                    // Generate all 7 days for the past week - use YYYY/MM/DD format  
                     for (let i = 6; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(year + "-" + month + "-" + day);
+                        labels.push(year + "/" + month + "/" + day);
                     }
                     break;
                     
                 case "month":
-                    // Generate all 30 days for the past month - use YYYY-MM-DD format
+                    // Generate all 30 days for the past month - use YYYY/MM/DD format
                     for (let i = 29; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(year + "-" + month + "-" + day);
+                        labels.push(year + "/" + month + "/" + day);
                     }
                     break;
             }

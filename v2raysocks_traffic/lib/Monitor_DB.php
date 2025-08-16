@@ -3875,9 +3875,9 @@ function v2raysocks_traffic_getHistoricalPeakTraffic()
             $peakDate = $result['traffic_date'];
             $peakTraffic = floatval($result['total_traffic'] ?? 0);
             
-            // Format date as y/m/d format as requested
+            // Format date as Y/m/d format for consistency (4-digit year with zero-padded month/day)
             $dateObj = new DateTime($peakDate);
-            $peakDate = $dateObj->format('y/n/j'); // y = 2-digit year, n = month without leading zeros, j = day without leading zeros
+            $peakDate = $dateObj->format('Y/m/d'); // Y = 4-digit year, m = zero-padded month, d = zero-padded day
         }
         
         $data = [

@@ -947,14 +947,14 @@ $trafficDashboardHtml = '
                     }
                     break;
                 default:
-                    // Generate date labels for multi-day ranges - use YYYY-MM-DD format consistently
+                    // Generate date labels for multi-day ranges - use YYYY/MM/DD format consistently
                     const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
                         const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(year + "-" + month + "-" + day);
+                        labels.push(year + "/" + month + "/" + day);
                     }
                     break;
             }
@@ -980,8 +980,8 @@ $trafficDashboardHtml = '
                     // Generate all 7 days for the past week
                     for (let i = 6; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const timeKey = date.getFullYear() + "-" + 
-                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                        const timeKey = date.getFullYear() + "/" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                        date.getDate().toString().padStart(2, "0");
                         labels.push(timeKey);
                     }
@@ -991,8 +991,8 @@ $trafficDashboardHtml = '
                     // Generate all 15 days for the past half month
                     for (let i = 14; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const timeKey = date.getFullYear() + "-" + 
-                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                        const timeKey = date.getFullYear() + "/" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                        date.getDate().toString().padStart(2, "0");
                         labels.push(timeKey);
                     }
@@ -1008,8 +1008,8 @@ $trafficDashboardHtml = '
                         const currentDate = new Date(startDate);
                         
                         while (currentDate <= endDate) {
-                            const timeKey = currentDate.getFullYear() + "-" + 
-                                           (currentDate.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                            const timeKey = currentDate.getFullYear() + "/" + 
+                                           (currentDate.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                            currentDate.getDate().toString().padStart(2, "0");
                             labels.push(timeKey);
                             currentDate.setDate(currentDate.getDate() + 1);
@@ -1018,8 +1018,8 @@ $trafficDashboardHtml = '
                         // Fallback to past 30 days if custom dates are not valid
                         for (let i = 29; i >= 0; i--) {
                             const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                            const timeKey = date.getFullYear() + "-" + 
-                                           (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                            const timeKey = date.getFullYear() + "/" + 
+                                           (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                            date.getDate().toString().padStart(2, "0");
                             labels.push(timeKey);
                         }
@@ -1030,8 +1030,8 @@ $trafficDashboardHtml = '
                     // For other ranges, generate past 30 days
                     for (let i = 29; i >= 0; i--) {
                         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                        const timeKey = date.getFullYear() + "-" + 
-                                       (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                        const timeKey = date.getFullYear() + "/" + 
+                                       (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                        date.getDate().toString().padStart(2, "0");
                         labels.push(timeKey);
                     }
@@ -1126,13 +1126,13 @@ $trafficDashboardHtml = '
                         timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                     } else if (["week", "halfmonth"].includes(timeRange)) {
                         // For weekly/bi-weekly ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                        timeKey = date.getFullYear() + "/" + 
+                                 (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                  date.getDate().toString().padStart(2, "0");
                     } else {
                         // For longer ranges, group by day using local time
-                        timeKey = date.getFullYear() + "-" + 
-                                 (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                        timeKey = date.getFullYear() + "/" + 
+                                 (date.getMonth() + 1).toString().padStart(2, "0") + "/" + 
                                  date.getDate().toString().padStart(2, "0");
                     }
                     
