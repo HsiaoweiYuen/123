@@ -478,11 +478,11 @@ $userStatsHtml = '
                 data.forEach(function(row) {
                     // use actual data timestamp for time grouping
                     const date = new Date(row.t * 1000);
-                    // Use consistent date formatting - YYYY-MM-DD format
+                    // Use consistent date formatting - YYYY/MM/DD format
                     const month = String(date.getMonth() + 1).padStart(2, "0");
                     const day = String(date.getDate()).padStart(2, "0");
                     const year = date.getFullYear();
-                    const timeKey = year + "-" + month + "-" + day;
+                    const timeKey = year + "/" + month + "/" + day;
                     
                     if (!timeData[timeKey]) {
                         timeData[timeKey] = { upload: 0, download: 0 };
