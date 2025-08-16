@@ -815,13 +815,14 @@ $serviceSearchHtml = '
                 case "week":
                 case "halfmonth":
                 case "month_including_today":
-                    // Generate date labels for multi-day ranges
+                    // Generate date labels for multi-day ranges - use YYYY-MM-DD format consistently
                     const today = new Date();
                     for (let i = points - 1; i >= 0; i--) {
                         const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                        const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(month + "/" + day);
+                        labels.push(year + "-" + month + "-" + day);
                     }
                     break;
                 default:
@@ -867,7 +868,35 @@ $serviceSearchHtml = '
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(year + "/" + month + "/" + day);
+                        labels.push(year + "-" + month + "-" + day);
+                    }
+                    break;
+                    
+                case "custom":
+                    // Generate dates for custom date range
+                    const startDateInput = document.getElementById("start_date").value;
+                    const endDateInput = document.getElementById("end_date").value;
+                    if (startDateInput && endDateInput) {
+                        const startDate = new Date(startDateInput);
+                        const endDate = new Date(endDateInput);
+                        const currentDate = new Date(startDate);
+                        
+                        while (currentDate <= endDate) {
+                            const year = currentDate.getFullYear();
+                            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+                            const day = String(currentDate.getDate()).padStart(2, "0");
+                            labels.push(year + "-" + month + "-" + day);
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    } else {
+                        // Fallback to weekly range if custom dates are not valid
+                        for (let i = 6; i >= 0; i--) {
+                            const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, "0");
+                            const day = String(date.getDate()).padStart(2, "0");
+                            labels.push(year + "-" + month + "-" + day);
+                        }
                     }
                     break;
                     
@@ -878,7 +907,7 @@ $serviceSearchHtml = '
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, "0");
                         const day = String(date.getDate()).padStart(2, "0");
-                        labels.push(year + "/" + month + "/" + day);
+                        labels.push(year + "-" + month + "-" + day);
                     }
                     break;
             }
@@ -997,11 +1026,11 @@ $serviceSearchHtml = '
                 if (timeRange === "today") {
                     timeKey = date.getHours() + ":00";
                 } else {
-                    // Format as YYYY/MM/DD for consistency with new date format
+                    // Format as YYYY-MM-DD for consistency with unified date format
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, "0");
                     const day = String(date.getDate()).padStart(2, "0");
-                    timeKey = year + "/" + month + "/" + day;
+                    timeKey = year + "-" + month + "-" + day;
                 }
                 
                 if (!timeData[timeKey]) {

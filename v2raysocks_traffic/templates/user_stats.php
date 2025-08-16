@@ -478,11 +478,11 @@ $userStatsHtml = '
                 data.forEach(function(row) {
                     // use actual data timestamp for time grouping
                     const date = new Date(row.t * 1000);
-                    // Use consistent date formatting to avoid timezone variations
+                    // Use consistent date formatting - YYYY-MM-DD format
                     const month = String(date.getMonth() + 1).padStart(2, "0");
                     const day = String(date.getDate()).padStart(2, "0");
                     const year = date.getFullYear();
-                    const timeKey = year + "/" + month + "/" + day;
+                    const timeKey = year + "-" + month + "-" + day;
                     
                     if (!timeData[timeKey]) {
                         timeData[timeKey] = { upload: 0, download: 0 };
@@ -494,13 +494,16 @@ $userStatsHtml = '
             
             // Sort labels chronologically instead of alphabetically
             const labels = Object.keys(timeData).sort((a, b) => {
-                if (a.includes(":") && !a.includes("/")) {
+                if (a.includes(":") && !a.includes("-")) {
                     // Time format sorting (HH:MM)
                     const [aHour, aMin] = a.split(":").map(Number);
                     const [bHour, bMin] = b.split(":").map(Number);
                     return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+                } else if (a.includes("-")) {
+                    // Date format sorting (YYYY-MM-DD)
+                    return new Date(a) - new Date(b);
                 } else if (a.includes("/")) {
-                    // Date format sorting (YYYY/MM/DD or MM/DD for legacy)
+                    // Legacy date format sorting (YYYY/MM/DD or MM/DD for backward compatibility)
                     const aParts = a.split("/").map(Number);
                     const bParts = b.split("/").map(Number);
                     
@@ -516,8 +519,11 @@ $userStatsHtml = '
                         return aDate - bDate;
                     }
                     return a.localeCompare(b);
-                } else if (a.includes("-")) {
-                    // Date format sorting (YYYY-MM-DD)
+                } else {
+                    // For numeric hour strings (0, 1, 2, ..., 23)
+                    return parseInt(a) - parseInt(b);
+                }
+            });
                     return new Date(a) - new Date(b);
                 } else {
                     return a.localeCompare(b);
