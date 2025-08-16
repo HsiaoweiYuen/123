@@ -416,6 +416,14 @@ $trafficDashboardHtml = '
                 <div class="stat-label">' . v2raysocks_traffic_lang('total_traffic') . '</div>
             </div>
             <div class="stat-card">
+                <div class="stat-value" id="custom-range-historical-peak-date">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('historical_peak_date') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-peak-day-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_day_traffic') . '</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-value" id="custom-range-records">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('records_found') . '</div>
             </div>
@@ -1030,6 +1038,38 @@ $trafficDashboardHtml = '
             
             return labels;
         }
+        
+        function calculateHistoricalPeak(callback) {
+            // Make AJAX call to get historical peak data (all dates, not filtered by current range)
+            $.ajax({
+                url: "addonmodules.php?module=v2raysocks_traffic&action=get_historical_peak",
+                type: "GET",
+                data: {
+                    // Only include service_id filter, not time range filters
+                    service_id: $("#service-id").val()
+                },
+                dataType: "json",
+                timeout: 15000,
+                success: function(response) {
+                    if (response.status === "success" && response.peak_date && response.peak_traffic) {
+                        // Format date as y/m/d
+                        const peakDate = new Date(response.peak_date);
+                        const formattedDate = peakDate.getFullYear() + "/" + 
+                                            (peakDate.getMonth() + 1) + "/" + 
+                                            peakDate.getDate();
+                        callback(formattedDate, response.peak_traffic);
+                    } else {
+                        // Fallback if no data available
+                        callback("--", 0);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.warn("Failed to load historical peak data:", error);
+                    // Fallback if AJAX fails
+                    callback("--", 0);
+                }
+            });
+        }
 
         function updateTrafficChart(data, groupedData) {
             // Store data for chart type changes
@@ -1164,8 +1204,11 @@ $trafficDashboardHtml = '
                 idleTraffic = 0;
             }
             
-            // Update custom time range summary
-            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic);
+            // Calculate historical peak across all data (not limited by current filter)
+            calculateHistoricalPeak(function(historicalPeakDate, peakDayTraffic) {
+                // Update custom time range summary with historical peak data
+                updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic, historicalPeakDate, peakDayTraffic);
+            });
             
             // Generate complete time series to avoid time gaps in chart
             const labels = generateCompleteTimeSeriesForTrafficChart(timeRange);
@@ -1335,10 +1378,12 @@ $trafficDashboardHtml = '
             return value.toFixed(2) + " " + unit;
         }
         
-        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic) {
+        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic, historicalPeakDate, peakDayTraffic) {
             $("#custom-range-upload").text(formatBytes(totalUpload));
             $("#custom-range-download").text(formatBytes(totalDownload));
             $("#custom-range-total").text(formatBytes(totalUpload + totalDownload));
+            $("#custom-range-historical-peak-date").text(historicalPeakDate || "--");
+            $("#custom-range-peak-day-traffic").text(formatBytes(peakDayTraffic || 0));
             $("#custom-range-records").text(recordCount.toLocaleString());
             
             // Update peak/idle statistics
@@ -1352,7 +1397,7 @@ $trafficDashboardHtml = '
         
         function hideCustomTimeRangeSummary() {
             // Reset all values to default
-            $("#custom-range-upload, #custom-range-download, #custom-range-total, #custom-range-records, #custom-range-peak-time, #custom-range-idle-time, #custom-range-peak-traffic, #custom-range-idle-traffic").text("--");
+            $("#custom-range-upload, #custom-range-download, #custom-range-total, #custom-range-historical-peak-date, #custom-range-peak-day-traffic, #custom-range-records, #custom-range-peak-time, #custom-range-idle-time, #custom-range-peak-traffic, #custom-range-idle-traffic").text("--");
             $("#custom-time-range-summary").hide();
         }
         

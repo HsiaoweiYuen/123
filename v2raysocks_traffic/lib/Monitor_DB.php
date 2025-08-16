@@ -3828,3 +3828,57 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
     
     return $timeData;
 }
+
+/**
+ * Get historical peak traffic data across all dates
+ * Returns the date and traffic amount for the day with highest total traffic
+ */
+function v2raysocks_traffic_getHistoricalPeak($filters = []) {
+    $pdo = v2raysocks_traffic_getDatabaseConnection();
+    
+    if (!$pdo) {
+        throw new \Exception("Database connection failed");
+    }
+    
+    try {
+        // Build query to find daily peak traffic across all historical data
+        $sql = 'SELECT 
+                    DATE(FROM_UNIXTIME(t)) as traffic_date,
+                    SUM(u + d) as daily_total
+                FROM user_usage_log uu';
+        
+        $params = [];
+        
+        // Apply service_id filter if provided
+        if (!empty($filters['service_id'])) {
+            $sql .= ' INNER JOIN user u ON uu.uid = u.uid';
+            $sql .= ' WHERE u.sid = :service_id';
+            $params[':service_id'] = $filters['service_id'];
+        }
+        
+        // Group by date and order by daily total descending to get peak day
+        $sql .= ' GROUP BY traffic_date
+                  ORDER BY daily_total DESC
+                  LIMIT 1';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            return [
+                'peak_date' => $result['traffic_date'],
+                'peak_traffic' => floatval($result['daily_total'])
+            ];
+        } else {
+            return [
+                'peak_date' => null,
+                'peak_traffic' => 0
+            ];
+        }
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Historical peak calculation failed: " . $e->getMessage(), 0);
+        throw $e;
+    }
+}

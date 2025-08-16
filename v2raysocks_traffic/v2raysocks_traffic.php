@@ -179,6 +179,33 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+        case 'get_historical_peak':
+            try {
+                $filters = [
+                    'service_id' => $_GET['service_id'] ?? null,
+                ];
+                
+                // Get historical peak data for all dates
+                $historicalPeak = v2raysocks_traffic_getHistoricalPeak($filters);
+                
+                $result = [
+                    'status' => 'success',
+                    'peak_date' => $historicalPeak['peak_date'] ?? null,
+                    'peak_traffic' => $historicalPeak['peak_traffic'] ?? 0,
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_historical_peak error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to retrieve historical peak data: ' . $e->getMessage(),
+                    'peak_date' => null,
+                    'peak_traffic' => 0
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
         case 'get_live_stats':
             $liveStats = v2raysocks_traffic_getLiveStats();
             $result = [

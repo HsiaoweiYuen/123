@@ -226,6 +226,8 @@ $_LANG = [
     'idle_time' => '空闲时间',
     'peak_traffic' => '高峰流量',
     'idle_traffic' => '空闲流量',
+    'historical_peak_date' => '历史峰值',
+    'peak_day_traffic' => '峰值流量',
     'traffic_usage_over_time' => '流量使用趋势',
     'hourly_traffic_pattern' => '小时流量模式',
     
