@@ -141,6 +141,7 @@ function v2raysocks_traffic_output($vars)
                     'end_date' => $_GET['end_date'] ?? null,
                     'time_range' => $_GET['time_range'] ?? 'month_including_today',
                     'uuid' => $_GET['uuid'] ?? null,
+                    'exclude_day_traffic' => $_GET['exclude_day_traffic'] ?? null,
                 ];
                 
                 // Use enhanced traffic data function for better node name resolution
