@@ -1076,6 +1076,22 @@ $nodeStatsHtml = '
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
                         <div class="info-value text-warning" id="node-recent-4hour-traffic">-</div>
                     </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_time")}</div>
+                        <div class="info-value text-info" id="node-peak-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_time")}</div>
+                        <div class="info-value text-info" id="node-idle-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_traffic")}</div>
+                        <div class="info-value text-info" id="node-peak-traffic">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_traffic")}</div>
+                        <div class="info-value text-info" id="node-idle-traffic">-</div>
+                    </div>
                 </div>
             `;
             
@@ -1103,11 +1119,71 @@ $nodeStatsHtml = '
                             document.getElementById("node-recent-5min-traffic").innerHTML = formatBytes(nodeData.traffic_5min);
                             document.getElementById("node-recent-1hour-traffic").innerHTML = formatBytes(nodeData.traffic_1hour);
                             document.getElementById("node-recent-4hour-traffic").innerHTML = formatBytes(nodeData.traffic_4hour);
+                            
+                            // Fetch detailed traffic data for peak/idle calculation
+                            fetchNodePeakIdleData();
                         }
                     }
                 })
                 .catch(error => {
                     console.error("Error loading node recent traffic data:", error);
+                    // Keep "-" values on error
+                });
+        }
+        
+        function fetchNodePeakIdleData() {
+            // Fetch detailed traffic data for the current node to calculate peak/idle times
+            const trafficUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&grouped=true&time_range=today`;
+            
+            fetch(trafficUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Node traffic data API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(trafficResponse => {
+                    if (trafficResponse.status === "success" && trafficResponse.grouped_data) {
+                        // Calculate peak/idle times from grouped data
+                        let timeStats = {};
+                        
+                        // Build time statistics
+                        Object.keys(trafficResponse.grouped_data).forEach(function(timeKey) {
+                            const groupData = trafficResponse.grouped_data[timeKey];
+                            timeStats[timeKey] = (groupData.upload || 0) + (groupData.download || 0);
+                        });
+                        
+                        // Find peak time and idle time
+                        let peakTime = "";
+                        let peakTraffic = 0;
+                        let idleTime = "";
+                        let idleTraffic = Number.MAX_VALUE;
+                        
+                        for (const [time, traffic] of Object.entries(timeStats)) {
+                            if (traffic > peakTraffic) {
+                                peakTraffic = traffic;
+                                peakTime = time;
+                            }
+                            if (traffic < idleTraffic && traffic > 0) {
+                                idleTraffic = traffic;
+                                idleTime = time;
+                            }
+                        }
+                        
+                        // If no valid idle traffic found, set to 0
+                        if (idleTraffic === Number.MAX_VALUE) {
+                            idleTraffic = 0;
+                        }
+                        
+                        // Update the display elements
+                        document.getElementById("node-peak-time").innerHTML = peakTime || "-";
+                        document.getElementById("node-idle-time").innerHTML = idleTime || "-";
+                        document.getElementById("node-peak-traffic").innerHTML = formatBytes(peakTraffic);
+                        document.getElementById("node-idle-traffic").innerHTML = formatBytes(idleTraffic);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading node peak/idle data:", error);
                     // Keep "-" values on error
                 });
         }

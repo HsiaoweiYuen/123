@@ -1405,6 +1405,22 @@ $userRankingsHtml = '
                         <div class="info-label">${t("recent_4hour_traffic_label")}</div>
                         <div class="info-value text-warning" id="recent-4hour-traffic">-</div>
                     </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_time")}</div>
+                        <div class="info-value text-info" id="user-peak-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_time")}</div>
+                        <div class="info-value text-info" id="user-idle-time">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("peak_traffic")}</div>
+                        <div class="info-value text-info" id="user-peak-traffic">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">${t("idle_traffic")}</div>
+                        <div class="info-value text-info" id="user-idle-traffic">-</div>
+                    </div>
                 </div>
             `;
             
@@ -1432,11 +1448,71 @@ $userRankingsHtml = '
                             document.getElementById("recent-5min-traffic").innerHTML = formatBytes(userData.traffic_5min);
                             document.getElementById("recent-1hour-traffic").innerHTML = formatBytes(userData.traffic_1hour);
                             document.getElementById("recent-4hour-traffic").innerHTML = formatBytes(userData.traffic_4hour);
+                            
+                            // Fetch detailed traffic data for peak/idle calculation
+                            fetchUserPeakIdleData();
                         }
                     }
                 })
                 .catch(error => {
                     console.error("Error loading user recent traffic data:", error);
+                    // Keep "-" values on error
+                });
+        }
+        
+        function fetchUserPeakIdleData() {
+            // Fetch detailed traffic data for the current user to calculate peak/idle times
+            const trafficUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&user_id=${currentUserId}&grouped=true&time_range=today`;
+            
+            fetch(trafficUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`User traffic data API HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(trafficResponse => {
+                    if (trafficResponse.status === "success" && trafficResponse.grouped_data) {
+                        // Calculate peak/idle times from grouped data
+                        let timeStats = {};
+                        
+                        // Build time statistics
+                        Object.keys(trafficResponse.grouped_data).forEach(function(timeKey) {
+                            const groupData = trafficResponse.grouped_data[timeKey];
+                            timeStats[timeKey] = (groupData.upload || 0) + (groupData.download || 0);
+                        });
+                        
+                        // Find peak time and idle time
+                        let peakTime = "";
+                        let peakTraffic = 0;
+                        let idleTime = "";
+                        let idleTraffic = Number.MAX_VALUE;
+                        
+                        for (const [time, traffic] of Object.entries(timeStats)) {
+                            if (traffic > peakTraffic) {
+                                peakTraffic = traffic;
+                                peakTime = time;
+                            }
+                            if (traffic < idleTraffic && traffic > 0) {
+                                idleTraffic = traffic;
+                                idleTime = time;
+                            }
+                        }
+                        
+                        // If no valid idle traffic found, set to 0
+                        if (idleTraffic === Number.MAX_VALUE) {
+                            idleTraffic = 0;
+                        }
+                        
+                        // Update the display elements
+                        document.getElementById("user-peak-time").innerHTML = peakTime || "-";
+                        document.getElementById("user-idle-time").innerHTML = idleTime || "-";
+                        document.getElementById("user-peak-traffic").innerHTML = formatBytes(peakTraffic);
+                        document.getElementById("user-idle-traffic").innerHTML = formatBytes(idleTraffic);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading user peak/idle data:", error);
                     // Keep "-" values on error
                 });
         }

@@ -419,6 +419,22 @@ $trafficDashboardHtml = '
                 <div class="stat-value" id="custom-range-records">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('records_found') . '</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-peak-time">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_time') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-idle-time">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('idle_time') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-peak-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_traffic') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="custom-range-idle-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('idle_traffic') . '</div>
+            </div>
         </div>
         
         <!-- Traffic Chart -->
@@ -1095,8 +1111,37 @@ $trafficDashboardHtml = '
             }
             const unitDivisor = getUnitDivisor(unit);
             
+            // Calculate peak time, idle time, peak traffic, and idle traffic
+            let peakTime = "";
+            let peakTraffic = 0;
+            let idleTime = "";
+            let idleTraffic = Number.MAX_VALUE;
+            
+            // Calculate time statistics from timeData
+            let timeStats = {};
+            for (const [time, traffic] of Object.entries(timeData)) {
+                timeStats[time] = traffic.upload + traffic.download;
+            }
+            
+            // Find peak time and idle time
+            for (const [time, totalTraffic] of Object.entries(timeStats)) {
+                if (totalTraffic > peakTraffic) {
+                    peakTraffic = totalTraffic;
+                    peakTime = time;
+                }
+                if (totalTraffic < idleTraffic && totalTraffic > 0) {
+                    idleTraffic = totalTraffic;
+                    idleTime = time;
+                }
+            }
+            
+            // If no valid idle traffic found, set to 0
+            if (idleTraffic === Number.MAX_VALUE) {
+                idleTraffic = 0;
+            }
+            
             // Update custom time range summary
-            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount);
+            updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic);
             
             // Generate complete time series to avoid time gaps in chart
             const labels = generateCompleteTimeSeriesForTrafficChart(timeRange);
@@ -1266,11 +1311,26 @@ $trafficDashboardHtml = '
             return value.toFixed(2) + " " + unit;
         }
         
-        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount) {
+        function updateCustomTimeRangeSummary(totalUpload, totalDownload, recordCount, peakTime, idleTime, peakTraffic, idleTraffic) {
             $("#custom-range-upload").text(formatBytes(totalUpload));
             $("#custom-range-download").text(formatBytes(totalDownload));
             $("#custom-range-total").text(formatBytes(totalUpload + totalDownload));
             $("#custom-range-records").text(recordCount.toLocaleString());
+            
+            // Add peak time display (only show time/date without text)
+            const peakDisplay = peakTime || "";
+            $("#custom-range-peak-time").text(peakDisplay);
+            
+            // Add idle time display
+            const idleDisplay = idleTime || "";
+            $("#custom-range-idle-time").text(idleDisplay);
+            
+            // Add peak traffic display
+            $("#custom-range-peak-traffic").text(formatBytes(peakTraffic || 0));
+            
+            // Add idle traffic display
+            $("#custom-range-idle-traffic").text(formatBytes(idleTraffic || 0));
+            
             $("#custom-time-range-summary").show();
         }
         
