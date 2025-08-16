@@ -468,6 +468,18 @@ $serviceSearchHtml = '
             chart_unit: "auto"
         };
         
+        // Unified date formatting function - returns YYYY-MM-DD HH:MM:SS format
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            const hours = String(date.getHours()).padStart(2, "0");
+            const minutes = String(date.getMinutes()).padStart(2, "0");
+            const seconds = String(date.getSeconds()).padStart(2, "0");
+            return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+        }
+        
         // Load module configuration
         function loadModuleConfig() {
             return $.ajax({
@@ -768,7 +780,7 @@ $serviceSearchHtml = '
                 // Generate table rows for current page
                 pageData.forEach(function(row) {
                     // use actual data timestamp for consistent local timezone formatting
-                    const displayTime = new Date(row.t * 1000).toLocaleString();
+                    const displayTime = formatDateTime(row.t);
                     html += `<tr>
                         <td>${displayTime}</td>
                         <td>${row.service_id || "-"}</td>
