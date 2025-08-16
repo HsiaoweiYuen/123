@@ -1566,7 +1566,7 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                 
                 // CSV headers - updated to include time labels
                 fputcsv($output, [
-                    'Timestamp', 'Date Label (m/d)', 'Hour Label (H:i)', 'User ID', 'Service ID', 'UUID', 'Node Name', 
+                    'Timestamp', 'Date Label (YYYY-MM-DD)', 'Hour Label (H:i)', 'User ID', 'Service ID', 'UUID', 'Node Name', 
                     'Upload (Formatted)', 'Download (Formatted)', 'Total (Formatted)',
                     'SS Speed Limit', 'V2Ray Speed Limit', 'Violation Count'
                 ]);
@@ -3526,8 +3526,8 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
                     'Period Upload (Formatted)', 'Period Download (Formatted)', 'Period Total (Formatted)',
                     'Total Upload (Formatted)', 'Total Download (Formatted)', 'Transfer Enable (Formatted)',
                     'Remaining Quota (Formatted)', 'Quota Utilization (%)',
-                    'Nodes Used', 'Usage Records', 'First Usage', 'First Usage Date (m/d)', 'First Usage Time (H:i)',
-                    'Last Usage', 'Last Usage Date (m/d)', 'Last Usage Time (H:i)',
+                    'Nodes Used', 'Usage Records', 'First Usage', 'First Usage Date (YYYY-MM-DD)', 'First Usage Time (H:i)',
+                    'Last Usage', 'Last Usage Date (YYYY-MM-DD)', 'Last Usage Time (H:i)',
                     'Average Traffic Per Node (Formatted)', 'Remark'
                 ]);
                 
@@ -3719,7 +3719,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
                 // CSV Headers - updated to include time labels
                 fputcsv($output, [
                     'Formatted Time',
-                    'Date Label (m/d)',
+                    'Date Label (YYYY-MM-DD)',
                     'Time Label (H:i)',
                     'Record ID',
                     'User ID', 
