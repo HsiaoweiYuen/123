@@ -342,6 +342,25 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+        case 'get_historical_peak_traffic':
+            try {
+                $historicalPeakData = v2raysocks_traffic_getHistoricalPeakTraffic();
+                $result = [
+                    'status' => 'success',
+                    'data' => $historicalPeakData,
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_historical_peak_traffic error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to retrieve historical peak traffic data: ' . $e->getMessage(),
+                    'data' => null
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
         case 'get_all_nodes':
             try {
                 $nodesData = v2raysocks_traffic_getAllNodes();

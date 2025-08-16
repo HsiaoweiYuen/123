@@ -362,6 +362,14 @@ $trafficDashboardHtml = '
                 <div class="stat-label">' . v2raysocks_traffic_lang('total_traffic') . '</div>
             </div>
             <div class="stat-card">
+                <div class="stat-value" id="historical-peak-date">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('historical_peak') . '</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="historical-peak-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('peak_traffic_amount') . '</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-value" id="site-launch-date">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('first_record') . '</div>
             </div>
@@ -607,11 +615,13 @@ $trafficDashboardHtml = '
             loadLiveStats();
             loadTrafficData();
             loadTotalTrafficSinceLaunch();
+            loadHistoricalPeakTraffic();
             
             // Auto-refresh every 5 minutes (300 seconds) for WHMCS sync
             refreshInterval = setInterval(function() {
                 loadLiveStats();
                 loadTotalTrafficSinceLaunch(); // Refresh total stats too
+                loadHistoricalPeakTraffic(); // Refresh historical peak data too
                 if ($("#time-range").val() === "today") {
                     loadTrafficData();
                 }
@@ -1425,6 +1435,32 @@ $trafficDashboardHtml = '
                     $("#total-download-since-launch").text("Error");
                     $("#total-traffic-since-launch-value").text("Error");
                     $("#site-launch-date").text("Error");
+                }
+            });
+        }
+        
+        function loadHistoricalPeakTraffic() {
+            $.ajax({
+                url: "addonmodules.php?module=v2raysocks_traffic&action=get_historical_peak_traffic",
+                type: "GET",
+                dataType: "json",
+                timeout: 15000,
+                success: function(response) {
+                    console.log("Historical peak traffic response:", response);
+                    if (response.status === "success" && response.data) {
+                        const data = response.data;
+                        $("#historical-peak-date").text(data.peak_date || "--");
+                        $("#historical-peak-traffic").text(formatBytes(data.peak_traffic || 0));
+                    } else {
+                        console.error("Historical peak traffic error:", response);
+                        $("#historical-peak-date").text("Error");
+                        $("#historical-peak-traffic").text("Error");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX error loading historical peak traffic:", status, error);
+                    $("#historical-peak-date").text("Error");
+                    $("#historical-peak-traffic").text("Error");
                 }
             });
         }
