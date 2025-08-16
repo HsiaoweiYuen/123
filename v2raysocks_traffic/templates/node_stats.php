@@ -1137,12 +1137,10 @@ $nodeStatsHtml = '
         
         function fetchNodePeakIdleStats() {
             // Fetch detailed traffic data for peak/idle calculation
-            const today = new Date();
-            const todayStr = today.getFullYear() + "-" + 
-                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                            today.getDate().toString().padStart(2, "0");
+            // Use simple time_range parameter like the working user implementation
+            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&grouped=true&enhanced=true`;
             
-            const apiUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data&node_id=${currentNodeId}&time_range=today&start_date=${todayStr}&end_date=${todayStr}&grouped=true&enhanced=true`;
+            console.log("Fetching node peak/idle stats from:", apiUrl);
             
             fetch(apiUrl)
                 .then(response => {
@@ -1152,7 +1150,11 @@ $nodeStatsHtml = '
                     return response.json();
                 })
                 .then(response => {
+                    console.log("Node peak/idle stats response:", response);
+                    
                     if (response.status === "success" && response.grouped_data) {
+                        console.log("Grouped data available:", response.grouped_data);
+                        
                         // Calculate peak time and idle time using grouped data (PR#37 pattern)
                         let peakTime = "";
                         let peakTraffic = 0;
@@ -1163,6 +1165,8 @@ $nodeStatsHtml = '
                         Object.keys(response.grouped_data).forEach(function(timeKey) {
                             const groupData = response.grouped_data[timeKey];
                             const totalTraffic = groupData.total || 0;
+                            
+                            console.log(`Time ${timeKey}: traffic = ${totalTraffic}`);
                             
                             if (totalTraffic > peakTraffic) {
                                 peakTraffic = totalTraffic;
@@ -1179,6 +1183,8 @@ $nodeStatsHtml = '
                             idleTraffic = 0;
                         }
                         
+                        console.log(`Peak: ${peakTime} (${peakTraffic}), Idle: ${idleTime} (${idleTraffic})`);
+                        
                         // Update the display elements
                         document.getElementById("node-peak-time").textContent = peakTime || "-";
                         document.getElementById("node-idle-time").textContent = idleTime || "-";
@@ -1186,7 +1192,7 @@ $nodeStatsHtml = '
                         document.getElementById("node-idle-traffic").innerHTML = formatBytes(idleTraffic);
                     } else {
                         // No data available, keep default "-" values
-                        console.log("No grouped traffic data available for peak/idle calculation");
+                        console.log("No grouped traffic data available for peak/idle calculation", response);
                     }
                 })
                 .catch(error => {
