@@ -1056,7 +1056,7 @@ $userRankingsHtml = '
             if (timeRange === "custom_time") {
                 const startTime = document.getElementById("start-time").value;
                 const endTime = document.getElementById("end-time").value;
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
                 const startDateTime = today + " " + startTime;
                 const endDateTime = today + " " + endTime;
                 

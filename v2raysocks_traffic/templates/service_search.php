@@ -730,7 +730,7 @@ $serviceSearchHtml = '
             
             // Add custom time parameters
             if (timeRange === "custom_time") {
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
                 const startDateTime = today + " " + startTime;
                 const endDateTime = today + " " + endTime;
                 
