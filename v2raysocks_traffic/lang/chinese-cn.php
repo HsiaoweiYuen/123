@@ -155,7 +155,7 @@ $_LANG = [
     'all_filtered_data' => '所有数据',
     'limited_number_of_records' => '自定义数量',
     'custom_date_range' => '自定义范围',
-    'custom_range' => '自定义范围',
+    'custom_range' => '自定义日期',
     'number_of_records' => '记录数量：',
     'start_date_label' => '开始日期：',
     'end_date_label' => '结束日期：',
@@ -170,7 +170,7 @@ $_LANG = [
     'all_filtered_data_option' => '全部筛选数据',
     'limit_records_option' => '限制记录数量',
     'custom_date_range_option' => '自定义日期范围',
-    'custom_range_option' => '自定义范围',
+    'custom_range_option' => '自定义日期',
     'number_of_records_label' => '记录数量',
     'format_label' => '格式',
     'cancel_button' => '取消',
@@ -207,6 +207,7 @@ $_LANG = [
     'total_users' => '总用户数',
     'active_users_5min' => '活跃用户 (5分钟)',
     'active_users_1hour' => '活跃用户 (1小时)',
+    'active_users_4hour' => '活跃用户 (4小时)',
     'active_users_24h' => '活跃用户 (24小时)',
     'online_nodes' => '在线节点',
     'today_traffic' => '今日流量',
@@ -354,3 +355,4 @@ $_LANG = [
     // ========================================
     'today_traffic_history' => '今日流量历史',
 ];
+?>

@@ -155,7 +155,7 @@ $_LANG = [
     'all_filtered_data' => 'All Data',
     'limited_number_of_records' => 'Custom Quantity',
     'custom_date_range' => 'Custom Range',
-    'custom_range' => 'Custom Range',
+    'custom_range' => 'Custom Date',
     'number_of_records' => 'Number of Records',
     'start_date_label' => 'Start Date',
     'end_date_label' => 'End Date',
@@ -170,7 +170,7 @@ $_LANG = [
     'all_filtered_data_option' => 'All filtered data',
     'limit_records_option' => 'Limit number of records',
     'custom_date_range_option' => 'Custom date range',
-    'custom_range_option' => 'Custom Range',
+    'custom_range_option' => 'Custom Date',
     'number_of_records_label' => 'Number of records',
     'format_label' => 'Format',
     'cancel_button' => 'Cancel',
@@ -207,6 +207,7 @@ $_LANG = [
     'total_users' => 'Total Users',
     'active_users_5min' => 'Active Users (5min)',
     'active_users_1hour' => 'Active Users (1h)',
+    'active_users_4hour' => 'Active Users (4h)',
     'active_users_24h' => 'Active Users (24h)',
     'online_nodes' => 'Online Nodes',
     'today_traffic' => 'Today\'s Traffic',
@@ -352,5 +353,5 @@ $_LANG = [
     // ========================================
     // TODAY TRAFFIC CHART (今日流量图表页面)
     // ========================================
-    'today_traffic_history' => 'Today\'s Traffic History',
 ];
+?>
