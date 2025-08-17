@@ -158,7 +158,7 @@ $_LANG = [
     'all_filtered_data' => '所有數據',
     'limited_number_of_records' => '自定義數量',
     'custom_date_range' => '自定義範圍',
-    'custom_range' => '自定義日期',
+    'custom_range' => '自訂範圍',
     'number_of_records' => '記錄數量',
     'start_date_label' => '開始日期',
     'end_date_label' => '結束日期',
@@ -172,7 +172,7 @@ $_LANG = [
     'all_filtered_data_option' => '全部篩選數據',
     'limit_records_option' => '限制記錄數量',
     'custom_date_range_option' => '自定義日期範圍',
-    'custom_range_option' => '自定義日期',
+    'custom_range_option' => '自訂範圍',
     'number_of_records_label' => '記錄數量',
     'format_label' => '格式',
     'cancel_button' => '取消',
@@ -209,7 +209,6 @@ $_LANG = [
     'total_users' => '總用戶數',
     'active_users_5min' => '活躍用戶 (5分鐘)',
     'active_users_1hour' => '活躍用戶 (1小時)',
-    'active_users_4hour' => '活躍用戶 (4小時)',
     'active_users_24h' => '活躍用戶 (24小時)',
     'online_nodes' => '線上節點',
     'today_traffic' => '今日流量',
@@ -356,4 +355,3 @@ $_LANG = [
     // ========================================
     'today_traffic_history' => '今日流量歷史',
 ];
-?>

@@ -318,10 +318,6 @@ $trafficDashboardHtml = '
                 <div class="stat-label">' . v2raysocks_traffic_lang('active_users_1hour') . '</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="active-users-4hour">--</div>
-                <div class="stat-label">' . v2raysocks_traffic_lang('active_users_4hour') . '</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-value" id="active-users-24h">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('active_users_24h') . '</div>
             </div>
@@ -340,10 +336,6 @@ $trafficDashboardHtml = '
             <div class="stat-card">
                 <div class="stat-value" id="traffic-1hour">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('traffic_1hour') . '</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="traffic-4hour">--</div>
-                <div class="stat-label">' . v2raysocks_traffic_lang('traffic_4hour') . '</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="today-traffic">--</div>
@@ -860,7 +852,6 @@ $trafficDashboardHtml = '
                         if (data.active_users) {
                             $("#active-users-5min").text(data.active_users["5min"] || 0);
                             $("#active-users-1hour").text(data.active_users["1hour"] || 0);
-                            $("#active-users-4hour").text(data.active_users["4hour"] || 0);
                             $("#active-users-24h").text(data.active_users["24hours"] || 0);
                         }
                         
@@ -873,7 +864,6 @@ $trafficDashboardHtml = '
                         if (data.traffic_periods) {
                             $("#traffic-5min").text(formatBytes(data.traffic_periods["5min"]?.total || 0));
                             $("#traffic-1hour").text(formatBytes(data.traffic_periods["1hour"]?.total || 0));
-                            $("#traffic-4hour").text(formatBytes(data.traffic_periods["4hour"]?.total || 0));
                             $("#traffic-monthly").text(formatBytes(data.traffic_periods.monthly?.total || 0));
                         }
                     }
