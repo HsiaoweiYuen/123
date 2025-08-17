@@ -963,6 +963,7 @@ function v2raysocks_traffic_getLiveStats()
                 'active_users' => [
                     '5min' => 0,
                     '1hour' => 0,
+                    '4hour' => 0,
                     '24hours' => 0
                 ],
                 'total_nodes' => 0,
@@ -972,6 +973,7 @@ function v2raysocks_traffic_getLiveStats()
                 'traffic_periods' => [
                     '5min' => ['upload' => 0, 'download' => 0, 'total' => 0],
                     '1hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                    '4hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
                     'monthly' => ['upload' => 0, 'download' => 0, 'total' => 0]
                 ],
                 'last_updated' => time(),
@@ -1021,6 +1023,7 @@ function v2raysocks_traffic_getLiveStats()
         // Get active users for different timeframes
         $activeUsers5min = 0;
         $activeUsers1hour = 0;
+        $activeUsers4hour = 0;
         $activeUsers24h = $activeUsers; // We already have 24h data
         
         try {
@@ -1031,6 +1034,10 @@ function v2raysocks_traffic_getLiveStats()
             $stmt = $pdo->prepare('SELECT COUNT(DISTINCT user_id) as active_users FROM user_usage WHERE t >= :time_1hour');
             $stmt->execute([':time_1hour' => time() - 3600]); // 1 hour
             $activeUsers1hour = $stmt->fetch(PDO::FETCH_ASSOC)['active_users'];
+            
+            $stmt = $pdo->prepare('SELECT COUNT(DISTINCT user_id) as active_users FROM user_usage WHERE t >= :time_4hour');
+            $stmt->execute([':time_4hour' => time() - 14400]); // 4 hours
+            $activeUsers4hour = $stmt->fetch(PDO::FETCH_ASSOC)['active_users'];
         } catch (\Exception $e) {
             // Use fallback values if queries fail
         }
@@ -1038,6 +1045,7 @@ function v2raysocks_traffic_getLiveStats()
         // Get traffic for different periods
         $traffic5min = ['upload' => 0, 'download' => 0];
         $traffic1hour = ['upload' => 0, 'download' => 0];
+        $traffic4hour = ['upload' => 0, 'download' => 0];
         $trafficMonthly = ['upload' => 0, 'download' => 0];
         
         try {
@@ -1065,6 +1073,16 @@ function v2raysocks_traffic_getLiveStats()
                 'download' => floatval($result['download'] ?? 0)
             ];
             
+            // 4-hour traffic - don't look back beyond today's start
+            $time4hourStart = max(time() - 14400, $todayStart);
+            $stmt = $pdo->prepare('SELECT SUM(u) as upload, SUM(d) as download FROM user_usage WHERE t >= :time_4hour');
+            $stmt->execute([':time_4hour' => $time4hourStart]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $traffic4hour = [
+                'upload' => floatval($result['upload'] ?? 0),
+                'download' => floatval($result['download'] ?? 0)
+            ];
+            
             // Monthly traffic (current month)
             $monthStart = strtotime('first day of this month 00:00:00');
             $stmt = $pdo->prepare('SELECT SUM(u) as upload, SUM(d) as download FROM user_usage WHERE t >= :month_start');
@@ -1083,6 +1101,7 @@ function v2raysocks_traffic_getLiveStats()
             'active_users' => [
                 '5min' => $activeUsers5min,
                 '1hour' => $activeUsers1hour,
+                '4hour' => $activeUsers4hour,
                 '24hours' => $activeUsers24h
             ],
             'total_nodes' => $totalNodes,
@@ -1100,6 +1119,11 @@ function v2raysocks_traffic_getLiveStats()
                     'download' => $traffic1hour['download'],
                     'total' => $traffic1hour['upload'] + $traffic1hour['download']
                 ],
+                '4hour' => [
+                    'upload' => $traffic4hour['upload'],
+                    'download' => $traffic4hour['download'],
+                    'total' => $traffic4hour['upload'] + $traffic4hour['download']
+                ],
                 'monthly' => [
                     'upload' => $trafficMonthly['upload'],
                     'download' => $trafficMonthly['download'],
@@ -1111,7 +1135,7 @@ function v2raysocks_traffic_getLiveStats()
         
         // Cache using unified cache function with shorter TTL for live stats
         $cacheTimeRange = 'today';
-        if (!$activeUsers5min && !$activeUsers1hour) {
+        if (!$activeUsers5min && !$activeUsers1hour && !$activeUsers4hour) {
             // If we couldn't get active user counts, treat as less reliable data
             $cacheTimeRange = 'today';
         }
@@ -1136,6 +1160,7 @@ function v2raysocks_traffic_getLiveStats()
             'active_users' => [
                 '5min' => 0,
                 '1hour' => 0,
+                '4hour' => 0,
                 '24hours' => 0
             ],
             'total_nodes' => 0,
@@ -1145,6 +1170,7 @@ function v2raysocks_traffic_getLiveStats()
             'traffic_periods' => [
                 '5min' => ['upload' => 0, 'download' => 0, 'total' => 0],
                 '1hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                '4hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
                 'monthly' => ['upload' => 0, 'download' => 0, 'total' => 0]
             ],
             'last_updated' => time(),
