@@ -178,7 +178,7 @@ $todayTrafficChartHtml = '
                     <option value="today" selected>Today</option>
                     <option value="7days">Last 7 Days</option>
                     <option value="30days">Last 30 Days</option>
-                    <option value="custom">Custom Range</option>
+                    <option value="custom">Custom Date</option>
                 </select>
             </div>
             <div class="control-group">

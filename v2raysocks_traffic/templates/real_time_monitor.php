@@ -146,6 +146,10 @@ $realTimeMonitorHtml = '
                 <div class="stat-label">' . v2raysocks_traffic_lang('traffic_1hour') . '</div>
             </div>
             <div class="stat-card">
+                <div class="stat-value" id="rt-4hour-traffic">--</div>
+                <div class="stat-label">' . v2raysocks_traffic_lang('traffic_4hour') . '</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-value" id="rt-current-traffic">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('today_traffic') . '</div>
             </div>
@@ -400,6 +404,7 @@ $realTimeMonitorHtml = '
                         if (data.traffic_periods) {
                             $("#rt-5min-traffic").text(formatBytes(data.traffic_periods["5min"]?.total || 0));
                             $("#rt-hourly-traffic").text(formatBytes(data.traffic_periods["1hour"]?.total || 0));
+                            $("#rt-4hour-traffic").text(formatBytes(data.traffic_periods["4hour"]?.total || 0));
                         }
                         
                         $("#last-update").text(new Date().toLocaleTimeString());

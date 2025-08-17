@@ -972,6 +972,7 @@ function v2raysocks_traffic_getLiveStats()
                 'traffic_periods' => [
                     '5min' => ['upload' => 0, 'download' => 0, 'total' => 0],
                     '1hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                    '4hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
                     'monthly' => ['upload' => 0, 'download' => 0, 'total' => 0]
                 ],
                 'last_updated' => time(),
@@ -1038,6 +1039,7 @@ function v2raysocks_traffic_getLiveStats()
         // Get traffic for different periods
         $traffic5min = ['upload' => 0, 'download' => 0];
         $traffic1hour = ['upload' => 0, 'download' => 0];
+        $traffic4hour = ['upload' => 0, 'download' => 0];
         $trafficMonthly = ['upload' => 0, 'download' => 0];
         
         try {
@@ -1061,6 +1063,16 @@ function v2raysocks_traffic_getLiveStats()
             $stmt->execute([':time_1hour' => $time1hourStart]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             $traffic1hour = [
+                'upload' => floatval($result['upload'] ?? 0),
+                'download' => floatval($result['download'] ?? 0)
+            ];
+            
+            // 4-hour traffic - don't look back beyond today's start
+            $time4hourStart = max(time() - 14400, $todayStart);
+            $stmt = $pdo->prepare('SELECT SUM(u) as upload, SUM(d) as download FROM user_usage WHERE t >= :time_4hour');
+            $stmt->execute([':time_4hour' => $time4hourStart]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $traffic4hour = [
                 'upload' => floatval($result['upload'] ?? 0),
                 'download' => floatval($result['download'] ?? 0)
             ];
@@ -1099,6 +1111,11 @@ function v2raysocks_traffic_getLiveStats()
                     'upload' => $traffic1hour['upload'],
                     'download' => $traffic1hour['download'],
                     'total' => $traffic1hour['upload'] + $traffic1hour['download']
+                ],
+                '4hour' => [
+                    'upload' => $traffic4hour['upload'],
+                    'download' => $traffic4hour['download'],
+                    'total' => $traffic4hour['upload'] + $traffic4hour['download']
                 ],
                 'monthly' => [
                     'upload' => $trafficMonthly['upload'],
@@ -1145,6 +1162,7 @@ function v2raysocks_traffic_getLiveStats()
             'traffic_periods' => [
                 '5min' => ['upload' => 0, 'download' => 0, 'total' => 0],
                 '1hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                '4hour' => ['upload' => 0, 'download' => 0, 'total' => 0],
                 'monthly' => ['upload' => 0, 'download' => 0, 'total' => 0]
             ],
             'last_updated' => time(),
