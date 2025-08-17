@@ -335,15 +335,12 @@ $serviceSearchHtml = '
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
                     </div>
                     <div class="form-group" id="custom-time-range" style="display: none;">
-                        <p style="margin-bottom: 10px; color: #666; font-size: 12px;">' . v2raysocks_traffic_lang('time_range_today_only') . '</p>
                         <label for="start_time">' . v2raysocks_traffic_lang('start_time') . ':</label>
                         <input type="time" id="start_time" name="start_time" step="1" style="width: 100%; margin-bottom: 10px;" placeholder="00:00:00">
-                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="form-group" id="custom-time-range-end" style="display: none;">
                         <label for="end_time">' . v2raysocks_traffic_lang('end_time') . ':</label>
                         <input type="time" id="end_time" name="end_time" step="1" style="width: 100%; margin-bottom: 10px;">
-                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>

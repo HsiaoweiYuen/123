@@ -85,7 +85,6 @@ $_LANG = [
     'custom_time_range' => '自定义时间',
     'start_time' => '开始时间',
     'end_time' => '结束时间',
-    'time_format_help' => '格式: HH:MM:SS',
     'to' => '至',
     
     // Common Table Headers
@@ -165,7 +164,6 @@ $_LANG = [
     'end_date_label' => '结束日期：',
     'start_time_label' => '开始时间：',
     'end_time_label' => '结束时间：',
-    'time_range_today_only' => '时间范围仅适用于今天',
     'format' => '格式：',
     'excel' => 'Excel',
     'csv' => 'CSV',

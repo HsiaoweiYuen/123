@@ -141,6 +141,9 @@ function v2raysocks_traffic_output($vars)
                     'end_date' => $_GET['end_date'] ?? null,
                     'time_range' => $_GET['time_range'] ?? 'month_including_today',
                     'uuid' => $_GET['uuid'] ?? null,
+                    // Add timestamp parameters for custom time functionality
+                    'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
+                    'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
                 // Use enhanced traffic data function for better node name resolution

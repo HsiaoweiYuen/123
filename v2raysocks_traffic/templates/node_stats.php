@@ -2001,7 +2001,6 @@ $nodeStatsHtml = '
                         <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
                         <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
                         <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
