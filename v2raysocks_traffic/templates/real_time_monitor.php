@@ -130,10 +130,6 @@ $realTimeMonitorHtml = '
                 <div class="stat-label">' . v2raysocks_traffic_lang('active_users_1hour') . '</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="rt-active-users-4hour">--</div>
-                <div class="stat-label">' . v2raysocks_traffic_lang('active_users_4hour') . '</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-value" id="rt-active-users-24h">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('active_users_24h') . '</div>
             </div>
@@ -148,10 +144,6 @@ $realTimeMonitorHtml = '
             <div class="stat-card">
                 <div class="stat-value" id="rt-hourly-traffic">--</div>
                 <div class="stat-label">' . v2raysocks_traffic_lang('traffic_1hour') . '</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="rt-4hour-traffic">--</div>
-                <div class="stat-label">' . v2raysocks_traffic_lang('traffic_4hour') . '</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="rt-current-traffic">--</div>
@@ -405,7 +397,6 @@ $realTimeMonitorHtml = '
                         if (data.active_users) {
                             $("#rt-active-users-5min").text(data.active_users["5min"] || 0);
                             $("#rt-active-users-1hour").text(data.active_users["1hour"] || 0);
-                            $("#rt-active-users-4hour").text(data.active_users["4hour"] || 0);
                             $("#rt-active-users-24h").text(data.active_users["24hours"] || 0);
                         }
                         
@@ -418,7 +409,6 @@ $realTimeMonitorHtml = '
                         if (data.traffic_periods) {
                             $("#rt-5min-traffic").text(formatBytes(data.traffic_periods["5min"]?.total || 0));
                             $("#rt-hourly-traffic").text(formatBytes(data.traffic_periods["1hour"]?.total || 0));
-                            $("#rt-4hour-traffic").text(formatBytes(data.traffic_periods["4hour"]?.total || 0));
                         }
                         
                         $("#last-update").text(new Date().toLocaleTimeString());
