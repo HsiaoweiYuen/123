@@ -85,7 +85,6 @@ $_LANG = [
     'custom_time_range' => 'Custom Time',
     'start_time' => 'Start Time',
     'end_time' => 'End Time',
-    'time_format_help' => 'Format: HH:MM:SS',
     'to' => 'to',
     
     // Common Table Headers
@@ -165,7 +164,6 @@ $_LANG = [
     'end_date_label' => 'End Date',
     'start_time_label' => 'Start Time',
     'end_time_label' => 'End Time',
-    'time_range_today_only' => 'Time range applies to today only',
     'format' => 'Format',
     'excel' => 'Excel',
     'csv' => 'CSV',
