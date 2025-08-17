@@ -3888,8 +3888,8 @@ function v2raysocks_traffic_getHistoricalPeakTraffic()
         
         // Cache using unified cache function
         v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
-            'data_type' => 'historical_peak',
-            'ttl' => 300 // 5 minutes cache
+            'data_type' => 'historical_peak'
+            // TTL will be determined by unified system (120s)
         ]);
         
         return $data;
@@ -3901,5 +3901,113 @@ function v2raysocks_traffic_getHistoricalPeakTraffic()
             'peak_traffic' => 0,
             'last_updated' => time()
         ];
+    }
+}
+
+/**
+ * Unified cache clearing function with improved strategies and cache version control
+ */
+function v2raysocks_traffic_unifiedCacheClear($dataType = null, $context = [])
+{
+    try {
+        $clearedCount = 0;
+        
+        // If specific data type is provided, use targeted clearing
+        if ($dataType) {
+            switch ($dataType) {
+                case 'user_data':
+                    // Clear user-related caches
+                    $patterns = ['user_*', 'user_details_*', 'user_rankings_*', 'usage_records_*'];
+                    break;
+                    
+                case 'node_data':
+                    // Clear node-related caches
+                    $patterns = ['node_*', 'node_details_*', 'node_rankings_*', 'all_nodes*'];
+                    break;
+                    
+                case 'traffic_data':
+                    // Clear traffic-related caches
+                    $patterns = ['traffic_*', 'enhanced_traffic_*', 'day_traffic_*', '*_chart_*'];
+                    break;
+                    
+                case 'rankings':
+                    // Clear ranking-related caches
+                    $patterns = ['*_rankings_*', 'rankings_*'];
+                    break;
+                    
+                case 'live_stats':
+                    // Clear only live/real-time caches
+                    $patterns = ['live_stats*', 'traffic_5min*', 'real_time*'];
+                    break;
+                    
+                case 'all_except_config':
+                    // Clear all caches except configuration data
+                    $patterns = [
+                        'traffic_*', 'enhanced_traffic_*', 'day_traffic_*', 
+                        'user_*', 'node_*', '*_rankings_*', 'live_stats*',
+                        '*_chart_*', 'usage_records_*'
+                    ];
+                    break;
+                    
+                default:
+                    // Use the existing clearRelatedCache function
+                    v2raysocks_traffic_clearRelatedCache($dataType);
+                    return true;
+            }
+            
+            // Clear specified patterns
+            foreach ($patterns as $pattern) {
+                v2raysocks_traffic_redisOperate('clear_pattern', ['pattern' => $pattern]);
+                $clearedCount++;
+            }
+        } else {
+            // Full cache clear using existing function
+            v2raysocks_traffic_clearCache();
+            $clearedCount = 1;
+        }
+        
+        // Log cache clearing activity
+        logActivity("V2RaySocks Traffic Monitor: Unified cache clear completed for type '{$dataType}', patterns cleared: {$clearedCount}", 0);
+        
+        return true;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Unified cache clear failed for type '{$dataType}': " . $e->getMessage(), 0);
+        return false;
+    }
+}
+
+/**
+ * Cache version control and automatic invalidation
+ */
+function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities = [])
+{
+    try {
+        $invalidationMap = [
+            'user_update' => ['user_data', 'rankings'],
+            'node_update' => ['node_data', 'rankings'],
+            'traffic_update' => ['traffic_data', 'live_stats', 'rankings'],
+            'data_import' => ['all_except_config'],
+            'settings_change' => ['all_except_config']
+        ];
+        
+        if (!isset($invalidationMap[$triggerType])) {
+            return false;
+        }
+        
+        $dataTypesToClear = $invalidationMap[$triggerType];
+        
+        foreach ($dataTypesToClear as $dataType) {
+            v2raysocks_traffic_unifiedCacheClear($dataType, [
+                'trigger' => $triggerType,
+                'entities' => $affectedEntities
+            ]);
+        }
+        
+        logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation completed for trigger '{$triggerType}'", 0);
+        
+        return true;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation failed for trigger '{$triggerType}': " . $e->getMessage(), 0);
+        return false;
     }
 }

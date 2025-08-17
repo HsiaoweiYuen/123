@@ -284,53 +284,44 @@ function v2raysocks_traffic_getDefaultTTL($key, $context = [])
         return 60; // 1 minute for real-time data
     }
     
-    // Traffic data - dynamic TTL based on time range
+    // Traffic data - unified TTL for consistency
     if (strpos($key, 'traffic_data') !== false || 
         strpos($key, 'day_traffic') !== false ||
         strpos($key, 'enhanced_traffic') !== false) {
-        // Shorter TTL for today's data, longer for historical
-        if ($timeRange === 'today' || (!$isHistorical && empty($timeRange))) {
-            return 120; // 2 minutes for current/today data
-        }
-        return 300; // 5 minutes for historical data
+        // Unified TTL for all traffic data except real-time
+        return 120; // 2 minutes for all traffic data
     }
     
-    // Chart data - dynamic TTL based on time range
+    // Chart data - unified TTL for consistency
     if (strpos($key, 'chart') !== false || 
         strpos($key, 'node_traffic_chart') !== false || 
         strpos($key, 'user_traffic_chart') !== false) {
-        // Use the standardized 180 seconds for chart data
-        if ($timeRange === 'today') {
-            return 120; // 2 minutes for today's charts (more dynamic)
-        }
-        return 180; // 3 minutes for historical charts (standard)
+        // Unified TTL for all chart data
+        return 120; // 2 minutes for all chart data
     }
     
-    // Rankings data - dynamic TTL based on time range
+    // Rankings data - unified TTL for consistency
     if (strpos($key, 'rankings') !== false || 
         strpos($key, 'node_rankings') !== false || 
         strpos($key, 'user_rankings') !== false) {
-        // Use the standardized 180 seconds for rankings
-        if ($timeRange === 'today' || $timeRange === 'custom') {
-            return 180; // 3 minutes for current rankings
-        }
-        return 300; // 5 minutes for historical rankings
+        // Unified TTL for all rankings data
+        return 120; // 2 minutes for all rankings data
     }
     
-    // User/Node details - dynamic TTL
+    // User/Node details - unified TTL for consistency
     if (strpos($key, 'user_details') !== false || 
         strpos($key, 'node_details') !== false ||
         strpos($key, 'usage_records') !== false) {
-        return 300; // 5 minutes for details and usage records
+        return 120; // 2 minutes for details and usage records
     }
     
-    // Static/slow-changing data - longer TTL
+    // Static/slow-changing data - unified TTL for consistency
     if (strpos($key, 'all_nodes') !== false) {
-        return 300; // 5 minutes for node lists (may change when nodes are added/removed)
+        return 120; // 2 minutes for node lists (unified with other data)
     }
     
-    // Default TTL - medium duration
-    return 300; // 5 minutes default
+    // Default TTL - unified medium duration
+    return 120; // 2 minutes default (unified)
 }
 
 /**
