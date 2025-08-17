@@ -267,7 +267,28 @@ $userStatsHtml = '
                             <option value="today">Today</option>
                             <option value="week">Last 7 Days</option>
                             <option value="month_including_today" selected>Last 30 Days</option>
+                            <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="custom-dates" style="display: none;">
+                        <label for="start_date">' . v2raysocks_traffic_lang('start_date') . ':</label>
+                        <input type="date" id="start_date" name="start_date">
+                    </div>
+                    <div class="form-group" id="custom-dates-end" style="display: none;">
+                        <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
+                        <input type="date" id="end_date" name="end_date">
+                    </div>
+                    <div class="form-group" id="custom-time-range" style="display: none;">
+                        <p style="margin-bottom: 10px; color: #666; font-size: 12px;">' . v2raysocks_traffic_lang('time_range_today_only') . '</p>
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" style="margin-bottom: 10px;">
+                        <small style="color: #666; display: block;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
+                    </div>
+                    <div class="form-group" id="custom-time-range-end" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" style="margin-bottom: 10px;">
+                        <small style="color: #666; display: block;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -390,6 +411,31 @@ $userStatsHtml = '
                 searchUser();
             });
             
+            // Time range change handler
+            $("#time_range").on("change", function() {
+                const value = $(this).val();
+                if (value === "custom") {
+                    $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-time-range, #custom-time-range-end").hide();
+                } else if (value === "custom_time") {
+                    $("#custom-time-range, #custom-time-range-end").show();
+                    $("#custom-dates, #custom-dates-end").hide();
+                    
+                    // Set default time values
+                    if (!$("#start_time").val()) {
+                        $("#start_time").val("00:00:00");
+                    }
+                    if (!$("#end_time").val()) {
+                        const now = new Date();
+                        const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                        $("#end_time").val(currentTime);
+                    }
+                } else {
+                    $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-time-range, #custom-time-range-end").hide();
+                }
+            });
+            
             $("#export-user-data").on("click", function(e) {
                 e.preventDefault();
                 if (Object.keys(currentUserData).length > 0) {
@@ -409,6 +455,46 @@ $userStatsHtml = '
                 return;
             }
             
+            // Validate custom time range
+            if (timeRange === "custom_time") {
+                const startTime = $("#start_time").val();
+                const endTime = $("#end_time").val();
+                
+                if (!startTime || !endTime) {
+                    alert("Please select both start time and end time");
+                    return;
+                }
+                
+                // Validate that start time is before end time
+                const startTimeDate = new Date("2000-01-01 " + startTime);
+                const endTimeDate = new Date("2000-01-01 " + endTime);
+                
+                if (startTimeDate >= endTimeDate) {
+                    alert("Start time must be earlier than end time");
+                    return;
+                }
+            }
+            
+            // Validate custom date range
+            if (timeRange === "custom") {
+                const startDate = $("#start_date").val();
+                const endDate = $("#end_date").val();
+                
+                if (!startDate || !endDate) {
+                    alert("Please select both start date and end date");
+                    return;
+                }
+                
+                // Validate date range logic
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                
+                if (start > end) {
+                    alert("Start date cannot be later than end date");
+                    return;
+                }
+            }
+            
             $("#user-results").hide();
             $("#no-results").hide();
             $("#user-traffic-history").html("<tr><td colspan=\\"5\\" class=\\"loading\\">Searching user data...</td></tr>");
@@ -419,6 +505,26 @@ $userStatsHtml = '
                 time_range: timeRange
             };
             params[searchType] = searchValue;
+            
+            // Add custom time parameters
+            if (timeRange === "custom_time") {
+                const startTime = $("#start_time").val();
+                const endTime = $("#end_time").val();
+                const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+                const startDateTime = today + " " + startTime;
+                const endDateTime = today + " " + endTime;
+                
+                params.start_timestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                params.end_timestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+            }
+            
+            // Add custom date parameters
+            if (timeRange === "custom") {
+                const startDate = $("#start_date").val();
+                const endDate = $("#end_date").val();
+                params.start_date = startDate;
+                params.end_date = endDate;
+            }
             
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
