@@ -39,7 +39,9 @@ $userRankingsHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-time-range,
+        .form-group#custom-time-range-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -322,12 +324,14 @@ $userRankingsHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
+            .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-time-range):not(#custom-time-range-end) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-time-range,
+            .form-group#custom-time-range-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -391,19 +395,25 @@ $userRankingsHtml = '
             
             /* Custom date range styling for mobile */
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-time-range,
+            .form-group#custom-time-range-end {
                 flex-direction: row !important;
                 align-items: center !important;
                 flex-wrap: wrap !important;
             }
             .form-group#custom-dates label,
-            .form-group#custom-dates-end label {
+            .form-group#custom-dates-end label,
+            .form-group#custom-time-range label,
+            .form-group#custom-time-range-end label {
                 margin-bottom: 0;
                 margin-right: 8px;
                 white-space: nowrap;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-time-range input,
+            .form-group#custom-time-range-end input {
                 width: auto;
                 margin-bottom: 0;
                 margin-right: 10px !important;
@@ -449,12 +459,16 @@ $userRankingsHtml = '
                 flex: 1 1 auto;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-time-range,
+            .form-group#custom-time-range-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-time-range input,
+            .form-group#custom-time-range-end input {
                 width: 100%;
             }
             .btn {
@@ -583,6 +597,7 @@ $userRankingsHtml = '
                             <option value="15days">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -592,6 +607,17 @@ $userRankingsHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date">
+                    </div>
+                    <div class="form-group" id="custom-time-range" style="display: none;">
+                        <p style="margin-bottom: 10px; color: #666; font-size: 12px;">' . v2raysocks_traffic_lang('time_range_today_only') . '</p>
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1" style="margin-bottom: 10px;">
+                        <small style="color: #666; display: block;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
+                    </div>
+                    <div class="form-group" id="custom-time-range-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1" style="margin-bottom: 10px;">
+                        <small style="color: #666; display: block;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="form-group">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
@@ -881,13 +907,36 @@ $userRankingsHtml = '
                 const timeRange = this.value;
                 const customDates = document.getElementById("custom-dates");
                 const customDatesEnd = document.getElementById("custom-dates-end");
+                const customTimeRange = document.getElementById("custom-time-range");
+                const customTimeRangeEnd = document.getElementById("custom-time-range-end");
                 
                 if (timeRange === "custom") {
                     customDates.style.display = "block";
                     customDatesEnd.style.display = "block";
+                    customTimeRange.style.display = "none";
+                    customTimeRangeEnd.style.display = "none";
+                } else if (timeRange === "custom_time") {
+                    customTimeRange.style.display = "block";
+                    customTimeRangeEnd.style.display = "block";
+                    customDates.style.display = "none";
+                    customDatesEnd.style.display = "none";
+                    
+                    // Set default time values
+                    const startTimeInput = document.getElementById("start-time");
+                    const endTimeInput = document.getElementById("end-time");
+                    if (!startTimeInput.value) {
+                        startTimeInput.value = "00:00:00";
+                    }
+                    if (!endTimeInput.value) {
+                        const now = new Date();
+                        const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                        endTimeInput.value = currentTime;
+                    }
                 } else {
                     customDates.style.display = "none";
                     customDatesEnd.style.display = "none";
+                    customTimeRange.style.display = "none";
+                    customTimeRangeEnd.style.display = "none";
                 }
             });
             
@@ -980,8 +1029,43 @@ $userRankingsHtml = '
                 }
             }
             
+            // Validate custom time range if selected
+            if (timeRange === "custom_time") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (!startTime || !endTime) {
+                    alert(t("select_start_end_times"));
+                    return;
+                }
+                
+                // Validate that start time is before end time
+                const startTimeDate = new Date("2000-01-01 " + startTime);
+                const endTimeDate = new Date("2000-01-01 " + endTime);
+                
+                if (startTimeDate >= endTimeDate) {
+                    alert("Start time must be earlier than end time");
+                    return;
+                }
+            }
+            
             // Use form serialization approach but remove sort_by parameter
-            const formData = $("#user-rankings-filter").serialize();
+            let formData = $("#user-rankings-filter").serialize();
+            
+            // Add custom time parameters if needed
+            if (timeRange === "custom_time") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const startDateTime = today + " " + startTime;
+                const endDateTime = today + " " + endTime;
+                
+                const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                
+                formData += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+            }
+            
             const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
             const tbody = document.getElementById("rankings-tbody");

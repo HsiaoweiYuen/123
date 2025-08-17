@@ -410,6 +410,9 @@ function v2raysocks_traffic_getTrafficData($filters = [])
                 case 'custom':
                     // For custom range, skip time_range filtering and rely on start_date/end_date filters below
                     break;
+                case 'custom_time':
+                    // For custom time range, skip time_range filtering and rely on start_timestamp/end_timestamp filters below
+                    break;
                 default:
                     if (is_numeric($filters['time_range'])) {
                         $sql .= ' AND uu.t >= :start_time';

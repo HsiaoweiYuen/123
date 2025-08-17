@@ -36,7 +36,9 @@ $serviceSearchHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-time-range,
+        .form-group#custom-time-range-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -143,12 +145,14 @@ $serviceSearchHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
+            .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-time-range):not(#custom-time-range-end) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-time-range,
+            .form-group#custom-time-range-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -187,12 +191,16 @@ $serviceSearchHtml = '
                 flex: 1 1 auto;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-time-range,
+            .form-group#custom-time-range-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-time-range input,
+            .form-group#custom-time-range-end input {
                 width: 100%;
             }
             .table th, .table td {
@@ -315,6 +323,7 @@ $serviceSearchHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -324,6 +333,17 @@ $serviceSearchHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-time-range" style="display: none;">
+                        <p style="margin-bottom: 10px; color: #666; font-size: 12px;">' . v2raysocks_traffic_lang('time_range_today_only') . '</p>
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%; margin-bottom: 10px;" placeholder="00:00:00">
+                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
+                    </div>
+                    <div class="form-group" id="custom-time-range-end" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%; margin-bottom: 10px;">
+                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -507,10 +527,26 @@ $serviceSearchHtml = '
             
             // Time range change handler
             $("#time_range").on("change", function() {
-                if ($(this).val() === "custom") {
+                const value = $(this).val();
+                if (value === "custom") {
                     $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-time-range, #custom-time-range-end").hide();
+                } else if (value === "custom_time") {
+                    $("#custom-time-range, #custom-time-range-end").show();
+                    $("#custom-dates, #custom-dates-end").hide();
+                    
+                    // Set default time values
+                    if (!$("#start_time").val()) {
+                        $("#start_time").val("00:00:00");
+                    }
+                    if (!$("#end_time").val()) {
+                        const now = new Date();
+                        const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                        $("#end_time").val(currentTime);
+                    }
                 } else {
                     $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-time-range, #custom-time-range-end").hide();
                 }
             });
             
@@ -659,10 +695,29 @@ $serviceSearchHtml = '
             const timeRange = $("#time_range").val();
             const startDate = $("#start_date").val();
             const endDate = $("#end_date").val();
+            const startTime = $("#start_time").val();
+            const endTime = $("#end_time").val();
             
             if (!searchValue) {
                 alert("Please enter a search value");
                 return;
+            }
+            
+            // Validate custom time range
+            if (timeRange === "custom_time") {
+                if (!startTime || !endTime) {
+                    alert("Please select both start time and end time");
+                    return;
+                }
+                
+                // Validate that start time is before end time
+                const startTimeDate = new Date("2000-01-01 " + startTime);
+                const endTimeDate = new Date("2000-01-01 " + endTime);
+                
+                if (startTimeDate >= endTimeDate) {
+                    alert("Start time must be earlier than end time");
+                    return;
+                }
             }
             
             // Build request parameters based on search type
@@ -672,6 +727,16 @@ $serviceSearchHtml = '
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
+            
+            // Add custom time parameters
+            if (timeRange === "custom_time") {
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const startDateTime = today + " " + startTime;
+                const endDateTime = today + " " + endTime;
+                
+                requestData.start_timestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                requestData.end_timestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+            }
             
             // Add search parameter based on type
             switch(searchType) {

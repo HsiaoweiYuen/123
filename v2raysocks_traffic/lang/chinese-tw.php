@@ -82,6 +82,10 @@ $_LANG = [
     'last_7_days' => '最近7天',
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
+    'custom_time_range' => '自定義時間',
+    'start_time' => '開始時間',
+    'end_time' => '結束時間',
+    'time_format_help' => '格式: HH:MM:SS',
     'to' => '至',
     
     // Common Table Headers

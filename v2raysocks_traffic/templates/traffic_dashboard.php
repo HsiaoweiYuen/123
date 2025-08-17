@@ -395,6 +395,7 @@ $trafficDashboardHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -408,6 +409,17 @@ $trafficDashboardHtml = '
                     <div class="filter-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="filter-group" id="custom-time-range" style="display: none;">
+                        <p style="margin-bottom: 10px; color: #666; font-size: 12px;">' . v2raysocks_traffic_lang('time_range_today_only') . '</p>
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1" style="width: 100%; margin-bottom: 10px;">
+                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
+                    </div>
+                    <div class="filter-group" id="custom-time-range-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1" style="width: 100%; margin-bottom: 10px;">
+                        <small style="color: #666;">' . v2raysocks_traffic_lang('time_format_help') . '</small>
                     </div>
                     <div class="filter-group">
                         <label>&nbsp;</label>
@@ -655,10 +667,26 @@ $trafficDashboardHtml = '
             
             // Time range change handler
             $("#time-range").on("change", function() {
-                if ($(this).val() === "custom") {
+                const value = $(this).val();
+                if (value === "custom") {
                     $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-time-range, #custom-time-range-end").hide();
+                } else if (value === "custom_time") {
+                    $("#custom-time-range, #custom-time-range-end").show();
+                    $("#custom-dates, #custom-dates-end").hide();
+                    
+                    // Set default time values
+                    if (!$("#start-time").val()) {
+                        $("#start-time").val("00:00:00");
+                    }
+                    if (!$("#end-time").val()) {
+                        const now = new Date();
+                        const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                        $("#end-time").val(currentTime);
+                    }
                 } else {
                     $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-time-range, #custom-time-range-end").hide();
                     // Note: Removed auto-refresh on time range change
                     // Users must click Apply Filter button to refresh data
                 }
@@ -863,7 +891,40 @@ $trafficDashboardHtml = '
         }
         
         function loadTrafficData() {
-            const params = $("#traffic-filter").serialize() + "&grouped=true";
+            // Validate custom time range
+            const timeRange = $("#time-range").val();
+            let params;
+            
+            if (timeRange === "custom_time") {
+                const startTime = $("#start-time").val();
+                const endTime = $("#end-time").val();
+                
+                if (!startTime || !endTime) {
+                    alert("Please select both start time and end time");
+                    return;
+                }
+                
+                // Validate that start time is before end time
+                const startTimeDate = new Date("2000-01-01 " + startTime);
+                const endTimeDate = new Date("2000-01-01 " + endTime);
+                
+                if (startTimeDate >= endTimeDate) {
+                    alert("Start time must be earlier than end time");
+                    return;
+                }
+                
+                // Add timestamp parameters to form data
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const startDateTime = today + " " + startTime;
+                const endDateTime = today + " " + endTime;
+                
+                const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                
+                params = $("#traffic-filter").serialize() + "&grouped=true&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+            } else {
+                params = $("#traffic-filter").serialize() + "&grouped=true";
+            }
             
             // Add loading indicator without clearing existing data
             const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";

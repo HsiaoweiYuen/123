@@ -82,6 +82,10 @@ $_LANG = [
     'last_7_days' => 'Last 7 Days',
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
+    'custom_time_range' => 'Custom Time',
+    'start_time' => 'Start Time',
+    'end_time' => 'End Time',
+    'time_format_help' => 'Format: HH:MM:SS',
     'to' => 'to',
     
     // Common Table Headers
