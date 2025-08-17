@@ -348,7 +348,6 @@ $_LANG = [
     'recent_4hour_traffic_label' => '近4小時流量',
     'traffic_5min' => '近5分鐘流量',
     'traffic_1hour' => '近1小時流量',
-    'traffic_4hour' => '近4小時流量',
     
     // ========================================
     // TODAY TRAFFIC CHART (今日流量圖表頁面)
