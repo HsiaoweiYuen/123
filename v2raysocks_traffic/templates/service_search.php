@@ -416,7 +416,7 @@ $serviceSearchHtml = '
                             <span id="service-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                         </div>
                         <div>
-                            <label for="service-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                            <label for="service-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                             <select id="service-records-per-page" style="margin-right: 15px; padding: 5px;">
                                 <option value="25">25</option>
                                 <option value="50" selected>50</option>
@@ -454,9 +454,9 @@ $serviceSearchHtml = '
                     </div>
                     
                     <div id="service-date-range-options" style="margin-bottom: 15px; display: none;">
-                        <label for="service_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . '</label>
+                        <label for="service_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . ':</label>
                         <input type="date" id="service_export_start_date" name="export_start_date"><br><br>
-                        <label for="service_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
+                        <label for="service_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
                         <input type="date" id="service_export_end_date" name="export_end_date">
                     </div>
                     
