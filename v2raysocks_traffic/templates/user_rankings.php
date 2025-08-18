@@ -528,7 +528,7 @@ $userRankingsHtml = '
             "last_7_days": "' . v2raysocks_traffic_lang('last_7_days') . '",
             "last_15_days": "' . v2raysocks_traffic_lang('last_15_days') . '",
             "last_30_days": "' . v2raysocks_traffic_lang('last_30_days') . '",
-            "custom_range_option": "' . v2raysocks_traffic_lang('custom_range_option') . '",
+            "custom_date_range": "' . v2raysocks_traffic_lang('custom_date_range') . '",
             "upload_traffic_unit": "' . v2raysocks_traffic_lang('upload_traffic_unit') . '",
             "download_traffic_unit": "' . v2raysocks_traffic_lang('download_traffic_unit') . '",
             "total_traffic_unit": "' . v2raysocks_traffic_lang('total_traffic_unit') . '",
@@ -582,7 +582,7 @@ $userRankingsHtml = '
                             <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
                             <option value="15days">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month">' . v2raysocks_traffic_lang('last_30_days') . '</option>
-                            <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -2111,7 +2111,7 @@ $userRankingsHtml = '
                 case "week": return t("last_7_days");
                 case "15days": return t("last_15_days");
                 case "month": return t("last_30_days");
-                case "custom": return t("custom_range_option");
+                case "custom": return t("custom_date_range");
                 default: return timeRange;
             }
         }
@@ -2124,7 +2124,7 @@ $userRankingsHtml = '
                 if (startDate && endDate) {
                     return `${startDate} ${t("to")} ${endDate}`;
                 } else {
-                    return t("custom_range_option");
+                    return t("custom_date_range");
                 }
             }
             
