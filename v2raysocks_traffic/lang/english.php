@@ -122,7 +122,7 @@ $_LANG = [
     'error_loading' => 'Error loading data',
     'data_updated' => 'Data updated successfully',
     'export_success' => 'Data exported successfully',
-    'loading_failed' => 'Loading failed:',
+    'loading_failed' => 'Loading failed',
     'unknown_error' => 'Unknown error',
     'network_error_retry' => 'Network error, please try again',
     'network_connection_error' => 'Network connection error',
@@ -154,7 +154,7 @@ $_LANG = [
     'previous_page' => 'Previous',
     'next_page' => 'Next',
     'last_page' => 'Last',
-    'records_per_page_label' => 'Records per page:',
+    'records_per_page_label' => 'Records per page',
     
     // Export Functionality
     'export_service_traffic_data' => 'Export Service Traffic Data',
@@ -328,7 +328,7 @@ $_LANG = [
     'user_count' => 'User Count',
     'last_online' => 'Last Online',
     'all_option' => 'All',
-    'node_search_label' => 'Node Search:',
+    'node_search_label' => 'Node Search',
     'node_search_placeholder' => 'Enter node name keyword',
     'time_column' => 'Time',
     'node_column' => 'Node',
@@ -338,7 +338,7 @@ $_LANG = [
     'billing_rate' => 'Billing Rate',
     'node_prefix' => 'Node',
     'node_today_usage_trends' => '{node_name} today\'s usage trends',
-    'node_id_label' => 'Node ID:',
+    'node_id_label' => 'Node ID',
     'no_node_selected' => 'No node selected',
     
     // ========================================

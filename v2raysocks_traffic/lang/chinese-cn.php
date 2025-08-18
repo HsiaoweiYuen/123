@@ -122,7 +122,7 @@ $_LANG = [
     'error_loading' => '数据加载错误',
     'data_updated' => '数据更新成功',
     'export_success' => '数据导出成功',
-    'loading_failed' => '加载失败:',
+    'loading_failed' => '加载失败',
     'unknown_error' => '未知错误',
     'network_error_retry' => '网络错误，请重试',
     'network_connection_error' => '网络连接错误',
@@ -154,7 +154,7 @@ $_LANG = [
     'previous_page' => '上一页',
     'next_page' => '下一页',
     'last_page' => '末页',
-    'records_per_page_label' => '每页记录数:',
+    'records_per_page_label' => '每页记录数',
     
     // Export Functionality
     'export_service_traffic_data' => '导出服务流量数据',
@@ -328,7 +328,7 @@ $_LANG = [
     'user_count' => '用户数',
     'last_online' => '最后在线',
     'all_option' => '全部',
-    'node_search_label' => '节点搜索:',
+    'node_search_label' => '节点搜索',
     'node_search_placeholder' => '输入节点名称关键字',
     'time_column' => '时间',
     'node_column' => '节点',
@@ -338,7 +338,7 @@ $_LANG = [
     'billing_rate' => '计费倍率',
     'node_prefix' => '节点',
     'node_today_usage_trends' => '{node_name} 今日使用趋势',
-    'node_id_label' => '节点ID:',
+    'node_id_label' => '节点ID',
     'no_node_selected' => '没有选中的节点',
     
     // ========================================
