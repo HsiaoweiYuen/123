@@ -72,6 +72,7 @@ $_LANG = [
     'last_10_minutes' => '最近10分鐘',
     'last_30_minutes' => '最近30分鐘',
     'last_hour' => '最近1小時',
+    'last_1_hour' => '最近1小時',
     'last_2_hours' => '最近2小時',
     'last_3_hours' => '最近3小時',
     'last_6_hours' => '最近6小時',
@@ -82,6 +83,7 @@ $_LANG = [
     'last_7_days' => '最近7天',
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
+    'custom_time_range' => '自訂時間範圍',
     'to' => '至',
     
     // Common Table Headers
@@ -170,6 +172,7 @@ $_LANG = [
     'all_filtered_data_option' => '全部篩選數據',
     'limit_records_option' => '限制記錄數量',
     'custom_date_range_option' => '自定義日期範圍',
+    'custom_time_range_option' => '自訂時間範圍',
     'custom_range_option' => '自定義日期',
     'number_of_records_label' => '記錄數量',
     'format_label' => '格式',

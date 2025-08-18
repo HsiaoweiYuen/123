@@ -72,6 +72,7 @@ $_LANG = [
     'last_10_minutes' => 'Last 10 Minutes',
     'last_30_minutes' => 'Last 30 Minutes',
     'last_hour' => 'Last Hour',
+    'last_1_hour' => 'Last 1 Hour',
     'last_2_hours' => 'Last 2 Hours',
     'last_3_hours' => 'Last 3 Hours',
     'last_6_hours' => 'Last 6 Hours',
@@ -82,6 +83,7 @@ $_LANG = [
     'last_7_days' => 'Last 7 Days',
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
+    'custom_time_range' => 'Custom Time Range',
     'to' => 'to',
     
     // Common Table Headers
@@ -170,6 +172,7 @@ $_LANG = [
     'all_filtered_data_option' => 'All filtered data',
     'limit_records_option' => 'Limit number of records',
     'custom_date_range_option' => 'Custom date range',
+    'custom_time_range_option' => 'Custom time range',
     'custom_range_option' => 'Custom Date',
     'number_of_records_label' => 'Number of records',
     'format_label' => 'Format',
