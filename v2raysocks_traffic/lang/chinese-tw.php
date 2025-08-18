@@ -72,6 +72,7 @@ $_LANG = [
     'last_10_minutes' => '最近10分鐘',
     'last_30_minutes' => '最近30分鐘',
     'last_hour' => '最近1小時',
+    'last_1_hour' => '最近1小時',
     'last_2_hours' => '最近2小時',
     'last_3_hours' => '最近3小時',
     'last_6_hours' => '最近6小時',
@@ -82,6 +83,8 @@ $_LANG = [
     'last_7_days' => '最近7天',
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
+    'custom_time_range' => '自定義時間',
+    'custom_time_range_option' => '自定義時間範圍',
     'to' => '至',
     
     // Common Table Headers
