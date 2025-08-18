@@ -1012,7 +1012,28 @@ $serviceSearchHtml = '
                                         const value = context.parsed.y;
                                         const unit = label.match(/\\(([^)]+)\\)/);
                                         const unitText = unit ? unit[1] : "GB";
-                                        const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                        
+                                        // Use translation functions instead of regex replacement
+                                        let cleanLabel;
+                                        if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('upload') . '";
+                                        } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('download') . '";
+                                        } else if (label.includes("total") || label.includes("总") || label.includes("總")) {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('total_traffic') . '";
+                                        } else if (label.includes("cumulative")) {
+                                            if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
+                                                cleanLabel = "' . v2raysocks_traffic_lang('cumulative_upload') . '";
+                                            } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
+                                                cleanLabel = "' . v2raysocks_traffic_lang('cumulative_download') . '";
+                                            } else {
+                                                cleanLabel = "' . v2raysocks_traffic_lang('total_cumulative_traffic') . '";
+                                            }
+                                        } else {
+                                            // Fallback: remove unit parentheses as before
+                                            cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                        }
+                                        
                                         return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
                                     }
                                 }
@@ -1168,8 +1189,28 @@ $serviceSearchHtml = '
                                     const value = context.parsed.y;
                                     const unit = label.match(/\\(([^)]+)\\)/);
                                     const unitText = unit ? unit[1] : "GB";
-                                    // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                    
+                                    // Use translation functions instead of regex replacement
+                                    let cleanLabel;
+                                    if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
+                                        cleanLabel = "' . v2raysocks_traffic_lang('upload') . '";
+                                    } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
+                                        cleanLabel = "' . v2raysocks_traffic_lang('download') . '";
+                                    } else if (label.includes("total") || label.includes("总") || label.includes("總")) {
+                                        cleanLabel = "' . v2raysocks_traffic_lang('total_traffic') . '";
+                                    } else if (label.includes("cumulative")) {
+                                        if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('cumulative_upload') . '";
+                                        } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('cumulative_download') . '";
+                                        } else {
+                                            cleanLabel = "' . v2raysocks_traffic_lang('total_cumulative_traffic') . '";
+                                        }
+                                    } else {
+                                        // Fallback: remove unit parentheses as before
+                                        cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                    }
+                                    
                                     return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
                                 }
                             }
