@@ -387,6 +387,11 @@ $nodeStatsHtml = '
             "node_name_label": "' . v2raysocks_traffic_lang('node_name_label') . '",
             "node_prefix": "' . v2raysocks_traffic_lang('node_prefix') . '",
             "today_range": "' . v2raysocks_traffic_lang('today_range') . '",
+            "last_1_hour": "' . v2raysocks_traffic_lang('last_1_hour') . '",
+            "last_3_hours": "' . v2raysocks_traffic_lang('last_3_hours') . '",
+            "last_6_hours": "' . v2raysocks_traffic_lang('last_6_hours') . '",
+            "last_12_hours": "' . v2raysocks_traffic_lang('last_12_hours') . '",
+            "custom_time_range": "' . v2raysocks_traffic_lang('custom_time_range') . '",
             "time_range_label": "' . v2raysocks_traffic_lang('time_range_label') . '",
             "upload_traffic": "' . v2raysocks_traffic_lang('upload_traffic') . '",
             "download_traffic": "' . v2raysocks_traffic_lang('download_traffic') . '",
@@ -1726,7 +1731,7 @@ $nodeStatsHtml = '
             }
             
             // Update export modal with current search conditions
-            document.getElementById("export-node-id").textContent = currentNodeId;
+            document.getElementById("export-node-id").textContent = currentNodeName || (t("node_prefix") + " " + currentNodeId);
             
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
@@ -2075,7 +2080,7 @@ $nodeStatsHtml = '
                     <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
                         <small style="color: #6c757d;">
                             <strong>' . v2raysocks_traffic_lang('current_search_conditions') . '</strong><br>
-                            • ' . v2raysocks_traffic_lang('node_id_label') . ' <span id="export-node-id">-</span><br>
+                            • ' . v2raysocks_traffic_lang('node_name_label') . ': <span id="export-node-id">-</span><br>
                             • ' . v2raysocks_traffic_lang('uuid_search_label') . ' <span id="export-uuid">-</span><br>
                             • ' . v2raysocks_traffic_lang('user_id') . ': <span id="export-user-id">-</span><br>
                             • ' . v2raysocks_traffic_lang('time_range_label') . ': <span id="export-time-filter">-</span>
