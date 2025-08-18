@@ -1010,10 +1010,8 @@ $serviceSearchHtml = '
                                     label: function(context) {
                                         const label = context.dataset.label || "";
                                         const value = context.parsed.y;
-                                        const unit = label.match(/\\(([^)]+)\\)/);
-                                        const unitText = unit ? unit[1] : "GB";
-                                        const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                        return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                        const unitText = unit || "GB";
+                                        return label + "：" + value.toFixed(2) + " " + unitText;
                                     }
                                 }
                             }
@@ -1166,11 +1164,9 @@ $serviceSearchHtml = '
                                 label: function(context) {
                                     const label = context.dataset.label || "";
                                     const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
+                                    const unitText = unit || "GB";
                                     // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    return label + "：" + value.toFixed(2) + " " + unitText;
                                 }
                             }
                         }

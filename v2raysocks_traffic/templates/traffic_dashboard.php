@@ -806,11 +806,9 @@ $trafficDashboardHtml = '
                                 label: function(context) {
                                     const label = context.dataset.label || "";
                                     const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
+                                    const unitText = unit || "GB";
                                     // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    return label + "：" + value.toFixed(2) + " " + unitText;
                                 }
                             }
                         }
@@ -1218,8 +1216,8 @@ $trafficDashboardHtml = '
                     const downloadData = labels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, downloadData)
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . '`, uploadData),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . '`, downloadData)
                     ];
                     break;
                     
@@ -1227,7 +1225,7 @@ $trafficDashboardHtml = '
                     const totalData = labels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
                     
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, totalData, {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . '`, totalData, {fill: true})
                     ];
                     break;
                     
@@ -1246,8 +1244,8 @@ $trafficDashboardHtml = '
                     });
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . ' (${unit})`, cumulativeUploadData, {fill: false}),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . ' (${unit})`, cumulativeDownloadData, {fill: false})
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . '`, cumulativeUploadData, {fill: false}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . '`, cumulativeDownloadData, {fill: false})
                     ];
                     break;
                     
@@ -1260,7 +1258,7 @@ $trafficDashboardHtml = '
                     });
                     
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, cumulativeTotalData, {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . '`, cumulativeTotalData, {fill: true})
                     ];
                     break;
             }

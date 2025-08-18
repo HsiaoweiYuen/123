@@ -1483,7 +1483,7 @@ $nodeStatsHtml = '
                     // Show upload and download separately
                     datasets = [
                         {
-                            label: t("upload_traffic_unit", {unit: unitLabel}),
+                            label: t("upload"),
                             data: chartData.upload.map(val => val * 1000000000 / unitMultiplier),
                             borderColor: CHART_COLORS.upload,
                             backgroundColor: CHART_COLORS.upload + "20",
@@ -1494,7 +1494,7 @@ $nodeStatsHtml = '
                             pointHoverRadius: 6
                         },
                         {
-                            label: t("download_traffic_unit", {unit: unitLabel}),
+                            label: t("download"),
                             data: chartData.download.map(val => val * 1000000000 / unitMultiplier),
                             borderColor: CHART_COLORS.download,
                             backgroundColor: CHART_COLORS.download + "20",
@@ -1510,7 +1510,7 @@ $nodeStatsHtml = '
                     // Show total traffic only
                     datasets = [
                         {
-                            label: t("total_traffic_unit", {unit: unitLabel}),
+                            label: t("total_traffic"),
                             data: chartData.total.map(val => val * 1000000000 / unitMultiplier),
                             borderColor: CHART_COLORS.total,
                             backgroundColor: CHART_COLORS.total + "20",
@@ -1538,7 +1538,7 @@ $nodeStatsHtml = '
                     
                     datasets = [
                         {
-                            label: t("cumulative_upload_unit", {unit: unitLabel}),
+                            label: t("cumulative_upload"),
                             data: cumulativeUpload,
                             borderColor: CHART_COLORS.upload,
                             backgroundColor: CHART_COLORS.upload + "20",
@@ -1549,7 +1549,7 @@ $nodeStatsHtml = '
                             pointHoverRadius: 6
                         },
                         {
-                            label: t("cumulative_download_unit", {unit: unitLabel}),
+                            label: t("cumulative_download"),
                             data: cumulativeDownload,
                             borderColor: CHART_COLORS.download,
                             backgroundColor: CHART_COLORS.download + "20",
@@ -1573,7 +1573,7 @@ $nodeStatsHtml = '
                     
                     datasets = [
                         {
-                            label: t("total_cumulative_traffic_unit", {unit: unitLabel}),
+                            label: t("total_cumulative_traffic"),
                             data: cumulativeTotal,
                             borderColor: CHART_COLORS.total,
                             backgroundColor: CHART_COLORS.total + "20",
@@ -1616,9 +1616,7 @@ $nodeStatsHtml = '
                                 label: function(context) {
                                     const value = context.parsed.y;
                                     const formattedValue = Number(value.toFixed(2));
-                                    // Extract clean label by removing unit parentheses, e.g., "上传 (GB)" → "上传"
-                                    const cleanLabel = context.dataset.label.replace(/\s*\([^)]*\)/, "");
-                                    return cleanLabel + "：" + formattedValue + " " + unitLabel;
+                                    return context.dataset.label + "：" + formattedValue + " " + unitLabel;
                                 }
                             }
                         }

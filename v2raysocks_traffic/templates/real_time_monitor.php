@@ -582,11 +582,9 @@ $realTimeMonitorHtml = '
                                 label: function(context) {
                                     const label = context.dataset.label || "";
                                     const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
+                                    const unitText = unit || "GB";
                                     // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    return label + "：" + value.toFixed(2) + " " + unitText;
                                 }
                             }
                         }
@@ -710,11 +708,11 @@ $realTimeMonitorHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             return stats.upload / unitDivisor;
                         })),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             return stats.download / unitDivisor;
                         }))
@@ -722,7 +720,7 @@ $realTimeMonitorHtml = '
                     break;
                 case "total":
                     datasets = [
-                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_traffic') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             return (stats.upload + stats.download) / unitDivisor;
                         }), {fill: true})
@@ -732,12 +730,12 @@ $realTimeMonitorHtml = '
                     let cumulativeUpload = 0;
                     let cumulativeDownload = 0;
                     datasets = [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             cumulativeUpload += stats.upload;
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             cumulativeDownload += stats.download;
                             return cumulativeDownload / unitDivisor;
@@ -747,7 +745,7 @@ $realTimeMonitorHtml = '
                 case "total_cumulative":
                     let cumulativeTotal = 0;
                     datasets = [
-                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (" + unit + ")", labels.map(timeKey => {
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_traffic') . '", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             cumulativeTotal += stats.upload + stats.download;
                             return cumulativeTotal / unitDivisor;
