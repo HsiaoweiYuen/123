@@ -567,7 +567,7 @@ $trafficDashboardHtml = '
                         <span id="pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                     </div>
                     <div>
-                        <label for="records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                        <label for="records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                         <select id="records-per-page" style="margin-right: 15px; padding: 5px;">
                             <option value="25">25</option>
                             <option value="50" selected>50</option>
@@ -603,9 +603,9 @@ $trafficDashboardHtml = '
                     </div>
                     
                     <div id="date-range-options" style="margin-bottom: 15px; display: none;">
-                        <label for="export_start_date">' . v2raysocks_traffic_lang('start_date_label') . '</label>
+                        <label for="export_start_date">' . v2raysocks_traffic_lang('start_date_label') . ':</label>
                         <input type="date" id="export_start_date" name="export_start_date"><br><br>
-                        <label for="export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
+                        <label for="export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
                         <input type="date" id="export_end_date" name="export_end_date">
                     </div>
                     

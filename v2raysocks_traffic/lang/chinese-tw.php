@@ -122,7 +122,7 @@ $_LANG = [
     'error_loading' => '數據載入錯誤',
     'data_updated' => '數據更新成功',
     'export_success' => '數據匯出成功',
-    'loading_failed' => '加載失敗:',
+    'loading_failed' => '加載失敗',
     'unknown_error' => '未知錯誤',
     'network_error_retry' => '網絡錯誤，請重試',
     'network_connection_error' => '網絡連接錯誤',
@@ -154,7 +154,7 @@ $_LANG = [
     'previous_page' => '上一頁',
     'next_page' => '下一頁',
     'last_page' => '末頁',
-    'records_per_page_label' => '每頁記錄數:',
+    'records_per_page_label' => '每頁記錄數',
     
     // Export Functionality
     'export_service_traffic_data' => '導出服務流量數據',
@@ -282,7 +282,7 @@ $_LANG = [
     'total_cumulative_traffic_unit' => '總累積流量 ({unit})',
     'no_user_selected' => '沒有選中的用戶',
     'no_usage_records' => '暫無使用記錄',
-    'failed_load_usage_records' => '加載使用記錄失敗:',
+    'failed_load_usage_records' => '加載使用記錄失敗',
     'loading_usage_records' => '正在加載使用記錄...',
     
     // ========================================
@@ -301,14 +301,14 @@ $_LANG = [
     'independent_search' => '獨立搜索',
     'service_id_search' => '服務ID搜索',
     'time_period_search' => '時間段搜索',
-    'search_type_label' => '搜索類型:',
-    'search_value_label' => '搜索值:',
+    'search_type_label' => '搜索類型',
+    'search_value_label' => '搜索值',
     'search_value_placeholder' => '輸入搜索值',
-    'start_time_label' => '開始時間:',
-    'end_time_label' => '結束時間:',
-    'current_search_conditions' => '當前搜索條件:',
-    'uuid_search_label' => 'UUID搜索:',
-    'no_traffic_data' => '暫無流量數據:',
+    'start_time_label' => '開始時間',
+    'end_time_label' => '結束時間',
+    'current_search_conditions' => '當前搜索條件',
+    'uuid_search_label' => 'UUID搜索',
+    'no_traffic_data' => '暫無流量數據',
     'no_traffic_records_period' => '該時間段內沒有流量記錄',
     
     // ========================================
@@ -327,7 +327,7 @@ $_LANG = [
     'user_count' => '用戶數',
     'last_online' => '最後上線',
     'all_option' => '全部',
-    'node_search_label' => '節點搜索:',
+    'node_search_label' => '節點搜索',
     'node_search_placeholder' => '輸入節點名稱關鍵字',
     'time_column' => '時間',
     'node_column' => '節點',
@@ -337,7 +337,7 @@ $_LANG = [
     'billing_rate' => '計費倍率',
     'node_prefix' => '節點',
     'node_today_usage_trends' => '{node_name} 今日使用趨勢',
-    'node_id_label' => '節點ID:',
+    'node_id_label' => '節點ID',
     'no_node_selected' => '沒有選中的節點',
     
     // ========================================

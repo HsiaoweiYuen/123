@@ -613,18 +613,18 @@ $nodeStatsHtml = '
                     <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                             <div style="flex: 0 0 180px; min-width: 150px;">
-                                <label for="node-search-type" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_type_label') . '</label>
+                                <label for="node-search-type" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_type_label') . ':</label>
                                 <select id="node-search-type" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                     <option value="uuid">UUID</option>
                                     <option value="user_id">' . v2raysocks_traffic_lang('user_id') . '</option>
                                 </select>
                             </div>
                             <div style="flex: 0 0 200px; min-width: 150px;">
-                                <label for="node-search-value" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_value_label') . '</label>
+                                <label for="node-search-value" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_value_label') . ':</label>
                                 <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             </div>
                             <div style="flex: 0 0 180px; min-width: 150px;">
-                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . '</label>
+                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
                                 <select id="node-time-filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                     <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                                     <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
@@ -643,11 +643,11 @@ $nodeStatsHtml = '
                         <div id="node-custom-time-range" style="margin-top: 15px; display: none;">
                             <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                                 <div style="flex: 0 0 140px;">
-                                    <label for="node-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                                    <label for="node-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
                                     <input type="time" id="node-start-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                 </div>
                                 <div style="flex: 0 0 140px;">
-                                    <label for="node-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                                    <label for="node-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
                                     <input type="time" id="node-end-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                                 </div>
                             </div>
@@ -687,7 +687,7 @@ $nodeStatsHtml = '
                                     <span id="node-pagination-info">' . v2raysocks_traffic_lang('showing_records') . '</span>
                                 </div>
                                 <div>
-                                    <label for="node-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . '</label>
+                                    <label for="node-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                                     <select id="node-records-per-page" style="margin-right: 15px; padding: 5px;">
                                         <option value="25">25</option>
                                         <option value="50" selected>50</option>
@@ -2049,27 +2049,27 @@ $nodeStatsHtml = '
             <h4>' . v2raysocks_traffic_lang('export_data') . '</h4>
                 <form id="node-export-form">
                     <div style="margin-bottom: 15px;">
-                        <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
+                        <label>' . v2raysocks_traffic_lang('export_type_label') . ':</label><br>
                         <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_data_option') . '</label><br>
                         <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('custom_quantity_option') . '</label><br>
                         <label><input type="radio" name="node_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
                     </div>
                     
                     <div id="node-limit-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
                         <input type="number" id="node_limit_count" name="limit_count" value="1000" min="1" max="10000">
                     </div>
                     
                     <div id="node-date-range-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . '</label>
+                        <label for="node_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . ':</label>
                         <input type="date" id="node_export_start_date" name="export_start_date"><br><br>
-                        <label for="node_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . '</label>
+                        <label for="node_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
                         <input type="date" id="node_export_end_date" name="export_end_date">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">选择自定义日期范围进行导出</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
-                        <label for="node_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <label for="node_export_format">' . v2raysocks_traffic_lang('format_label') . ':</label>
                         <select id="node_export_format" name="format">
                             <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
                             <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
@@ -2091,27 +2091,27 @@ $nodeStatsHtml = '
             <h4>' . v2raysocks_traffic_lang('export_usage_records') . '</h4>
                 <form id="node-usage-export-form">
                     <div style="margin-bottom: 15px;">
-                        <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
+                        <label>' . v2raysocks_traffic_lang('export_type_label') . ':</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_data_option') . '</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('custom_quantity_option') . '</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . '</label>
+                        <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
                         <input type="number" id="node_usage_limit_count" name="limit_count" value="1000" min="1" max="10000">
                     </div>
                     
                     <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">
-                        <label for="node_usage_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
+                        <label for="node_usage_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
                         <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1"><br>
-                        <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
+                        <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
                         <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
-                        <label for="node_usage_export_format">' . v2raysocks_traffic_lang('format_label') . '</label>
+                        <label for="node_usage_export_format">' . v2raysocks_traffic_lang('format_label') . ':</label>
                         <select id="node_usage_export_format" name="format">
                             <option value="excel" selected>' . v2raysocks_traffic_lang('excel') . '</option>
                             <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
