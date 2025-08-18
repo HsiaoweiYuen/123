@@ -1152,7 +1152,7 @@ $realTimeMonitorHtml = '
                         <label>' . v2raysocks_traffic_lang('export_type') . '</label><br>
                         <label><input type="radio" name="export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                         <label><input type="radio" name="export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
-                        <label><input type="radio" name="export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
+                        <label><input type="radio" name="export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="limit-options" style="margin-bottom: 15px; display: none;">
