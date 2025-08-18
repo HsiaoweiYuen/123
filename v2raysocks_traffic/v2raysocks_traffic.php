@@ -544,13 +544,15 @@ function v2raysocks_traffic_output($vars)
                 $timeRange = $_GET['time_range'] ?? 'today';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
+                $startTimestamp = $_GET['start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? null;
                 $limitValue = $_GET['limit'] ?? '100';
                 
                 // Handle "all" option properly
                 $limit = ($limitValue === 'all') ? 10000 : intval($limitValue);
                 if ($limit <= 0) $limit = 100; // Default fallback
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate);
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
                 $result = [
                     'status' => 'success',
                     'data' => $rankings,

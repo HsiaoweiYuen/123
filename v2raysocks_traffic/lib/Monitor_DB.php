@@ -2558,11 +2558,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
 /**
  * Get user traffic rankings
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2634,11 +2634,28 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                     $endTime = strtotime('tomorrow') - 1;
                 }
                 break;
+            case 'time_range':
+                // Handle custom time range using timestamps
+                if ($startTimestamp !== null && $endTimestamp !== null) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                } else {
+                    // Fallback to today if timestamps are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
             case 'all':
             default:
                 $startTime = 0;
                 $endTime = time();
                 break;
+        }
+
+        // Override time range if timestamp parameters are provided for any time range
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
         }
 
         // Calculate short-term time ranges
@@ -3450,7 +3467,7 @@ function v2raysocks_traffic_exportUserRankings($filters, $format = 'csv', $limit
         $timeRange = $filters['time_range'] ?? 'today';
         $limitNum = $limit ?: intval($filters['limit'] ?? 100);
         
-        $data = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limitNum);
+        $data = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limitNum, null, null, null, null);
         
         $filename = 'user_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
