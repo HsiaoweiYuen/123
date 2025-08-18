@@ -14,6 +14,7 @@ $realTimeMonitorHtml = '
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>' . v2raysocks_traffic_lang('real_time_monitor') . '</title>
+    <link rel="stylesheet" href="../v2raysocks_traffic/assets/time-filter-responsive.css">
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }

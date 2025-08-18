@@ -11,6 +11,7 @@ $todayTrafficChartHtml = '
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>' . v2raysocks_traffic_lang('today_traffic_chart') . '</title>
+    <link rel="stylesheet" href="../v2raysocks_traffic/assets/time-filter-responsive.css">
     <style>
         .dashboard-container {
             padding: 20px;

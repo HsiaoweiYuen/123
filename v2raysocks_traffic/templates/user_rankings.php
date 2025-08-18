@@ -14,6 +14,7 @@ $userRankingsHtml = '
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>' . v2raysocks_traffic_lang('user_rankings_title') . '</title>
+    <link rel="stylesheet" href="../v2raysocks_traffic/assets/time-filter-responsive.css">
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
         ' . v2raysocks_traffic_getUnifiedStyles() . '

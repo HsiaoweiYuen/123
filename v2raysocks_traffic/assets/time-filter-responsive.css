@@ -1,0 +1,172 @@
+/**
+ * Unified Time Filter Responsive Design for V2RaySocks Traffic Analysis
+ * 
+ * This CSS file provides consistent responsive behavior for all time filter
+ * elements across the traffic analysis module pages.
+ * 
+ * Mobile: 100% width for better touch experience
+ * Desktop/Tablet: 200px width for compact layout
+ */
+
+/* Desktop and Tablet version (min-width: 768px) */
+@media (min-width: 768px) {
+    /* Time range select elements */
+    #time-range,
+    #rt-time-range,
+    #node-time-filter,
+    #today-time-range,
+    #user-time-filter {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* Date input elements */
+    #start-date,
+    #end-date,
+    #rt-start-date,
+    #rt-end-date,
+    #export_start_date,
+    #export_end_date {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* Time input elements */
+    #node-start-time,
+    #node-end-time,
+    input[type="time"] {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* Number input elements for limits */
+    #limit_count,
+    #service_limit_count,
+    #user_limit_count,
+    #user_limit_count,
+    input[type="number"][id*="limit"] {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* Generic selectors for time-related elements */
+    select[id*="time"],
+    input[id*="date"],
+    input[id*="time"] {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* Service ID and search inputs in time filter contexts */
+    #service-id,
+    #today-service-id,
+    #node-search-value {
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+}
+
+/* Mobile version (max-width: 767px) */
+@media (max-width: 767px) {
+    /* Time range select elements */
+    #time-range,
+    #rt-time-range,
+    #node-time-filter,
+    #today-time-range,
+    #user-time-filter {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Date input elements */
+    #start-date,
+    #end-date,
+    #rt-start-date,
+    #rt-end-date,
+    #export_start_date,
+    #export_end_date {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Time input elements */
+    #node-start-time,
+    #node-end-time,
+    input[type="time"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Number input elements for limits */
+    #limit_count,
+    #service_limit_count,
+    #user_limit_count,
+    #user_limit_count,
+    input[type="number"][id*="limit"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Generic selectors for time-related elements */
+    select[id*="time"],
+    input[id*="date"],
+    input[id*="time"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Service ID and search inputs in time filter contexts */
+    #service-id,
+    #today-service-id,
+    #node-search-value {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ensure filter groups take full width on mobile */
+    .filter-group,
+    .form-group {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+}
+
+/* Additional overrides for specific container layouts */
+@media (min-width: 768px) {
+    /* Override existing flex layouts that might interfere */
+    #rt-custom-dates,
+    #rt-custom-dates-end,
+    #custom-dates,
+    #custom-dates-end {
+        flex: 0 0 auto !important;
+        max-width: 200px !important;
+    }
+    
+    #rt-custom-dates input,
+    #rt-custom-dates-end input,
+    #custom-dates input,
+    #custom-dates-end input {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* Ensure custom date containers are full width on mobile */
+    #rt-custom-dates,
+    #rt-custom-dates-end,
+    #custom-dates,
+    #custom-dates-end {
+        flex: 1 1 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    #rt-custom-dates input,
+    #rt-custom-dates-end input,
+    #custom-dates input,
+    #custom-dates-end input {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
