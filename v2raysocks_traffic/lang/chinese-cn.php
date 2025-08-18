@@ -354,5 +354,15 @@ $_LANG = [
     // TODAY TRAFFIC CHART (今日流量图表页面)
     // ========================================
     'today_traffic_history' => '今日流量历史',
+    
+    // ========================================
+    // CLEAN CHART LABELS (干净的图表标签)
+    // ========================================
+    'upload_clean' => '上传',
+    'download_clean' => '下载',
+    'total_clean' => '总计',
+    'cumulative_upload_clean' => '累积上传',
+    'cumulative_download_clean' => '累积下载',
+    'total_cumulative_clean' => '总累积',
 ];
 ?>

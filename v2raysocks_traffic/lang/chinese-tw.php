@@ -353,5 +353,15 @@ $_LANG = [
     // TODAY TRAFFIC CHART (今日流量圖表頁面)
     // ========================================
     'today_traffic_history' => '今日流量歷史',
+    
+    // ========================================
+    // CLEAN CHART LABELS (乾淨的圖表標籤)
+    // ========================================
+    'upload_clean' => '上傳',
+    'download_clean' => '下載',
+    'total_clean' => '總計',
+    'cumulative_upload_clean' => '累積上傳',
+    'cumulative_download_clean' => '累積下載',
+    'total_cumulative_clean' => '總累積',
 ];
 ?>

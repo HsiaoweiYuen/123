@@ -555,8 +555,8 @@ $userStatsHtml = '
                 data: {
                     labels: labels,
                     datasets: [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", uploadData),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", downloadData)
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload_clean') . '", uploadData),
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download_clean') . '", downloadData)
                     ]
                 },
                 options: {
@@ -582,11 +582,8 @@ $userStatsHtml = '
                                 label: function(context) {
                                     const label = context.dataset.label || "";
                                     const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
-                                    // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    // Simplified format with clean labels
+                                    return label + "：" + value.toFixed(2) + " GB";
                                 }
                             }
                         }

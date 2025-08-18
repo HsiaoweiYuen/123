@@ -945,24 +945,24 @@ $serviceSearchHtml = '
                 switch(mode) {
                     case "separate":
                         datasets = [
-                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData),
-                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData)
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload_clean') . '", emptyData),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download_clean') . '", emptyData)
                         ];
                         break;
                     case "total":
                         datasets = [
-                            getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, emptyData, {fill: true})
+                            getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_clean') . '", emptyData, {fill: true})
                         ];
                         break;
                     case "cumulative":
                         datasets = [
-                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData, {fill: false}),
-                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData, {fill: false})
+                            getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload_clean') . '", emptyData, {fill: false}),
+                            getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download_clean') . '", emptyData, {fill: false})
                         ];
                         break;
                     case "total_cumulative":
                         datasets = [
-                            getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, emptyData, {fill: true})
+                            getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_clean') . '", emptyData, {fill: true})
                         ];
                         break;
                 }
@@ -1010,10 +1010,8 @@ $serviceSearchHtml = '
                                     label: function(context) {
                                         const label = context.dataset.label || "";
                                         const value = context.parsed.y;
-                                        const unit = label.match(/\\(([^)]+)\\)/);
-                                        const unitText = unit ? unit[1] : "GB";
-                                        const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                        return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                        // Simplified format with clean labels and dynamic unit
+                                        return label + "：" + value.toFixed(2) + " " + unit;
                                     }
                                 }
                             }
@@ -1089,24 +1087,24 @@ $serviceSearchHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (timeData[time].upload / unitDivisor))),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (timeData[time].download / unitDivisor)))
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload_clean') . '", labels.map(time => (timeData[time].upload / unitDivisor))),
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download_clean') . '", labels.map(time => (timeData[time].download / unitDivisor)))
                     ];
                     break;
                 case "total":
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, labels.map(time => ((timeData[time].upload + timeData[time].download) / unitDivisor)), {fill: true})
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_clean') . '", labels.map(time => ((timeData[time].upload + timeData[time].download) / unitDivisor)), {fill: true})
                     ];
                     break;
                 case "cumulative":
                     let cumulativeUpload = 0;
                     let cumulativeDownload = 0;
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => {
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('cumulative_upload_clean') . '", labels.map(time => {
                             cumulativeUpload += timeData[time].upload;
                             return cumulativeUpload / unitDivisor;
                         }), {fill: false}),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => {
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download_clean') . '", labels.map(time => {
                             cumulativeDownload += timeData[time].download;
                             return cumulativeDownload / unitDivisor;
                         }), {fill: false})
@@ -1115,7 +1113,7 @@ $serviceSearchHtml = '
                 case "total_cumulative":
                     let cumulativeTotal = 0;
                     datasets = [
-                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, labels.map(time => {
+                        getStandardDatasetConfig("total", "' . v2raysocks_traffic_lang('total_cumulative_clean') . '", labels.map(time => {
                             cumulativeTotal += timeData[time].upload + timeData[time].download;
                             return cumulativeTotal / unitDivisor;
                         }), {fill: true})
@@ -1166,11 +1164,8 @@ $serviceSearchHtml = '
                                 label: function(context) {
                                     const label = context.dataset.label || "";
                                     const value = context.parsed.y;
-                                    const unit = label.match(/\\(([^)]+)\\)/);
-                                    const unitText = unit ? unit[1] : "GB";
-                                    // Format: "下载：100 GB" instead of "下载 (GB)：100"
-                                    const cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
-                                    return cleanLabel + "：" + value.toFixed(2) + " " + unitText;
+                                    // Simplified format with clean labels and dynamic unit
+                                    return label + "：" + value.toFixed(2) + " " + unit;
                                 }
                             }
                         }
