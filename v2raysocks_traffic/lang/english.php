@@ -84,7 +84,6 @@ $_LANG = [
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
     'custom_time_range' => 'Custom Time Range',
-    'custom_time_range_option' => 'Custom Time Range',
     'to' => 'to',
     
     // Common Table Headers

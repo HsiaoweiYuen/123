@@ -84,7 +84,6 @@ $_LANG = [
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
     'custom_time_range' => '自定義時間',
-    'custom_time_range_option' => '自定義時間範圍',
     'to' => '至',
     
     // Common Table Headers
