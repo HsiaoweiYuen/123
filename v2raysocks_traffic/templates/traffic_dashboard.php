@@ -155,12 +155,14 @@ $trafficDashboardHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize filter layout for mobile - make inputs more compact */
-            .filter-group:not(#custom-dates):not(#custom-dates-end) {
+            .filter-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 120px;
             }
             .filter-group#custom-dates,
-            .filter-group#custom-dates-end {
+            .filter-group#custom-dates-end,
+            .filter-group#custom-times,
+            .filter-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -285,6 +287,20 @@ $trafficDashboardHtml = '
                         endDate = new Date(endDateInput + " 23:59:59");
                     } else {
                         return null; // Invalid custom range
+                    }
+                    break;
+                case "time_range":
+                    const startTimeInput = document.getElementById("start-time").value;
+                    const endTimeInput = document.getElementById("end-time").value;
+                    if (startTimeInput && endTimeInput) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        startDate = new Date(todayStr + " " + startTimeInput);
+                        endDate = new Date(todayStr + " " + endTimeInput);
+                    } else {
+                        return null; // Invalid custom time range
                     }
                     break;
                 default:
@@ -416,6 +432,7 @@ $trafficDashboardHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -429,6 +446,14 @@ $trafficDashboardHtml = '
                     <div class="filter-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="filter-group" id="custom-times" style="display: none;">
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1" style="width: 100%;">
+                    </div>
+                    <div class="filter-group" id="custom-times-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1" style="width: 100%;">
                     </div>
                     <div class="filter-group">
                         <label>&nbsp;</label>
@@ -678,8 +703,12 @@ $trafficDashboardHtml = '
             $("#time-range").on("change", function() {
                 if ($(this).val() === "custom") {
                     $("#custom-dates, #custom-dates-end").show();
-                } else {
+                    $("#custom-times, #custom-times-end").hide();
+                } else if ($(this).val() === "time_range") {
+                    $("#custom-times, #custom-times-end").show();
                     $("#custom-dates, #custom-dates-end").hide();
+                } else {
+                    $("#custom-dates, #custom-dates-end, #custom-times, #custom-times-end").hide();
                     // Note: Removed auto-refresh on time range change
                     // Users must click Apply Filter button to refresh data
                 }
@@ -904,7 +933,30 @@ $trafficDashboardHtml = '
         }
         
         function loadTrafficData() {
-            const params = $("#traffic-filter").serialize() + "&grouped=true";
+            let params = $("#traffic-filter").serialize() + "&grouped=true";
+            
+            // Handle custom time range - convert times to timestamps
+            const timeRange = $("#time-range").val();
+            if (timeRange === "time_range") {
+                const startTime = $("#start-time").val();
+                const endTime = $("#end-time").val();
+                
+                if (startTime && endTime) {
+                    // Convert time to todays date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    // Remove time_range=time_range and replace with timestamp parameters
+                    params = params.replace(/time_range=time_range/g, "time_range=custom");
+                    params += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                }
+            }
             
             // Add loading indicator without clearing existing data
             const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";
@@ -1002,9 +1054,10 @@ $trafficDashboardHtml = '
                 case "30min":
                 case "1hour":
                 case "today":
+                case "time_range":
                     // Generate hour labels for today and short ranges - only up to current hour for "today"
                     const currentHour = new Date().getHours();
-                    const maxHours = timeRange === "today" ? Math.min(currentHour + 1, 24) : 24;
+                    const maxHours = (timeRange === "today" || timeRange === "time_range") ? Math.min(currentHour + 1, 24) : 24;
                     for (let i = 0; i < Math.min(points, maxHours); i++) {
                         labels.push(String(i).padStart(2, "0") + ":00");
                     }
@@ -1085,6 +1138,31 @@ $trafficDashboardHtml = '
                                            (date.getMonth() + 1).toString().padStart(2, "0") + "-" + 
                                            date.getDate().toString().padStart(2, "0");
                             labels.push(timeKey);
+                        }
+                    }
+                    break;
+                    
+                case "time_range":
+                    // Generate time intervals for custom time range (using minutes for better granularity)
+                    const startTimeInput = document.getElementById("start-time").value;
+                    const endTimeInput = document.getElementById("end-time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const [startHour, startMin] = startTimeInput.split(":").map(Number);
+                        const [endHour, endMin] = endTimeInput.split(":").map(Number);
+                        const startMinutes = startHour * 60 + startMin;
+                        const endMinutes = endHour * 60 + endMin;
+                        
+                        // Generate 15-minute intervals within the time range
+                        for (let minutes = startMinutes; minutes <= endMinutes; minutes += 15) {
+                            const hour = Math.floor(minutes / 60);
+                            const min = minutes % 60;
+                            labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                        }
+                    } else {
+                        // Fallback to hourly intervals for today
+                        const currentHour = now.getHours();
+                        for (let hour = 0; hour <= currentHour; hour++) {
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
                         }
                     }
                     break;
