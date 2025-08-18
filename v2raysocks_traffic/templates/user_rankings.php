@@ -39,7 +39,9 @@ $userRankingsHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-times,
+        .form-group#custom-times-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -322,12 +324,14 @@ $userRankingsHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
+            .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-times,
+            .form-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -391,19 +395,25 @@ $userRankingsHtml = '
             
             /* Custom date range styling for mobile */
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-times,
+            .form-group#custom-times-end {
                 flex-direction: row !important;
                 align-items: center !important;
                 flex-wrap: wrap !important;
             }
             .form-group#custom-dates label,
-            .form-group#custom-dates-end label {
+            .form-group#custom-dates-end label,
+            .form-group#custom-times label,
+            .form-group#custom-times-end label {
                 margin-bottom: 0;
                 margin-right: 8px;
                 white-space: nowrap;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-times input,
+            .form-group#custom-times-end input {
                 width: auto;
                 margin-bottom: 0;
                 margin-right: 10px !important;
@@ -449,12 +459,16 @@ $userRankingsHtml = '
                 flex: 1 1 auto;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-times,
+            .form-group#custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-times input,
+            .form-group#custom-times-end input {
                 width: 100%;
             }
             .btn {
@@ -610,6 +624,7 @@ $userRankingsHtml = '
                             <option value="15days">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -619,6 +634,14 @@ $userRankingsHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date">
+                    </div>
+                    <div class="form-group" id="custom-times" style="display: none;">
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1">
+                    </div>
+                    <div class="form-group" id="custom-times-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1">
                     </div>
                     <div class="form-group">
                         <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
@@ -908,13 +931,24 @@ $userRankingsHtml = '
                 const timeRange = this.value;
                 const customDates = document.getElementById("custom-dates");
                 const customDatesEnd = document.getElementById("custom-dates-end");
+                const customTimes = document.getElementById("custom-times");
+                const customTimesEnd = document.getElementById("custom-times-end");
                 
                 if (timeRange === "custom") {
                     customDates.style.display = "block";
                     customDatesEnd.style.display = "block";
+                    customTimes.style.display = "none";
+                    customTimesEnd.style.display = "none";
+                } else if (timeRange === "time_range") {
+                    customTimes.style.display = "block";
+                    customTimesEnd.style.display = "block";
+                    customDates.style.display = "none";
+                    customDatesEnd.style.display = "none";
                 } else {
                     customDates.style.display = "none";
                     customDatesEnd.style.display = "none";
+                    customTimes.style.display = "none";
+                    customTimesEnd.style.display = "none";
                 }
             });
             
@@ -1003,6 +1037,32 @@ $userRankingsHtml = '
                 
                 if (start > end) {
                     alert(t("start_date_after_end_date"));
+                    return;
+                }
+            } else if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (!startTime || !endTime) {
+                    alert(t("select_start_end_dates")); // Reuse same translation for time
+                    return;
+                }
+                
+                // Validate time range logic (both times should be valid)
+                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                
+                if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+                    alert(t("date_format_incorrect")); // Reuse same translation for time format
+                    return;
+                }
+                
+                // Convert times to today's date for comparison
+                const today = new Date().toISOString().split("T")[0];
+                const startDateTime = new Date(today + " " + startTime);
+                const endDateTime = new Date(today + " " + endTime);
+                
+                if (startDateTime >= endDateTime) {
+                    alert(t("start_date_after_end_date")); // Reuse same translation for time range logic
                     return;
                 }
             }
@@ -1319,6 +1379,22 @@ $userRankingsHtml = '
                         usageUrlParams += dateParams;
                     }
                 }
+            } else if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to todays date + time for timestamp calculation
+                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                    const startDateTime = today + " " + startTime;
+                    const endDateTime = today + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    chartUrlParams += timeParams;
+                    usageUrlParams += timeParams;
+                }
             }
             
             // Load chart data and usage records atomically using Promise.all
@@ -1513,6 +1589,20 @@ $userRankingsHtml = '
                         apiUrl += "&start_date=" + startDate + "&end_date=" + endDate;
                     }
                 }
+            } else if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to todays date + time for timestamp calculation
+                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                    const startDateTime = today + " " + startTime;
+                    const endDateTime = today + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                }
             }
             
             fetch(apiUrl)
@@ -1586,6 +1676,20 @@ $userRankingsHtml = '
                     if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
                         urlParams += "&start_date=" + startDate + "&end_date=" + endDate;
                     }
+                }
+            } else if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to todays date + time for timestamp calculation
+                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                    const startDateTime = today + " " + startTime;
+                    const endDateTime = today + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
                 }
             }
             
@@ -1773,6 +1877,31 @@ $userRankingsHtml = '
                                        String(date.getMonth() + 1).padStart(2, "0") + "-" + 
                                        String(date.getDate()).padStart(2, "0"); // Standardized yyyy-mm-dd format
                         labels.push(timeKey);
+                    }
+                    break;
+                    
+                case "time_range":
+                    // Generate time intervals for custom time range (using minutes for better granularity)
+                    const startTimeInput = document.getElementById("start-time").value;
+                    const endTimeInput = document.getElementById("end-time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const [startHour, startMin] = startTimeInput.split(":").map(Number);
+                        const [endHour, endMin] = endTimeInput.split(":").map(Number);
+                        const startMinutes = startHour * 60 + startMin;
+                        const endMinutes = endHour * 60 + endMin;
+                        
+                        // Generate 15-minute intervals within the time range
+                        for (let minutes = startMinutes; minutes <= endMinutes; minutes += 15) {
+                            const hour = Math.floor(minutes / 60);
+                            const min = minutes % 60;
+                            labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                        }
+                    } else {
+                        // Fallback to hourly intervals for today
+                        const currentHour = now.getHours();
+                        for (let hour = 0; hour <= currentHour; hour++) {
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
+                        }
                     }
                     break;
                     
@@ -2293,6 +2422,20 @@ $userRankingsHtml = '
                             return null; // Invalid custom range
                         }
                         break;
+                    case "time_range":
+                        const startTimeInput = document.getElementById("start-time").value;
+                        const endTimeInput = document.getElementById("end-time").value;
+                        if (startTimeInput && endTimeInput) {
+                            // Convert time to todays date + time for timestamp calculation
+                            const todayStr = today.getFullYear() + "-" + 
+                                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                            today.getDate().toString().padStart(2, "0");
+                            startDate = new Date(todayStr + " " + startTimeInput);
+                            endDate = new Date(todayStr + " " + endTimeInput);
+                        } else {
+                            return null; // Invalid custom time range
+                        }
+                        break;
                     default:
                         return null;
                 }
@@ -2358,6 +2501,20 @@ $userRankingsHtml = '
                         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
                             exportParams += "&start_date=" + startDate + "&end_date=" + endDate;
                         }
+                    }
+                } else if (timeRange === "time_range" && exportType !== "time_range" && exportType !== "date_range") {
+                    const startTime = document.getElementById("start-time").value;
+                    const endTime = document.getElementById("end-time").value;
+                    
+                    if (startTime && endTime) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                        const startDateTime = today + " " + startTime;
+                        const endDateTime = today + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        
+                        exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
                     }
                 }
                 
