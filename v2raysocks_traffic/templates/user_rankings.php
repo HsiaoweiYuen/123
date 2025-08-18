@@ -492,6 +492,27 @@ $userRankingsHtml = '
             text-overflow: ellipsis; /* 显示省略号 */
             font-family: monospace; /* 等宽字体便于查看 */
         }
+        
+        /* Standard styles for export modal inputs */
+        #user-export-modal input[type="date"], 
+        #user-export-modal input[type="time"], 
+        #user-export-modal input[type="number"] {
+            width: 200px;
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        #user-export-modal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        #user-export-modal .form-group {
+            margin-bottom: 15px;
+        }
 
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

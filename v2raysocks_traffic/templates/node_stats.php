@@ -342,6 +342,32 @@ $nodeStatsHtml = '
             font-size: inherit;
             font-weight: normal;
         }
+        
+        /* Standard styles for export modal inputs */
+        #node-export-modal input[type="date"], 
+        #node-export-modal input[type="time"], 
+        #node-export-modal input[type="number"],
+        #node-export-usage-modal input[type="date"], 
+        #node-export-usage-modal input[type="time"], 
+        #node-export-usage-modal input[type="number"] {
+            width: 200px;
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        #node-export-modal label,
+        #node-export-usage-modal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        #node-export-modal .form-group,
+        #node-export-usage-modal .form-group {
+            margin-bottom: 15px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -2031,9 +2057,9 @@ $nodeStatsHtml = '
                     
                     <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_usage_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
-                        <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"><br>
+                        <input type="time" id="node_usage_export_start_time" name="export_start_time" step="1"><br>
                         <label for="node_usage_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
-                        <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="node_usage_export_end_time" name="export_end_time" step="1">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     

@@ -212,6 +212,27 @@ $serviceSearchHtml = '
                 padding: 15px !important;
             }
         }
+        
+        /* Standard styles for export modal inputs */
+        #service-export-modal input[type="date"], 
+        #service-export-modal input[type="time"], 
+        #service-export-modal input[type="number"] {
+            width: 200px;
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        #service-export-modal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        #service-export-modal .form-group {
+            margin-bottom: 15px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
