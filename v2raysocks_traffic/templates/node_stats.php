@@ -1726,7 +1726,7 @@ $nodeStatsHtml = '
             }
             
             // Update export modal with current search conditions
-            document.getElementById("export-node-id").textContent = currentNodeId;
+            document.getElementById("export-node-name").textContent = currentNodeName || (t("node_prefix") + " " + currentNodeId);
             
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
@@ -1744,16 +1744,63 @@ $nodeStatsHtml = '
                 document.getElementById("export-user-id").textContent = "-";
             }
             
+            // Calculate and display specific time range
             const timeFilter = document.getElementById("node-time-filter").value;
-            const timeFilterText = {
-                "today": t("today_range"),
-                "last_1_hour": t("last_1_hour"),
-                "last_3_hours": t("last_3_hours"), 
-                "last_6_hours": t("last_6_hours"),
-                "last_12_hours": t("last_12_hours"),
-                "custom_range": t("custom_time_range")
-            };
-            document.getElementById("export-time-filter").textContent = timeFilterText[timeFilter] || timeFilter;
+            const startTime = document.getElementById("node-start-time").value;
+            const endTime = document.getElementById("node-end-time").value;
+            
+            let timeRangeText = "-";
+            const now = new Date();
+            
+            if (timeFilter === "custom_range" && startTime && endTime) {
+                // For custom range, use the selected start and end times with today\'s date
+                const today = now.toISOString().split(\'T\')[0]; // YYYY-MM-DD format
+                timeRangeText = today + " " + startTime + " 至 " + today + " " + endTime;
+            } else {
+                // Calculate actual time ranges for predefined periods
+                let startDate, endDate;
+                
+                switch (timeFilter) {
+                    case "today":
+                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        endDate = new Date(now);
+                        break;
+                    case "last_1_hour":
+                        startDate = new Date(now.getTime() - (1 * 60 * 60 * 1000));
+                        endDate = new Date(now);
+                        break;
+                    case "last_3_hours":
+                        startDate = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+                        endDate = new Date(now);
+                        break;
+                    case "last_6_hours":
+                        startDate = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+                        endDate = new Date(now);
+                        break;
+                    case "last_12_hours":
+                        startDate = new Date(now.getTime() - (12 * 60 * 60 * 1000));
+                        endDate = new Date(now);
+                        break;
+                    default:
+                        startDate = endDate = null;
+                }
+                
+                if (startDate && endDate) {
+                    const formatDateTime = (date) => {
+                        const year = date.getFullYear();
+                        const month = (date.getMonth() + 1).toString().padStart(2, \'0\');
+                        const day = date.getDate().toString().padStart(2, \'0\');
+                        const hours = date.getHours().toString().padStart(2, \'0\');
+                        const minutes = date.getMinutes().toString().padStart(2, \'0\');
+                        const seconds = date.getSeconds().toString().padStart(2, \'0\');
+                        return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+                    };
+                    
+                    timeRangeText = formatDateTime(startDate) + " 至 " + formatDateTime(endDate);
+                }
+            }
+            
+            document.getElementById("export-time-range").textContent = timeRangeText;
             
             // Show export confirmation dialog
             document.getElementById("node-export-usage-modal").style.display = "block";
@@ -2075,10 +2122,10 @@ $nodeStatsHtml = '
                     <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
                         <small style="color: #6c757d;">
                             <strong>' . v2raysocks_traffic_lang('current_search_conditions') . '</strong><br>
-                            • ' . v2raysocks_traffic_lang('node_id_label') . ' <span id="export-node-id">-</span><br>
+                            • ' . v2raysocks_traffic_lang('node_name_label') . ' <span id="export-node-name">-</span><br>
                             • ' . v2raysocks_traffic_lang('uuid_search_label') . ' <span id="export-uuid">-</span><br>
                             • ' . v2raysocks_traffic_lang('user_id') . ': <span id="export-user-id">-</span><br>
-                            • ' . v2raysocks_traffic_lang('time_range_label') . ': <span id="export-time-filter">-</span>
+                            • ' . v2raysocks_traffic_lang('time_range_label') . ': <span id="export-time-range">-</span>
                         </small>
                     </div>
                     
