@@ -552,7 +552,13 @@ $userRankingsHtml = '
             "days_ago": "' . v2raysocks_traffic_lang('days_ago') . '",
             "showing_records": "' . v2raysocks_traffic_lang('showing_records') . '",
             "page_info": "' . v2raysocks_traffic_lang('page_info') . '",
-            "to": "' . v2raysocks_traffic_lang('to') . '"
+            "to": "' . v2raysocks_traffic_lang('to') . '",
+            "upload": "' . v2raysocks_traffic_lang('upload') . '",
+            "download": "' . v2raysocks_traffic_lang('download') . '",
+            "total_traffic": "' . v2raysocks_traffic_lang('total_traffic') . '",
+            "cumulative_upload": "' . v2raysocks_traffic_lang('cumulative_upload') . '",
+            "cumulative_download": "' . v2raysocks_traffic_lang('cumulative_download') . '",
+            "total_cumulative_traffic": "' . v2raysocks_traffic_lang('total_cumulative_traffic') . '"
         };
         
         function t(key, replacements = {}) {
@@ -2009,8 +2015,33 @@ $userRankingsHtml = '
                                 label: function(context) {
                                     const value = context.parsed.y;
                                     const formattedValue = Number(value.toFixed(2));
-                                    // Extract clean label by removing unit parentheses, e.g., "上传 (GB)" → "上传"
-                                    const cleanLabel = context.dataset.label.replace(/\s*\([^)]*\)/, "");
+                                    const label = context.dataset.label || "";
+                                    
+                                    // Use translation functions instead of regex replacement
+                                    let cleanLabel;
+                                    if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
+                                        if (label.includes("cumulative") || label.includes("累积") || label.includes("累積")) {
+                                            cleanLabel = t("cumulative_upload");
+                                        } else {
+                                            cleanLabel = t("upload");
+                                        }
+                                    } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
+                                        if (label.includes("cumulative") || label.includes("累积") || label.includes("累積")) {
+                                            cleanLabel = t("cumulative_download");
+                                        } else {
+                                            cleanLabel = t("download");
+                                        }
+                                    } else if (label.includes("total") || label.includes("总") || label.includes("總")) {
+                                        if (label.includes("cumulative") || label.includes("累积") || label.includes("累積")) {
+                                            cleanLabel = t("total_cumulative_traffic");
+                                        } else {
+                                            cleanLabel = t("total_traffic");
+                                        }
+                                    } else {
+                                        // Fallback: remove unit parentheses as before
+                                        cleanLabel = label.replace(/\\s*\\([^)]*\\)/, "");
+                                    }
+                                    
                                     return cleanLabel + "：" + formattedValue + " " + unitLabel;
                                 }
                             }
