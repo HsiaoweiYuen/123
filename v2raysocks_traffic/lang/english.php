@@ -84,6 +84,7 @@ $_LANG = [
     'last_15_days' => 'Last 15 Days',
     'last_30_days' => 'Last 30 Days',
     'custom_time_range' => 'Custom Time Range',
+    'custom_date_range' => 'Custom Date Range',
     'to' => 'to',
     
     // Common Table Headers
@@ -157,7 +158,6 @@ $_LANG = [
     'all_filtered_data' => 'All Data',
     'limited_number_of_records' => 'Custom Quantity',
     'custom_time_range' => 'Custom Time',
-    'custom_range' => 'Custom Date',
     'number_of_records' => 'Number of Records',
     'start_date_label' => 'Start Date',
     'end_date_label' => 'End Date',
@@ -171,8 +171,6 @@ $_LANG = [
     'export_type_label' => 'Export Type',
     'all_data_option' => 'All data',
     'custom_quantity_option' => 'Custom quantity',
-    'custom_date_range_option' => 'Custom date range',
-    'custom_range_option' => 'Custom Date',
     'number_of_records_label' => 'Number of records',
     'format_label' => 'Format',
     'cancel_button' => 'Cancel',

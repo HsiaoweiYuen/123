@@ -84,6 +84,7 @@ $_LANG = [
     'last_15_days' => '最近15天',
     'last_30_days' => '最近30天',
     'custom_time_range' => '自定义时间',
+    'custom_date_range' => '自定义日期',
     'to' => '至',
     
     // Common Table Headers
@@ -157,7 +158,6 @@ $_LANG = [
     'all_filtered_data' => '所有数据',
     'limited_number_of_records' => '自定义数量',
     'custom_time_range' => '自定义时间',
-    'custom_range' => '自定义日期',
     'number_of_records' => '记录数量：',
     'start_date_label' => '开始日期：',
     'end_date_label' => '结束日期：',
@@ -171,8 +171,6 @@ $_LANG = [
     'export_type_label' => '导出类型',
     'all_data_option' => '全部数据',
     'custom_quantity_option' => '自定义数量',
-    'custom_date_range_option' => '自定义日期范围',
-    'custom_range_option' => '自定义日期',
     'number_of_records_label' => '记录数量',
     'format_label' => '格式',
     'cancel_button' => '取消',

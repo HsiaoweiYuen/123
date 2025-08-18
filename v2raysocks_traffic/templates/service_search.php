@@ -314,7 +314,7 @@ $serviceSearchHtml = '
                             <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
-                            <option value="custom">' . v2raysocks_traffic_lang('custom_range') . '</option>
+                            <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
