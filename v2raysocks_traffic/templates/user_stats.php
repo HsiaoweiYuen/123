@@ -4,6 +4,9 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
+// Include unified navigation component
+require_once(__DIR__ . '/navigation_component.php');
+
 $userStatsHtml = '
 <!DOCTYPE html>
 <html lang="en">
@@ -12,6 +15,7 @@ $userStatsHtml = '
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>' . v2raysocks_traffic_lang('user_statistics') . '</title>
     <style>
+        ' . v2raysocks_traffic_getTimeFilterStyles() . '
         .dashboard-container {
             padding: 20px;
         }

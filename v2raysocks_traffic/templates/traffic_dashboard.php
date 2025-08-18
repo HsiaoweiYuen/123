@@ -16,6 +16,7 @@ $trafficDashboardHtml = '
     <title>' . v2raysocks_traffic_lang('traffic_dashboard') . '</title>
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
+        ' . v2raysocks_traffic_getTimeFilterStyles() . '
         .stats-row {
             display: flex;
             flex-wrap: wrap;

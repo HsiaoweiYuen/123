@@ -1,0 +1,378 @@
+/**
+ * Unified Time Filter Styles for V2RaySocks Traffic Analysis
+ * 
+ * This CSS file provides consistent styling for all time filtering elements
+ * across all pages in the traffic analysis module.
+ * 
+ * Target Elements:
+ * - Time range select elements 
+ * - Date input fields (input[type="date"])
+ * - Time input fields (input[type="time"])
+ * - Number input fields (input[type="number"]) for record limits
+ * 
+ * Responsive Design:
+ * - Desktop/Tablet (≥768px): 200px fixed width
+ * - Mobile (<768px): 100% width for optimal touch interaction
+ */
+
+/* ==============================================
+   UNIFIED TIME FILTER ELEMENT STYLING
+   ============================================== */
+
+/* Time range select dropdowns */
+select[id*="time-range"],
+select[id*="time_range"],
+select[name*="time_range"],
+select[id*="time-filter"],
+#rt-time-range,
+#node-time-filter,
+#time_range,
+#time-range,
+#traffic-chart-type,
+#traffic-chart-unit,
+#chart-type,
+#data-unit,
+#export_format,
+#records-per-page,
+#today-time-range,
+#today-records-per-page,
+#service-records-per-page,
+#user-records-per-page,
+#node-records-per-page {
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    background-color: #fff !important;
+    background-image: none !important;
+    color: #495057 !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+/* Date input fields */
+input[type="date"],
+#start-date,
+#end-date,
+#start_date,
+#end_date,
+#rt-start-date,
+#rt-end-date,
+#custom-dates input,
+#custom-dates-end input,
+#export_start_date,
+#export_end_date,
+#user_export_start_date,
+#user_export_end_date,
+#service_export_start_date,
+#service_export_end_date,
+#node_export_start_date,
+#node_export_end_date {
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    background-color: #fff !important;
+    color: #495057 !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+/* Time input fields */
+input[type="time"],
+#node-start-time,
+#node-end-time,
+#user_export_start_time,
+#user_export_end_time,
+#service_export_start_time,
+#service_export_end_time {
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    background-color: #fff !important;
+    color: #495057 !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+/* Number input fields for record limits */
+input[type="number"],
+#limit_count,
+#user_limit_count,
+#service_limit_count,
+#node_limit_count {
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    background-color: #fff !important;
+    color: #495057 !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+/* Focus states for all time filter elements */
+select[id*="time-range"]:focus,
+select[id*="time_range"]:focus,
+select[name*="time_range"]:focus,
+select[id*="time-filter"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus,
+#rt-time-range:focus,
+#node-time-filter:focus,
+#time_range:focus,
+#time-range:focus,
+#traffic-chart-type:focus,
+#traffic-chart-unit:focus,
+#chart-type:focus,
+#data-unit:focus,
+#export_format:focus,
+#records-per-page:focus {
+    border-color: #007bff !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+/* ==============================================
+   RESPONSIVE WIDTH CONTROLS
+   ============================================== */
+
+/* Desktop and Tablet: Fixed 200px width (≥768px) */
+@media (min-width: 768px) {
+    /* Time range selects */
+    select[id*="time-range"],
+    select[id*="time_range"],
+    select[name*="time_range"],
+    select[id*="time-filter"],
+    #rt-time-range,
+    #node-time-filter,
+    #time_range,
+    #time-range,
+    #traffic-chart-type,
+    #traffic-chart-unit,
+    #chart-type,
+    #data-unit,
+    #export_format,
+    
+    /* Date inputs */
+    input[type="date"],
+    #start-date,
+    #end-date,
+    #start_date,
+    #end_date,
+    #rt-start-date,
+    #rt-end-date,
+    #custom-dates input,
+    #custom-dates-end input,
+    #export_start_date,
+    #export_end_date,
+    #user_export_start_date,
+    #user_export_end_date,
+    #service_export_start_date,
+    #service_export_end_date,
+    #node_export_start_date,
+    #node_export_end_date,
+    
+    /* Time inputs */
+    input[type="time"],
+    #node-start-time,
+    #node-end-time,
+    #user_export_start_time,
+    #user_export_end_time,
+    #service_export_start_time,
+    #service_export_end_time,
+    
+    /* Number inputs */
+    input[type="number"],
+    #limit_count,
+    #user_limit_count,
+    #service_limit_count,
+    #node_limit_count {
+        width: 200px !important;
+        max-width: 200px !important;
+        min-width: 200px !important;
+        flex: 0 0 200px !important;
+    }
+    
+    /* Modal-specific inputs maintain 200px width */
+    #export-modal input[type="date"],
+    #export-modal input[type="time"], 
+    #export-modal input[type="number"],
+    #user-export-modal input[type="date"],
+    #user-export-modal input[type="time"], 
+    #user-export-modal input[type="number"],
+    #service-export-modal input[type="date"],
+    #service-export-modal input[type="time"], 
+    #service-export-modal input[type="number"],
+    #node-export-modal input[type="date"],
+    #node-export-modal input[type="time"], 
+    #node-export-modal input[type="number"],
+    #node-export-usage-modal input[type="date"],
+    #node-export-usage-modal input[type="time"], 
+    #node-export-usage-modal input[type="number"] {
+        width: 200px !important;
+        max-width: 200px !important;
+        min-width: 200px !important;
+    }
+    
+    /* Container adjustments for 200px elements */
+    .form-group.custom-dates,
+    .form-group#custom-dates,
+    .form-group#custom-dates-end,
+    .filter-group#rt-custom-dates,
+    .filter-group#rt-custom-dates-end {
+        flex: 0 0 200px !important;
+        max-width: 200px !important;
+        min-width: 200px !important;
+    }
+}
+
+/* Mobile: Full width (< 768px) */
+@media (max-width: 767px) {
+    /* All time filter elements take full width on mobile */
+    select[id*="time-range"],
+    select[id*="time_range"],
+    select[name*="time_range"],
+    select[id*="time-filter"],
+    #rt-time-range,
+    #node-time-filter,
+    #time_range,
+    #time-range,
+    #traffic-chart-type,
+    #traffic-chart-unit,
+    #chart-type,
+    #data-unit,
+    #export_format,
+    #records-per-page,
+    #today-time-range,
+    #today-records-per-page,
+    #service-records-per-page,
+    #user-records-per-page,
+    #node-records-per-page,
+    
+    /* Date inputs */
+    input[type="date"],
+    #start-date,
+    #end-date,
+    #start_date,
+    #end_date,
+    #rt-start-date,
+    #rt-end-date,
+    #custom-dates input,
+    #custom-dates-end input,
+    #export_start_date,
+    #export_end_date,
+    #user_export_start_date,
+    #user_export_end_date,
+    #service_export_start_date,
+    #service_export_end_date,
+    #node_export_start_date,
+    #node_export_end_date,
+    
+    /* Time inputs */
+    input[type="time"],
+    #node-start-time,
+    #node-end-time,
+    #user_export_start_time,
+    #user_export_end_time,
+    #service_export_start_time,
+    #service_export_end_time,
+    
+    /* Number inputs */
+    input[type="number"],
+    #limit_count,
+    #user_limit_count,
+    #service_limit_count,
+    #node_limit_count {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: auto !important;
+        flex: 1 1 auto !important;
+    }
+    
+    /* Modal inputs also take full width on mobile */
+    #export-modal input[type="date"],
+    #export-modal input[type="time"], 
+    #export-modal input[type="number"],
+    #user-export-modal input[type="date"],
+    #user-export-modal input[type="time"], 
+    #user-export-modal input[type="number"],
+    #service-export-modal input[type="date"],
+    #service-export-modal input[type="time"], 
+    #service-export-modal input[type="number"],
+    #node-export-modal input[type="date"],
+    #node-export-modal input[type="time"], 
+    #node-export-modal input[type="number"],
+    #node-export-usage-modal input[type="date"],
+    #node-export-usage-modal input[type="time"], 
+    #node-export-usage-modal input[type="number"] {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: auto !important;
+    }
+    
+    /* Container adjustments for mobile */
+    .form-group.custom-dates,
+    .form-group#custom-dates,
+    .form-group#custom-dates-end,
+    .filter-group#rt-custom-dates,
+    .filter-group#rt-custom-dates-end {
+        flex: 1 1 auto !important;
+        max-width: none !important;
+        min-width: auto !important;
+        width: 100% !important;
+    }
+}
+
+/* ==============================================
+   OVERRIDE EXISTING CONFLICTING STYLES
+   ============================================== */
+
+/* Override any existing inline styles */
+*[style*="width: 100%"] select[id*="time"],
+*[style*="width: 100%"] input[type="date"],
+*[style*="width: 100%"] input[type="time"],
+*[style*="width: 100%"] input[type="number"],
+*[style*="flex: 0 0 200px"] select,
+*[style*="flex: 0 0 200px"] input[type="date"],
+*[style*="flex: 0 0 200px"] input[type="time"],
+*[style*="flex: 0 0 200px"] input[type="number"],
+*[style*="min-width: 150px"] select,
+*[style*="min-width: 150px"] input[type="date"],
+*[style*="min-width: 150px"] input[type="time"],
+*[style*="min-width: 150px"] input[type="number"] {
+    /* Let the media queries handle width */
+}
+
+/* Ensure proper container behavior */
+.form-row,
+.filter-row,
+.controls-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    align-items: end !important;
+}
+
+/* Responsive form row adjustments */
+@media (max-width: 767px) {
+    .form-row,
+    .filter-row,
+    .controls-row {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    
+    .form-group,
+    .filter-group,
+    .control-group {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+    }
+}

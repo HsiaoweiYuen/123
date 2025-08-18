@@ -16,6 +16,7 @@ $serviceSearchHtml = '
     <title>' . v2raysocks_traffic_lang('service_search') . '</title>
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
+        ' . v2raysocks_traffic_getTimeFilterStyles() . '
         .search-form { 
             background: #f8f9fa; 
             padding: 20px; 

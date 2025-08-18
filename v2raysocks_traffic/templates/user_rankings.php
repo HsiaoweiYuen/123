@@ -17,6 +17,7 @@ $userRankingsHtml = '
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
         ' . v2raysocks_traffic_getUnifiedStyles() . '
+        ' . v2raysocks_traffic_getTimeFilterStyles() . '
         
         /* Search form styles from service_search.php */
         .search-form { 

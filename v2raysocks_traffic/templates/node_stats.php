@@ -17,6 +17,7 @@ $nodeStatsHtml = '
     <style>
         ' . v2raysocks_traffic_getNavigationCSS() . '
         ' . v2raysocks_traffic_getUnifiedStyles() . '
+        ' . v2raysocks_traffic_getTimeFilterStyles() . '
         
         .rank-badge {
             display: inline-block;
