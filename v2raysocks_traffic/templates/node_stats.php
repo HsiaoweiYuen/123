@@ -1615,8 +1615,10 @@ $nodeStatsHtml = '
                             callbacks: {
                                 label: function(context) {
                                     const value = context.parsed.y;
-                                    const formattedValue = Number(value.toFixed(2)) + " " + unitLabel;
-                                    return context.dataset.label + ": " + formattedValue;
+                                    const formattedValue = Number(value.toFixed(2));
+                                    // Extract clean label by removing unit parentheses, e.g., "上传 (GB)" → "上传"
+                                    const cleanLabel = context.dataset.label.replace(/\s*\([^)]*\)/, "");
+                                    return cleanLabel + "：" + formattedValue + " " + unitLabel;
                                 }
                             }
                         }
