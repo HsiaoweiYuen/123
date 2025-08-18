@@ -1056,7 +1056,7 @@ $userRankingsHtml = '
                     return;
                 }
                 
-                // Convert times to today's date for comparison
+                // Convert times to today date for comparison
                 const today = new Date().toISOString().split("T")[0];
                 const startDateTime = new Date(today + " " + startTime);
                 const endDateTime = new Date(today + " " + endTime);
