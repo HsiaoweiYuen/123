@@ -1383,17 +1383,24 @@ $userRankingsHtml = '
                 const startTime = document.getElementById("start-time").value;
                 const endTime = document.getElementById("end-time").value;
                 
-                if (startTime && endTime) {
-                    // Convert time to todays date + time for timestamp calculation
+                // Validate time format and values
+                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                
+                if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
+                    // Convert times to today date for comparison and validation
                     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
-                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
-                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    const startDateTime = new Date(today + " " + startTime);
+                    const endDateTime = new Date(today + " " + endTime);
                     
-                    const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
-                    chartUrlParams += timeParams;
-                    usageUrlParams += timeParams;
+                    // Only add times if they are valid and start <= end
+                    if (!isNaN(startDateTime.getTime()) && !isNaN(endDateTime.getTime()) && startDateTime <= endDateTime) {
+                        const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                        const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                        
+                        const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        chartUrlParams += timeParams;
+                        usageUrlParams += timeParams;
+                    }
                 }
             }
             
@@ -1593,15 +1600,22 @@ $userRankingsHtml = '
                 const startTime = document.getElementById("start-time").value;
                 const endTime = document.getElementById("end-time").value;
                 
-                if (startTime && endTime) {
-                    // Convert time to todays date + time for timestamp calculation
+                // Validate time format and values
+                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                
+                if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
+                    // Convert times to today date for comparison and validation
                     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
-                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
-                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    const startDateTime = new Date(today + " " + startTime);
+                    const endDateTime = new Date(today + " " + endTime);
                     
-                    apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    // Only add times if they are valid and start <= end
+                    if (!isNaN(startDateTime.getTime()) && !isNaN(endDateTime.getTime()) && startDateTime <= endDateTime) {
+                        const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                        const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                        
+                        apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    }
                 }
             }
             
@@ -1681,15 +1695,22 @@ $userRankingsHtml = '
                 const startTime = document.getElementById("start-time").value;
                 const endTime = document.getElementById("end-time").value;
                 
-                if (startTime && endTime) {
-                    // Convert time to todays date + time for timestamp calculation
+                // Validate time format and values
+                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                
+                if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
+                    // Convert times to today date for comparison and validation
                     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
-                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
-                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    const startDateTime = new Date(today + " " + startTime);
+                    const endDateTime = new Date(today + " " + endTime);
                     
-                    urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    // Only add times if they are valid and start <= end
+                    if (!isNaN(startDateTime.getTime()) && !isNaN(endDateTime.getTime()) && startDateTime <= endDateTime) {
+                        const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                        const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                        
+                        urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    }
                 }
             }
             
@@ -2506,15 +2527,22 @@ $userRankingsHtml = '
                     const startTime = document.getElementById("start-time").value;
                     const endTime = document.getElementById("end-time").value;
                     
-                    if (startTime && endTime) {
-                        // Convert time to todays date + time for timestamp calculation
+                    // Validate time format and values
+                    const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                    
+                    if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
+                        // Convert times to today date for comparison and validation
                         const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
-                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
-                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        const startDateTime = new Date(today + " " + startTime);
+                        const endDateTime = new Date(today + " " + endTime);
                         
-                        exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        // Only add times if they are valid and start <= end
+                        if (!isNaN(startDateTime.getTime()) && !isNaN(endDateTime.getTime()) && startDateTime <= endDateTime) {
+                            const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                            const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                            
+                            exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        }
                     }
                 }
                 
@@ -2555,24 +2583,32 @@ $userRankingsHtml = '
                     const startTime = $("#user_export_start_time").val();
                     const endTime = $("#user_export_end_time").val();
                     
-                    if (startTime && endTime) {
-                        // Convert time to todays date + time for timestamp calculation
+                    // Validate time format and values
+                    const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                    
+                    if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
+                        // Convert times to today date for comparison and validation
                         const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
-                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
-                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        const startDateTime = new Date(today + " " + startTime);
+                        const endDateTime = new Date(today + " " + endTime);
                         
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                        // Validate time range logic and format
+                        if (!isNaN(startDateTime.getTime()) && !isNaN(endDateTime.getTime()) && startDateTime <= endDateTime) {
+                            const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                            const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                            
+                            // Validate time range against main page bounds
+                            if (!validateExportTimeRange(startDateTime, endDateTime)) {
+                                return;
+                            }
+                            
+                            exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                        } else {
+                            alert("Invalid time range. Please check your start and end times.");
                             return;
                         }
-                        
-                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
                     } else {
-                        alert("Please select both start and end times");
+                        alert("Please select both start and end times in valid format (HH:MM:SS)");
                         return;
                     }
                 }
