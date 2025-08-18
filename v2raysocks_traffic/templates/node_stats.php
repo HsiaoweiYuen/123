@@ -1988,7 +1988,7 @@ $nodeStatsHtml = '
                         <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range_option') . '</label>
+                        <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">

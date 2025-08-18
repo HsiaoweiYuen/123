@@ -156,6 +156,7 @@ $_LANG = [
     'limited_number_of_records' => '自定義數量',
     'custom_date_range' => '自定義範圍',
     'custom_range' => '自定義日期',
+    'custom_time_range' => '自定義範圍',
     'number_of_records' => '記錄數量',
     'start_date_label' => '開始日期',
     'end_date_label' => '結束日期',

@@ -156,6 +156,7 @@ $_LANG = [
     'limited_number_of_records' => 'Custom Quantity',
     'custom_date_range' => 'Custom Range',
     'custom_range' => 'Custom Date',
+    'custom_time_range' => 'Custom Range',
     'number_of_records' => 'Number of Records',
     'start_date_label' => 'Start Date',
     'end_date_label' => 'End Date',
