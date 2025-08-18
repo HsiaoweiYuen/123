@@ -952,8 +952,7 @@ $trafficDashboardHtml = '
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
-                    // Remove time_range=time_range and replace with timestamp parameters
-                    params = params.replace(/time_range=time_range/g, "time_range=custom");
+                    // Keep time_range=time_range and add timestamp parameters for backend processing
                     params += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
                 }
             }
