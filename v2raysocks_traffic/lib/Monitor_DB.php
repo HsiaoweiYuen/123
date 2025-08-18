@@ -3828,6 +3828,23 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
 function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
     $timeData = [];
     
+    // For custom time ranges, determine if we should group by hour or day
+    $useHourlyGrouping = false;
+    if ($timeRange === 'custom' && !empty($data)) {
+        // Check if all data falls within the same day
+        $timestamps = array_map(function($row) { return intval($row['t']); }, $data);
+        $minTimestamp = min($timestamps);
+        $maxTimestamp = max($timestamps);
+        
+        $minDate = new DateTime();
+        $minDate->setTimestamp($minTimestamp);
+        $maxDate = new DateTime();
+        $maxDate->setTimestamp($maxTimestamp);
+        
+        // If data spans same day, use hourly grouping; otherwise use daily
+        $useHourlyGrouping = $minDate->format('Y-m-d') === $maxDate->format('Y-m-d');
+    }
+    
     foreach ($data as $row) {
         // Use actual data timestamp like PR#37 pattern
         $timestamp = intval($row['t']);
@@ -3835,14 +3852,14 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
         $date->setTimestamp($timestamp);
         
         // Time grouping using server local time (not UTC) - consistent with PR#37
-        if ($timeRange === 'today') {
-            // For today, group by hour with proper time display
+        if ($timeRange === 'today' || ($timeRange === 'custom' && $useHourlyGrouping)) {
+            // For today or custom same-day ranges, group by hour with proper time display
             $timeKey = $date->format('H') . ':00';
         } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
             // For weekly/bi-weekly/monthly ranges, use Y-m-d format for compatibility
             $timeKey = $date->format('Y-m-d'); // Standardized yyyy-mm-dd format
         } else {
-            // For longer ranges, use Y-m-d format
+            // For longer ranges or custom multi-day ranges, use Y-m-d format
             $timeKey = $date->format('Y-m-d'); // Standardized yyyy-mm-dd format
         }
         

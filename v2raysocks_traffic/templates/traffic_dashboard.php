@@ -1143,20 +1143,16 @@ $trafficDashboardHtml = '
                     break;
                     
                 case "time_range":
-                    // Generate time intervals for custom time range (using minutes for better granularity)
+                    // Generate time intervals for custom time range (using hourly intervals to match backend grouping)
                     const startTimeInput = document.getElementById("start-time").value;
                     const endTimeInput = document.getElementById("end-time").value;
                     if (startTimeInput && endTimeInput) {
                         const [startHour, startMin] = startTimeInput.split(":").map(Number);
                         const [endHour, endMin] = endTimeInput.split(":").map(Number);
-                        const startMinutes = startHour * 60 + startMin;
-                        const endMinutes = endHour * 60 + endMin;
                         
-                        // Generate 15-minute intervals within the time range
-                        for (let minutes = startMinutes; minutes <= endMinutes; minutes += 15) {
-                            const hour = Math.floor(minutes / 60);
-                            const min = minutes % 60;
-                            labels.push(hour.toString().padStart(2, "0") + ":" + min.toString().padStart(2, "0"));
+                        // Generate hourly intervals within the time range to match backend grouping
+                        for (let hour = startHour; hour <= endHour; hour++) {
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
                         }
                     } else {
                         // Fallback to hourly intervals for today
@@ -1262,8 +1258,8 @@ $trafficDashboardHtml = '
                     allDataPoints.push(upload + download);
                     
                     // Time grouping using server local time (not UTC)
-                    if (timeRange === "today") {
-                        // For today, group by hour with proper time display
+                    if (timeRange === "today" || timeRange === "time_range") {
+                        // For today and custom time ranges, group by hour with proper time display
                         timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                     } else if (["week", "halfmonth"].includes(timeRange)) {
                         // For weekly/bi-weekly ranges, group by day using local time
