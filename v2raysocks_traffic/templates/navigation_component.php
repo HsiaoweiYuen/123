@@ -265,4 +265,3 @@ function v2raysocks_traffic_getUnifiedStyles() {
 function v2raysocks_traffic_getTimeFilterStyles() {
     return file_get_contents(__DIR__ . '/time-filter-styles.css');
 }
-}
