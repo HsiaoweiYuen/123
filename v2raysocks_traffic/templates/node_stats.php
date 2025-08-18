@@ -1944,8 +1944,8 @@ $nodeStatsHtml = '
                 <form id="node-export-form">
                     <div style="margin-bottom: 15px;">
                         <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
-                        <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
-                        <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_data_option') . '</label><br>
+                        <label><input type="radio" name="node_export_type" value="limited"> ' . v2raysocks_traffic_lang('custom_quantity_option') . '</label><br>
                         <label><input type="radio" name="node_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range_option') . '</label>
                     </div>
                     
@@ -1986,8 +1986,8 @@ $nodeStatsHtml = '
                 <form id="node-usage-export-form">
                     <div style="margin-bottom: 15px;">
                         <label>' . v2raysocks_traffic_lang('export_type_label') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data_option') . '</label><br>
-                        <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('limit_records_option') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_data_option') . '</label><br>
+                        <label><input type="radio" name="node_usage_export_type" value="limited"> ' . v2raysocks_traffic_lang('custom_quantity_option') . '</label><br>
                         <label><input type="radio" name="node_usage_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
