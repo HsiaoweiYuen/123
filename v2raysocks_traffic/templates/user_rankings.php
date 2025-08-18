@@ -1069,7 +1069,24 @@ $userRankingsHtml = '
             
             // Use form serialization approach but remove sort_by parameter
             const formData = $("#user-rankings-filter").serialize();
-            const url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
+            let url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
+            
+            // Add timestamp parameters for time_range selection
+            if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to todays date + time for timestamp calculation
+                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+                    const startDateTime = today + " " + startTime;
+                    const endDateTime = today + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    url += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                }
+            }
             
             const tbody = document.getElementById("rankings-tbody");
             tbody.innerHTML = `<tr><td colspan="18" class="loading">${t("loading_user_rankings")}</td></tr>`;
@@ -2308,6 +2325,15 @@ $userRankingsHtml = '
                     return `${startDate} ${t("to")} ${endDate}`;
                 } else {
                     return t("custom_date_range");
+                }
+            } else if (timeRange === "time_range") {
+                const startTime = document.getElementById("start-time").value;
+                const endTime = document.getElementById("end-time").value;
+                
+                if (startTime && endTime) {
+                    return `${startTime} ${t("to")} ${endTime}`;
+                } else {
+                    return t("custom_time_range");
                 }
             }
             
