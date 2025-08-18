@@ -283,7 +283,7 @@ $_LANG = [
     'total_cumulative_traffic_unit' => 'Total cumulative traffic ({unit})',
     'no_user_selected' => 'No user selected',
     'no_usage_records' => 'No usage records',
-    'failed_load_usage_records' => 'Failed to load usage records:',
+    'failed_load_usage_records' => 'Failed to load usage records',
     'loading_usage_records' => 'Loading usage records...',
     
     // ========================================
@@ -302,14 +302,14 @@ $_LANG = [
     'independent_search' => 'Independent Search',
     'service_id_search' => 'Service ID Search',
     'time_period_search' => 'Time Period Search',
-    'search_type_label' => 'Search Type:',
-    'search_value_label' => 'Search Value:',
+    'search_type_label' => 'Search Type',
+    'search_value_label' => 'Search Value',
     'search_value_placeholder' => 'Enter search value',
-    'start_time_label' => 'Start Time:',
-    'end_time_label' => 'End Time:',
-    'current_search_conditions' => 'Current search conditions:',
-    'uuid_search_label' => 'UUID search:',
-    'no_traffic_data' => 'No traffic data:',
+    'start_time_label' => 'Start Time',
+    'end_time_label' => 'End Time',
+    'current_search_conditions' => 'Current search conditions',
+    'uuid_search_label' => 'UUID search',
+    'no_traffic_data' => 'No traffic data',
     'no_traffic_records_period' => 'No traffic records in this time period',
     
     // ========================================

@@ -282,7 +282,7 @@ $_LANG = [
     'total_cumulative_traffic_unit' => '總累積流量 ({unit})',
     'no_user_selected' => '沒有選中的用戶',
     'no_usage_records' => '暫無使用記錄',
-    'failed_load_usage_records' => '加載使用記錄失敗:',
+    'failed_load_usage_records' => '加載使用記錄失敗',
     'loading_usage_records' => '正在加載使用記錄...',
     
     // ========================================
@@ -301,14 +301,14 @@ $_LANG = [
     'independent_search' => '獨立搜索',
     'service_id_search' => '服務ID搜索',
     'time_period_search' => '時間段搜索',
-    'search_type_label' => '搜索類型:',
-    'search_value_label' => '搜索值:',
+    'search_type_label' => '搜索類型',
+    'search_value_label' => '搜索值',
     'search_value_placeholder' => '輸入搜索值',
-    'start_time_label' => '開始時間:',
-    'end_time_label' => '結束時間:',
-    'current_search_conditions' => '當前搜索條件:',
-    'uuid_search_label' => 'UUID搜索:',
-    'no_traffic_data' => '暫無流量數據:',
+    'start_time_label' => '開始時間',
+    'end_time_label' => '結束時間',
+    'current_search_conditions' => '當前搜索條件',
+    'uuid_search_label' => 'UUID搜索',
+    'no_traffic_data' => '暫無流量數據',
     'no_traffic_records_period' => '該時間段內沒有流量記錄',
     
     // ========================================
