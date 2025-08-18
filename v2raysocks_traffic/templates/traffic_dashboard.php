@@ -1258,8 +1258,8 @@ $trafficDashboardHtml = '
                     allDataPoints.push(upload + download);
                     
                     // Time grouping using server local time (not UTC)
-                    if (timeRange === "today") {
-                        // For today, group by hour with proper time display
+                    if (timeRange === "today" || timeRange === "time_range") {
+                        // For today and custom time ranges, group by hour with proper time display
                         timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                     } else if (["week", "halfmonth"].includes(timeRange)) {
                         // For weekly/bi-weekly ranges, group by day using local time
