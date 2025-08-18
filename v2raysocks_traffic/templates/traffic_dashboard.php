@@ -67,7 +67,9 @@ $trafficDashboardHtml = '
         }
         /* Compact layout for time inputs */
         .filter-group#custom-dates,
-        .filter-group#custom-dates-end {
+        .filter-group#custom-dates-end,
+        .filter-group#custom-times,
+        .filter-group#custom-times-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -160,7 +162,9 @@ $trafficDashboardHtml = '
                 min-width: 120px;
             }
             .filter-group#custom-dates,
-            .filter-group#custom-dates-end {
+            .filter-group#custom-dates-end,
+            .filter-group#custom-times,
+            .filter-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -202,12 +206,16 @@ $trafficDashboardHtml = '
                 flex: 1 1 auto;
             }
             .filter-group#custom-dates,
-            .filter-group#custom-dates-end {
+            .filter-group#custom-dates-end,
+            .filter-group#custom-times,
+            .filter-group#custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .filter-group#custom-dates input,
-            .filter-group#custom-dates-end input {
+            .filter-group#custom-dates-end input,
+            .filter-group#custom-times input,
+            .filter-group#custom-times-end input {
                 width: 100%;
             }
             .table th, .table td {
@@ -280,9 +288,22 @@ $trafficDashboardHtml = '
                 case "custom":
                     const startDateInput = document.getElementById("start-date").value;
                     const endDateInput = document.getElementById("end-date").value;
+                    const startTimeInput = document.getElementById("start-time").value;
+                    const endTimeInput = document.getElementById("end-time").value;
+                    
                     if (startDateInput && endDateInput) {
-                        startDate = new Date(startDateInput);
-                        endDate = new Date(endDateInput + " 23:59:59");
+                        // Combine date and time, defaulting to 00:00:00 and 23:59:59 if no time specified
+                        const startTime = startTimeInput || "00:00:00";
+                        const endTime = endTimeInput || "23:59:59";
+                        
+                        startDate = new Date(startDateInput + " " + startTime);
+                        endDate = new Date(endDateInput + " " + endTime);
+                        
+                        // Validate that start time is not later than end time
+                        if (startDate > endDate) {
+                            alert("' . v2raysocks_traffic_lang('start_date_after_end_date') . '");
+                            return null;
+                        }
                     } else {
                         return null; // Invalid custom range
                     }
@@ -429,6 +450,14 @@ $trafficDashboardHtml = '
                     <div class="filter-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end-date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="filter-group" id="custom-times" style="display: none;">
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1" style="width: 100%;">
+                    </div>
+                    <div class="filter-group" id="custom-times-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1" style="width: 100%;">
                     </div>
                     <div class="filter-group">
                         <label>&nbsp;</label>
@@ -677,9 +706,9 @@ $trafficDashboardHtml = '
             // Time range change handler
             $("#time-range").on("change", function() {
                 if ($(this).val() === "custom") {
-                    $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-dates, #custom-dates-end, #custom-times, #custom-times-end").show();
                 } else {
-                    $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-dates, #custom-dates-end, #custom-times, #custom-times-end").hide();
                     // Note: Removed auto-refresh on time range change
                     // Users must click Apply Filter button to refresh data
                 }
@@ -691,6 +720,30 @@ $trafficDashboardHtml = '
                     loadTrafficData();
                 }
             }, 1000)); // Wait 1 second after user stops typing
+            
+            // Add validation for custom time inputs
+            $("#start-time, #end-time, #start-date, #end-date").on("change", function() {
+                const timeRange = $("#time-range").val();
+                if (timeRange === "custom") {
+                    const startDate = $("#start-date").val();
+                    const endDate = $("#end-date").val();
+                    const startTime = $("#start-time").val();
+                    const endTime = $("#end-time").val();
+                    
+                    if (startDate && endDate && startTime && endTime) {
+                        const startDateTime = new Date(startDate + " " + startTime);
+                        const endDateTime = new Date(endDate + " " + endTime);
+                        
+                        if (startDateTime > endDateTime) {
+                            alert("' . v2raysocks_traffic_lang('start_date_after_end_date') . '");
+                            // Reset the field that was just changed
+                            if (this.id === "end-time" || this.id === "end-date") {
+                                $(this).val("");
+                            }
+                        }
+                    }
+                }
+            });
             
             // Chart type and unit change handlers
             $("#traffic-chart-type, #traffic-chart-unit").on("change", function() {
@@ -904,7 +957,38 @@ $trafficDashboardHtml = '
         }
         
         function loadTrafficData() {
-            const params = $("#traffic-filter").serialize() + "&grouped=true";
+            let params = $("#traffic-filter").serialize() + "&grouped=true";
+            
+            // Handle custom time range by converting to timestamps
+            const timeRange = $("#time-range").val();
+            if (timeRange === "custom") {
+                const startDateInput = $("#start-date").val();
+                const endDateInput = $("#end-date").val();
+                const startTimeInput = $("#start-time").val();
+                const endTimeInput = $("#end-time").val();
+                
+                if (startDateInput && endDateInput) {
+                    // Combine date and time, defaulting to 00:00:00 and 23:59:59 if no time specified
+                    const startTime = startTimeInput || "00:00:00";
+                    const endTime = endTimeInput || "23:59:59";
+                    
+                    const startDateTime = new Date(startDateInput + " " + startTime);
+                    const endDateTime = new Date(endDateInput + " " + endTime);
+                    
+                    // Validate that start time is not later than end time
+                    if (startDateTime > endDateTime) {
+                        alert("' . v2raysocks_traffic_lang('start_date_after_end_date') . '");
+                        return;
+                    }
+                    
+                    // Convert to Unix timestamps (seconds since epoch)
+                    const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+                    const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+                    
+                    // Add timestamp parameters to the request
+                    params += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                }
+            }
             
             // Add loading indicator without clearing existing data
             const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";
@@ -1065,17 +1149,35 @@ $trafficDashboardHtml = '
                     // Generate dates for custom date range
                     const startDateInput = document.getElementById("start-date").value;
                     const endDateInput = document.getElementById("end-date").value;
+                    const startTimeInput = document.getElementById("start-time").value;
+                    const endTimeInput = document.getElementById("end-time").value;
+                    
                     if (startDateInput && endDateInput) {
                         const startDate = new Date(startDateInput);
                         const endDate = new Date(endDateInput);
-                        const currentDate = new Date(startDate);
                         
-                        while (currentDate <= endDate) {
-                            const timeKey = currentDate.getFullYear() + "-" + 
-                                           (currentDate.getMonth() + 1).toString().padStart(2, "0") + "-" + 
-                                           currentDate.getDate().toString().padStart(2, "0");
-                            labels.push(timeKey);
-                            currentDate.setDate(currentDate.getDate() + 1);
+                        // Check if it's a single day with custom times
+                        const isSameDay = startDate.toDateString() === endDate.toDateString();
+                        
+                        if (isSameDay && (startTimeInput || endTimeInput)) {
+                            // For same-day custom time ranges, generate hourly labels
+                            const startTime = startTimeInput ? startTimeInput.split(':')[0] : 0;
+                            const endTime = endTimeInput ? endTimeInput.split(':')[0] : 23;
+                            
+                            for (let hour = parseInt(startTime); hour <= parseInt(endTime); hour++) {
+                                labels.push(hour.toString().padStart(2, "0") + ":00");
+                            }
+                        } else {
+                            // For multi-day ranges, generate date labels
+                            const currentDate = new Date(startDate);
+                            
+                            while (currentDate <= endDate) {
+                                const timeKey = currentDate.getFullYear() + "-" + 
+                                               (currentDate.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                               currentDate.getDate().toString().padStart(2, "0");
+                                labels.push(timeKey);
+                                currentDate.setDate(currentDate.getDate() + 1);
+                            }
                         }
                     } else {
                         // Fallback to past 30 days if custom dates are not valid
