@@ -97,6 +97,27 @@ $realTimeMonitorHtml = '
                 padding: 15px !important;
             }
         }
+        
+        /* Standard styles for export modal inputs */
+        #export-modal input[type="date"], 
+        #export-modal input[type="time"], 
+        #export-modal input[type="number"] {
+            width: 200px;
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        #export-modal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        #export-modal .form-group {
+            margin-bottom: 15px;
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1182,9 +1203,9 @@ $realTimeMonitorHtml = '
                     
                     <div id="date-range-options" style="margin-bottom: 15px; display: none;">
                         <label for="export_start_time">' . v2raysocks_traffic_lang('start_time_label') . '</label>
-                        <input type="time" id="export_start_time" name="export_start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;"><br><br>
+                        <input type="time" id="export_start_time" name="export_start_time" step="1"><br><br>
                         <label for="export_end_time">' . v2raysocks_traffic_lang('end_time_label') . '</label>
-                        <input type="time" id="export_end_time" name="export_end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="export_end_time" name="export_end_time" step="1">
                         <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
