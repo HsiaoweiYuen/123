@@ -71,6 +71,12 @@ $userStatsHtml = '
             border: 1px solid #ced4da; 
             border-radius: 4px; 
         }
+        .form-group#custom-dates,
+        .form-group#custom-dates-end,
+        .form-group#custom-times,
+        .form-group#custom-times-end {
+            display: none;
+        }
         .btn { 
             padding: 8px 16px; 
             border: none; 
@@ -267,7 +273,25 @@ $userStatsHtml = '
                             <option value="today">Today</option>
                             <option value="week">Last 7 Days</option>
                             <option value="month_including_today" selected>Last 30 Days</option>
+                            <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="custom-dates" style="display: none;">
+                        <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
+                        <input type="date" id="start-date" name="start_date">
+                    </div>
+                    <div class="form-group" id="custom-dates-end" style="display: none;">
+                        <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
+                        <input type="date" id="end-date" name="end_date">
+                    </div>
+                    <div class="form-group" id="custom-times" style="display: none;">
+                        <label for="start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start-time" name="start_time" step="1">
+                    </div>
+                    <div class="form-group" id="custom-times-end" style="display: none;">
+                        <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end-time" name="end_time" step="1">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -305,6 +329,29 @@ $userStatsHtml = '
                     <div class="info-item">
                         <div class="info-label">V2Ray Speed Limit</div>
                         <div class="info-value" id="v2ray-speed-display">--</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Custom Time Range Summary -->
+            <div class="user-info" id="custom-time-range-summary" style="display: none;">
+                <h3>Custom Time Range Summary</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Upload</div>
+                        <div class="info-value" id="custom-range-upload">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Download</div>
+                        <div class="info-value" id="custom-range-download">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Total</div>
+                        <div class="info-value" id="custom-range-total">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Records</div>
+                        <div class="info-value" id="custom-range-records">--</div>
                     </div>
                 </div>
             </div>
@@ -397,6 +444,20 @@ $userStatsHtml = '
                     window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + params);
                 }
             });
+            
+            // Time range change handler
+            $(\\"#time_range\\").on(\\"change\\", function() {
+                if ($(this).val() === \\"custom\\") {
+                    $(\\"#custom-dates, #custom-dates-end\\").show();
+                    $(\\"#custom-times, #custom-times-end\\").hide();
+                } else if ($(this).val() === \\"time_range\\") {
+                    $(\\"#custom-times, #custom-times-end\\").show();
+                    $(\\"#custom-dates, #custom-dates-end\\").hide();
+                } else {
+                    $(\\"#custom-dates, #custom-dates-end, #custom-times, #custom-times-end\\").hide();
+                    hideCustomTimeRangeSummary();
+                }
+            });
         });
         
         function searchUser() {
@@ -413,31 +474,77 @@ $userStatsHtml = '
             $("#no-results").hide();
             $("#user-traffic-history").html("<tr><td colspan=\\"5\\" class=\\"loading\\">Searching user data...</td></tr>");
             
-            const params = {
+            let params = {
                 enhanced: "true",
                 grouped: "true",
                 time_range: timeRange
             };
             params[searchType] = searchValue;
             
+            // Handle custom time range - similar to traffic_dashboard.php
+            if (timeRange === \\"custom\\") {
+                const startDate = $(\\"#start-date\\").val();
+                const endDate = $(\\"#end-date\\").val();
+                
+                if (startDate && endDate) {
+                    params.start_date = startDate;
+                    params.end_date = endDate;
+                } else if (startDate || endDate) {
+                    alert(\\"Please select both start and end dates for custom date range\\");
+                    return;
+                }
+            } else if (timeRange === \\"time_range\\") {
+                const startTime = $(\\"#start-time\\").val();
+                const endTime = $(\\"#end-time\\").val();
+                
+                if (startTime && endTime) {
+                    // Convert time to today date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + \\"-\\" + 
+                                    (today.getMonth() + 1).toString().padStart(2, \\"0\\") + \\"-\\" + 
+                                    today.getDate().toString().padStart(2, \\"0\\");
+                    const startDateTime = todayStr + \\" \\" + startTime;
+                    const endDateTime = todayStr + \\" \\" + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    params.time_range = \\"custom\\";
+                    params.start_timestamp = startTimestamp;
+                    params.end_timestamp = endTimestamp;
+                } else if (startTime || endTime) {
+                    alert(\\"Please select both start and end times for custom time range\\");
+                    return;
+                }
+            }
+            
             $.ajax({
-                url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
-                type: "GET",
+                url: \\"addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data\\",
+                type: \\"GET\\",
                 data: params,
-                dataType: "json",
+                dataType: \\"json\\",
                 success: function(response) {
-                    if (response.status === "success" && response.data.length > 0) {
+                    if (response.status === \\"success\\" && response.data.length > 0) {
                         currentUserData = response.data[0]; // Get first result for user info
                         displayUserInfo(currentUserData);
                         updateUserTrafficHistory(response.data);
                         updateUserTrafficChart(response.data, response.grouped_data);
-                        $("#user-results").show();
+                        
+                        // Update custom time range summary if custom time range is selected
+                        if (timeRange === \\"custom\\" || timeRange === \\"time_range\\") {
+                            updateCustomTimeRangeSummary(response.data);
+                        } else {
+                            hideCustomTimeRangeSummary();
+                        }
+                        
+                        $(\\"#user-results\\").show();
                     } else {
-                        $("#no-results").show();
+                        $(\\"#no-results\\").show();
+                        hideCustomTimeRangeSummary();
                     }
                 },
                 error: function() {
-                    $("#user-traffic-history").html("<tr><td colspan=\\"5\\" class=\\"loading\\">Error loading user data</td></tr>");
+                    $(\\"#user-traffic-history\\").html(\\"<tr><td colspan=\\\\\\"5\\\\\\" class=\\\\\\"loading\\\\\\">Error loading user data</td></tr>\\");
+                    hideCustomTimeRangeSummary();
                 }
             });
         }
@@ -674,6 +781,31 @@ $userStatsHtml = '
                 const eb = size / 1000000000000000000;
                 return eb.toFixed(2) + " EB";
             }
+        }
+        
+        function updateCustomTimeRangeSummary(data) {
+            let totalUpload = 0;
+            let totalDownload = 0;
+            let recordCount = data.length;
+            
+            // Calculate totals from traffic data
+            data.forEach(function(row) {
+                totalUpload += (row.u || 0);
+                totalDownload += (row.d || 0);
+            });
+            
+            $(\\"#custom-range-upload\\").text(formatBytes(totalUpload));
+            $(\\"#custom-range-download\\").text(formatBytes(totalDownload));
+            $(\\"#custom-range-total\\").text(formatBytes(totalUpload + totalDownload));
+            $(\\"#custom-range-records\\").text(recordCount.toLocaleString());
+            
+            $(\\"#custom-time-range-summary\\").show();
+        }
+        
+        function hideCustomTimeRangeSummary() {
+            // Reset all values to default
+            $(\\"#custom-range-upload, #custom-range-download, #custom-range-total, #custom-range-records\\").text(\\"--\\");
+            $(\\"#custom-time-range-summary\\").hide();
         }
     </script>
 </body>
