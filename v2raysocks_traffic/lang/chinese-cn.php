@@ -270,8 +270,7 @@ $_LANG = [
     'remaining_quota' => '剩余配额',
     'user_id_label' => '服务ID',
     'time_range_label' => '时间范围',
-    'upload_traffic' => '上传流量',
-    'download_traffic' => '下载流量',
+
     'total_traffic_label' => '总流量',
     'user_traffic_usage_trends' => '服务 {user_id} 流量使用趋势',
     'upload_traffic_unit' => '上传 ({unit})',
