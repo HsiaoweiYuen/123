@@ -312,8 +312,8 @@ $_LANG = [
     // ========================================
     // NODE STATISTICS (节点统计页面)
     // ========================================
-    'node_rankings_title_today' => '节点流量统计 (仅今日数据)',
-    'node_rankings_table_title_today' => '节点流量排行榜 (今日)',
+    'node_rankings_title_today' => '节点流量统计',
+    'node_rankings_table_title_today' => '节点流量排行榜',
     'node_rankings_loading' => '正在加载节点排行数据...',
     'loading_node_rankings' => '正在加载节点排行数据...',
     'node_details_title' => '节点详细信息',
