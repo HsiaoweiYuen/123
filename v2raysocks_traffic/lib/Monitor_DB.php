@@ -3852,8 +3852,8 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
         $date->setTimestamp($timestamp);
         
         // Time grouping using server local time (not UTC) - consistent with PR#37
-        if ($timeRange === 'today' || ($timeRange === 'custom' && $useHourlyGrouping)) {
-            // For today or custom same-day ranges, group by hour with proper time display
+        if ($timeRange === 'today' || $timeRange === 'time_range' || ($timeRange === 'custom' && $useHourlyGrouping)) {
+            // For today, custom time ranges, or custom same-day ranges, group by hour with proper time display
             $timeKey = $date->format('H') . ':00';
         } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
             // For weekly/bi-weekly/monthly ranges, use Y-m-d format for compatibility
