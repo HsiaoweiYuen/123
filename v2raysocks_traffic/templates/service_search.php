@@ -276,6 +276,20 @@ $serviceSearchHtml = '
                         return null; // Invalid custom range
                     }
                     break;
+                case "time_range":
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        // Convert time to today date + time for range calculation
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        startDate = new Date(todayStr + " " + startTimeInput);
+                        endDate = new Date(todayStr + " " + endTimeInput);
+                    } else {
+                        return null; // Invalid time range
+                    }
+                    break;
                 default:
                     return null;
             }
@@ -336,6 +350,7 @@ $serviceSearchHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -345,6 +360,14 @@ $serviceSearchHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times" style="display: none;">
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times-end" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -528,10 +551,16 @@ $serviceSearchHtml = '
             
             // Time range change handler
             $("#time_range").on("change", function() {
-                if ($(this).val() === "custom") {
+                const value = $(this).val();
+                if (value === "custom") {
                     $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-times, #custom-times-end").hide();
+                } else if (value === "time_range") {
+                    $("#custom-times, #custom-times-end").show();
+                    $("#custom-dates, #custom-dates-end").hide();
                 } else {
                     $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-times, #custom-times-end").hide();
                 }
             });
             
@@ -680,6 +709,8 @@ $serviceSearchHtml = '
             const timeRange = $("#time_range").val();
             const startDate = $("#start_date").val();
             const endDate = $("#end_date").val();
+            const startTime = $("#start_time").val();
+            const endTime = $("#end_time").val();
             
             if (!searchValue) {
                 alert("Please enter a search value");
@@ -693,6 +724,26 @@ $serviceSearchHtml = '
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
+            
+            // Handle time_range option by adding timestamp parameters
+            if (timeRange === "time_range") {
+                if (startTime && endTime) {
+                    // Convert time to today date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    requestData.start_timestamp = startTimestamp;
+                    requestData.end_timestamp = endTimestamp;
+                }
+            }
             
             // Add search parameter based on type
             switch(searchType) {
@@ -838,6 +889,7 @@ $serviceSearchHtml = '
             
             switch (timeRange) {
                 case "today":
+                case "time_range":
                     // Generate hour labels for today - only up to current hour
                     const currentHour = new Date().getHours();
                     const maxHours = Math.min(currentHour + 1, 24);
@@ -876,6 +928,7 @@ $serviceSearchHtml = '
             
             switch (timeRange) {
                 case "today":
+                case "time_range":
                     // Generate hours up to current time only
                     const currentHour = now.getHours();
                     for (let hour = 0; hour <= currentHour; hour++) {
@@ -1077,7 +1130,7 @@ $serviceSearchHtml = '
                 
                 // Group by different time periods based on range - use consistent formatting
                 const timeRange = $("#time_range").val();
-                if (timeRange === "today") {
+                if (timeRange === "today" || timeRange === "time_range") {
                     timeKey = date.getHours() + ":00";
                 } else {
                     // Format as YYYY-MM-DD for consistency with unified date format
