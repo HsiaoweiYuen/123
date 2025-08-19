@@ -3063,6 +3063,9 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
             if ($timeRange === 'today') {
                 // For today, group by hour with proper time display
                 $timeKey = $date->format('H') . ':00';
+            } else if ($timeRange === 'time_range') {
+                // For custom time ranges, use hour granularity since they're typically same-day
+                $timeKey = $date->format('H') . ':00';
             } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days'])) {
                 // For weekly/bi-weekly/monthly ranges, group by day using Y-m-d format for frontend compatibility
                 $timeKey = $date->format('Y-m-d'); // Standardized yyyy-mm-dd format
@@ -3201,6 +3204,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
                     $startTime = strtotime('today');
                     $endTime = strtotime('tomorrow') - 1;
                 }
+                break;
+            case 'time_range':
+                // Handle custom time range - will be overridden by timestamps if provided
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
                 break;
             case 'all':
             default:
