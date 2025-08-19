@@ -931,7 +931,7 @@ $serviceSearchHtml = '
                     // Generate hours up to current time only
                     const currentHour = now.getHours();
                     for (let hour = 0; hour <= currentHour; hour++) {
-                        labels.push(hour + ":00");
+                        labels.push(hour.toString().padStart(2, "0") + ":00");
                     }
                     break;
                 case "time_range":
@@ -950,7 +950,7 @@ $serviceSearchHtml = '
                         // Fallback to current day hours if time inputs are not available
                         const currentHour = now.getHours();
                         for (let hour = 0; hour <= currentHour; hour++) {
-                            labels.push(hour + ":00");
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
                         }
                     }
                     break;
@@ -1150,7 +1150,7 @@ $serviceSearchHtml = '
                 // Group by different time periods based on range - use consistent formatting
                 const timeRange = $("#time_range").val();
                 if (timeRange === "today" || timeRange === "time_range") {
-                    timeKey = date.getHours() + ":00";
+                    timeKey = date.getHours().toString().padStart(2, "0") + ":00";
                 } else {
                     // Format as YYYY-MM-DD for consistency with unified date format
                     const year = date.getFullYear();
