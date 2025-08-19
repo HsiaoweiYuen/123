@@ -29,9 +29,9 @@ $realTimeMonitorHtml = '
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-group label { font-weight: 500; }
         .filter-group input, .filter-group select { padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; }
-        /* Make custom date inputs more compact */
-        #rt-custom-dates, #rt-custom-dates-end { flex: 0 0 auto; max-width: 160px; }
-        #rt-custom-dates input, #rt-custom-dates-end input { width: 100%; max-width: 100%; }
+        /* Make custom date and time inputs more compact */
+        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 0 0 auto; max-width: 160px; }
+        #rt-custom-dates input, #rt-custom-dates-end input, #rt-custom-times input, #rt-custom-times-end input { width: 100%; max-width: 100%; }
         .btn { padding: 8px 15px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
@@ -201,6 +201,14 @@ $realTimeMonitorHtml = '
                     <div class="filter-group" id="rt-custom-dates-end" style="display: none;">
                         <label for="rt-end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="rt-end-date" name="end_date">
+                    </div>
+                    <div class="filter-group" id="rt-custom-times" style="display: none;">
+                        <label for="rt-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="rt-start-time" name="start_time" step="1" value="00:00:00">
+                    </div>
+                    <div class="filter-group" id="rt-custom-times-end" style="display: none;">
+                        <label for="rt-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="rt-end-time" name="end_time" step="1" value="23:59:59">
                     </div>
                     <div class="filter-group">
                         <button type="submit" class="btn btn-primary">' . v2raysocks_traffic_lang('apply_filter') . '</button>
@@ -445,7 +453,46 @@ $realTimeMonitorHtml = '
         }
         
         function loadCustomTimeRangeData() {
-            const params = $("#custom-time-filter").serialize() + "&grouped=true";
+            // Get form data
+            const timeRange = $("#rt-time-range").val();
+            let params = "time_range=" + timeRange + "&grouped=true";
+            
+            // Handle custom date range with time
+            if (timeRange === "custom") {
+                const startDate = $("#rt-start-date").val();
+                const endDate = $("#rt-end-date").val();
+                const startTime = $("#rt-start-time").val();
+                const endTime = $("#rt-end-time").val();
+                
+                if (startDate && endDate) {
+                    // Combine date and time for start timestamp
+                    if (startTime) {
+                        const startDateTime = startDate + " " + startTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        params += "&start_timestamp=" + startTimestamp;
+                    } else {
+                        // Default to start of day if no time specified
+                        const startDateTime = startDate + " 00:00:00";
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        params += "&start_timestamp=" + startTimestamp;
+                    }
+                    
+                    // Combine date and time for end timestamp
+                    if (endTime) {
+                        const endDateTime = endDate + " " + endTime;
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        params += "&end_timestamp=" + endTimestamp;
+                    } else {
+                        // Default to end of day if no time specified
+                        const endDateTime = endDate + " 23:59:59";
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        params += "&end_timestamp=" + endTimestamp;
+                    }
+                    
+                    // Also add the original date parameters for backward compatibility
+                    params += "&start_date=" + startDate + "&end_date=" + endDate;
+                }
+            }
             
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
@@ -854,9 +901,9 @@ $realTimeMonitorHtml = '
             // Time range change handler
             $("#rt-time-range").on("change", function() {
                 if ($(this).val() === "custom") {
-                    $("#rt-custom-dates, #rt-custom-dates-end").show();
+                    $("#rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end").show();
                 } else {
-                    $("#rt-custom-dates, #rt-custom-dates-end").hide();
+                    $("#rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end").hide();
                 }
                 // Removed auto-load - data only updates when Apply button is clicked
             });
