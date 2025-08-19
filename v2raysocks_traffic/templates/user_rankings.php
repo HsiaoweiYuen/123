@@ -1657,9 +1657,13 @@ $userRankingsHtml = '
                             idleTraffic = 0;
                         }
                         
+                        // Format time display based on time range type
+                        const formattedPeakTime = formatPeakIdleTime(peakTime, timeRange);
+                        const formattedIdleTime = formatPeakIdleTime(idleTime, timeRange);
+                        
                         // Update the display elements
-                        document.getElementById("user-peak-time").textContent = peakTime || "-";
-                        document.getElementById("user-idle-time").textContent = idleTime || "-";
+                        document.getElementById("user-peak-time").textContent = formattedPeakTime || "-";
+                        document.getElementById("user-idle-time").textContent = formattedIdleTime || "-";
                         document.getElementById("user-peak-traffic").innerHTML = formatBytes(peakTraffic);
                         document.getElementById("user-idle-traffic").innerHTML = formatBytes(idleTraffic);
                     } else {
@@ -2322,7 +2326,7 @@ $userRankingsHtml = '
                 const endDate = document.getElementById("end-date").value;
                 
                 if (startDate && endDate) {
-                    return `${startDate} ${t("to")} ${endDate}`;
+                    return startDate + " " + t("to") + " " + endDate;
                 } else {
                     return t("custom_date_range");
                 }
@@ -2331,13 +2335,79 @@ $userRankingsHtml = '
                 const endTime = document.getElementById("end-time").value;
                 
                 if (startTime && endTime) {
-                    return `${startTime} ${t("to")} ${endTime}`;
+                    return startTime + " " + t("to") + " " + endTime;
                 } else {
                     return t("custom_time_range");
                 }
             }
             
             return getTimeRangeText(timeRange);
+        }
+        
+        function formatPeakIdleTime(timeKey, timeRange) {
+            if (!timeKey) return "-";
+            
+            // Handle different time formats based on time range type
+            switch (timeRange) {
+                case "today":
+                case "time_range":
+                    // For today and custom time ranges, timeKey should already be in HH:00 format
+                    // Just ensure it is properly formatted as time
+                    if (timeKey.match(/^\d{1,2}:\d{2}$/)) {
+                        return timeKey; // Already in correct format like "14:00"
+                    }
+                    // Fallback: if it is a full datetime, extract the time part
+                    if (timeKey.includes(" ")) {
+                        const timePart = timeKey.split(" ")[1];
+                        if (timePart && timePart.includes(":")) {
+                            return timePart.substring(0, 5); // Extract HH:MM
+                        }
+                    }
+                    return timeKey;
+                    
+                case "custom":
+                    // For custom date ranges, check if it is a single day or multiple days
+                    const startDate = document.getElementById("start-date").value;
+                    const endDate = document.getElementById("end-date").value;
+                    
+                    if (startDate && endDate && startDate === endDate) {
+                        // Single day custom range - show time
+                        if (timeKey.match(/^\d{1,2}:\d{2}$/)) {
+                            return timeKey; // Already in correct format like "14:00"
+                        }
+                        // Extract time from datetime if needed
+                        if (timeKey.includes(" ")) {
+                            const timePart = timeKey.split(" ")[1];
+                            if (timePart && timePart.includes(":")) {
+                                return timePart.substring(0, 5); // Extract HH:MM
+                            }
+                        }
+                    } else {
+                        // Multi-day custom range - show date
+                        if (timeKey.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            return timeKey; // Already in YYYY-MM-DD format
+                        }
+                        // Extract date from datetime if needed
+                        if (timeKey.includes(" ")) {
+                            return timeKey.split(" ")[0]; // Extract date part
+                        }
+                    }
+                    return timeKey;
+                    
+                case "week":
+                case "15days":
+                case "month":
+                default:
+                    // For multi-day ranges, show date
+                    if (timeKey.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        return timeKey; // Already in YYYY-MM-DD format
+                    }
+                    // Extract date from datetime if needed
+                    if (timeKey.includes(" ")) {
+                        return timeKey.split(" ")[0]; // Extract date part
+                    }
+                    return timeKey;
+            }
         }
         
         // Close modal when clicking outside
