@@ -389,6 +389,8 @@ function v2raysocks_traffic_output($vars)
                     'time_range' => $_GET['time_range'] ?? 'month_including_today',
                     'start_date' => $_GET['start_date'] ?? null,
                     'end_date' => $_GET['end_date'] ?? null,
+                    'start_timestamp' => $_GET['start_timestamp'] ?? null,
+                    'end_timestamp' => $_GET['end_timestamp'] ?? null,
                 ];
                 
                 if (empty($serviceId)) {
