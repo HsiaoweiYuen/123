@@ -36,7 +36,9 @@ $serviceSearchHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-times,
+        .form-group#custom-times-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -143,12 +145,14 @@ $serviceSearchHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
+            .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-times,
+            .form-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -187,12 +191,16 @@ $serviceSearchHtml = '
                 flex: 1 1 auto;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-times,
+            .form-group#custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-times input,
+            .form-group#custom-times-end input {
                 width: 100%;
             }
             .table th, .table td {
@@ -276,6 +284,20 @@ $serviceSearchHtml = '
                         return null; // Invalid custom range
                     }
                     break;
+                case "time_range":
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        startDate = new Date(todayStr + " " + startTimeInput);
+                        endDate = new Date(todayStr + " " + endTimeInput);
+                    } else {
+                        return null; // Invalid custom time range
+                    }
+                    break;
                 default:
                     return null;
             }
@@ -336,6 +358,7 @@ $serviceSearchHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -345,6 +368,14 @@ $serviceSearchHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times" style="display: none;">
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times-end" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -445,7 +476,8 @@ $serviceSearchHtml = '
                         <label>' . v2raysocks_traffic_lang('export_type') . '</label><br>
                         <label><input type="radio" name="service_export_type" value="all" checked> ' . v2raysocks_traffic_lang('all_filtered_data') . '</label><br>
                         <label><input type="radio" name="service_export_type" value="limited"> ' . v2raysocks_traffic_lang('limited_number_of_records') . '</label><br>
-                        <label><input type="radio" name="service_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label>
+                        <label><input type="radio" name="service_export_type" value="date_range"> ' . v2raysocks_traffic_lang('custom_date_range') . '</label><br>
+                        <label><input type="radio" name="service_export_type" value="time_range"> ' . v2raysocks_traffic_lang('custom_time_range') . '</label>
                     </div>
                     
                     <div id="service-limit-options" style="margin-bottom: 15px; display: none;">
@@ -458,6 +490,14 @@ $serviceSearchHtml = '
                         <input type="date" id="service_export_start_date" name="export_start_date"><br><br>
                         <label for="service_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
                         <input type="date" id="service_export_end_date" name="export_end_date">
+                    </div>
+                    
+                    <div id="service-time-range-options" style="margin-bottom: 15px; display: none;">
+                        <label for="service_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="service_export_start_time" name="export_start_time" step="1"><br>
+                        <label for="service_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="service_export_end_time" name="export_end_time" step="1">
+                        <br><small style="color: #6c757d; margin-top: 5px; display: block;">' . v2raysocks_traffic_lang('time_range_today_only') . '</small>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
@@ -528,10 +568,19 @@ $serviceSearchHtml = '
             
             // Time range change handler
             $("#time_range").on("change", function() {
-                if ($(this).val() === "custom") {
-                    $("#custom-dates, #custom-dates-end").show();
+                const timeRange = $(this).val();
+                const customDates = $("#custom-dates, #custom-dates-end");
+                const customTimes = $("#custom-times, #custom-times-end");
+                
+                if (timeRange === "custom") {
+                    customDates.show();
+                    customTimes.hide();
+                } else if (timeRange === "time_range") {
+                    customTimes.show();
+                    customDates.hide();
                 } else {
-                    $("#custom-dates, #custom-dates-end").hide();
+                    customDates.hide();
+                    customTimes.hide();
                 }
             });
             
@@ -595,10 +644,11 @@ $serviceSearchHtml = '
             });
             
             // Export type change handlers
-            $("input[name=\'service_export_type\']").on("change", function() {
+            $("input[name=\\"service_export_type\\"]").on("change", function() {
                 const type = $(this).val();
                 $("#service-limit-options").toggle(type === "limited");
                 $("#service-date-range-options").toggle(type === "date_range");
+                $("#service-time-range-options").toggle(type === "time_range");
             });
             
             // Export form submission
@@ -609,7 +659,7 @@ $serviceSearchHtml = '
                 const searchParams = $.param(currentSearchParams);
                 
                 // Get export options
-                const exportType = $("input[name=\'service_export_type\']:checked").val();
+                const exportType = $("input[name=\\"service_export_type\\"]:checked").val();
                 const format = $("#service_export_format").val();
                 
                 let exportParams = searchParams + "&export_type=" + exportType + "&format=" + format;
@@ -633,6 +683,24 @@ $serviceSearchHtml = '
                     
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
+                } else if (exportType === "time_range") {
+                    const startTime = $("#service_export_start_time").val();
+                    const endTime = $("#service_export_end_time").val();
+                    
+                    if (startTime && endTime) {
+                        // Convert time to todays date + time for timestamp calculation
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                       (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                       today.getDate().toString().padStart(2, "0");
+                        const startDateTime = todayStr + " " + startTime;
+                        const endDateTime = todayStr + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        
+                        exportParams += "&export_start_timestamp=" + startTimestamp;
+                        exportParams += "&export_end_timestamp=" + endTimestamp;
+                    }
                 }
                 
                 // Trigger download
@@ -680,6 +748,8 @@ $serviceSearchHtml = '
             const timeRange = $("#time_range").val();
             const startDate = $("#start_date").val();
             const endDate = $("#end_date").val();
+            const startTime = $("#start_time").val();
+            const endTime = $("#end_time").val();
             
             if (!searchValue) {
                 alert("Please enter a search value");
@@ -693,6 +763,22 @@ $serviceSearchHtml = '
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
+            
+            // Handle custom time range
+            if (timeRange === "time_range" && startTime && endTime) {
+                // Convert time to todays date + time for timestamp calculation
+                const today = new Date();
+                const todayStr = today.getFullYear() + "-" + 
+                               (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                               today.getDate().toString().padStart(2, "0");
+                const startDateTime = todayStr + " " + startTime;
+                const endDateTime = todayStr + " " + endTime;
+                const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                
+                requestData.start_timestamp = startTimestamp;
+                requestData.end_timestamp = endTimestamp;
+            }
             
             // Add search parameter based on type
             switch(searchType) {
@@ -929,6 +1015,35 @@ $serviceSearchHtml = '
                             const month = String(date.getMonth() + 1).padStart(2, "0");
                             const day = String(date.getDate()).padStart(2, "0");
                             labels.push(year + "-" + month + "-" + day);
+                        }
+                    }
+                    break;
+                    
+                case "time_range":
+                    // Generate hourly labels for custom time range
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                       (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                       today.getDate().toString().padStart(2, "0");
+                        const startDateTime = new Date(todayStr + " " + startTimeInput);
+                        const endDateTime = new Date(todayStr + " " + endTimeInput);
+                        
+                        // Generate hourly labels between start and end time
+                        const current = new Date(startDateTime);
+                        while (current <= endDateTime) {
+                            const hour = current.getHours().toString().padStart(2, "0");
+                            const minute = current.getMinutes().toString().padStart(2, "0");
+                            labels.push(hour + ":" + minute);
+                            current.setHours(current.getHours() + 1);
+                        }
+                    } else {
+                        // Fallback to todays hours if time range is not valid
+                        const currentHour = now.getHours();
+                        for (let hour = 0; hour <= currentHour; hour++) {
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
                         }
                     }
                     break;
