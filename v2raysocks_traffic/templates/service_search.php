@@ -928,11 +928,30 @@ $serviceSearchHtml = '
             
             switch (timeRange) {
                 case "today":
-                case "time_range":
                     // Generate hours up to current time only
                     const currentHour = now.getHours();
                     for (let hour = 0; hour <= currentHour; hour++) {
                         labels.push(hour + ":00");
+                    }
+                    break;
+                case "time_range":
+                    // Generate hours for custom time range only
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const [startHour, startMin] = startTimeInput.split(":").map(Number);
+                        const [endHour, endMin] = endTimeInput.split(":").map(Number);
+                        
+                        // Generate hourly labels only within the selected time range
+                        for (let hour = startHour; hour <= endHour; hour++) {
+                            labels.push(hour.toString().padStart(2, "0") + ":00");
+                        }
+                    } else {
+                        // Fallback to current day hours if time inputs are not available
+                        const currentHour = now.getHours();
+                        for (let hour = 0; hour <= currentHour; hour++) {
+                            labels.push(hour + ":00");
+                        }
                     }
                     break;
                     
