@@ -663,6 +663,8 @@ $serviceSearchHtml = '
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
                 }
+                // Note: For exportType === "all", timestamp parameters are already included 
+                // in currentSearchParams from the search function and passed via searchParams
                 
                 // Trigger download
                 window.open("addonmodules.php?module=v2raysocks_traffic&action=export_data&" + exportParams);

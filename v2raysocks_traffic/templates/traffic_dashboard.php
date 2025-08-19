@@ -777,6 +777,27 @@ $trafficDashboardHtml = '
                     
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
+                } else if (exportType === "all") {
+                    // For "all" export type, include timestamp parameters if time_range is selected
+                    const timeRange = $("#time-range").val();
+                    if (timeRange === "time_range") {
+                        const startTime = $("#start-time").val();
+                        const endTime = $("#end-time").val();
+                        
+                        if (startTime && endTime) {
+                            // Convert time to today\'s date + time for timestamp calculation
+                            const today = new Date();
+                            const todayStr = today.getFullYear() + "-" + 
+                                            (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                            today.getDate().toString().padStart(2, "0");
+                            const startDateTime = todayStr + " " + startTime;
+                            const endDateTime = todayStr + " " + endTime;
+                            const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                            const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                            
+                            exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        }
+                    }
                 }
                 
                 // Trigger download
