@@ -2181,7 +2181,7 @@ $userRankingsHtml = '
                             callbacks: {
                                 label: function(context) {
                                     const value = context.parsed.y;
-                                    const formattedValue = Number(value.toFixed(2));
+                                    const formattedValue = value.toFixed(2);
                                     const label = context.dataset.label || "";
                                     
                                     // Use translation functions instead of regex replacement
@@ -2223,7 +2223,7 @@ $userRankingsHtml = '
                             },
                             ticks: {
                                 callback: function(value) {
-                                    return Number(value.toFixed(2)) + " " + unitLabel;
+                                    return value.toFixed(2) + " " + unitLabel;
                                 }
                             }
                         },
@@ -2292,7 +2292,7 @@ $userRankingsHtml = '
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             const value = bytes / Math.pow(k, i);
             // Use Number.prototype.toFixed() to match PHP number_format() behavior
-            return Number(value.toFixed(2)) + "&nbsp;" + sizes[i];
+            return value.toFixed(2) + "&nbsp;" + sizes[i];
         }
         
         function formatTimeAgo(timestamp) {
