@@ -36,7 +36,9 @@ $serviceSearchHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-start-time,
+        .form-group#custom-end-time {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -143,12 +145,14 @@ $serviceSearchHtml = '
                 flex: 0 0 auto;
             }
             /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
+            .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-start-time):not(#custom-end-time) {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-start-time,
+            .form-group#custom-end-time {
                 flex: 1 1 calc(50% - 4px);
                 min-width: 140px;
             }
@@ -187,12 +191,16 @@ $serviceSearchHtml = '
                 flex: 1 1 auto;
             }
             .form-group#custom-dates,
-            .form-group#custom-dates-end {
+            .form-group#custom-dates-end,
+            .form-group#custom-start-time,
+            .form-group#custom-end-time {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
+            .form-group#custom-dates-end input,
+            .form-group#custom-start-time input,
+            .form-group#custom-end-time input {
                 width: 100%;
             }
             .table th, .table td {
@@ -269,9 +277,14 @@ $serviceSearchHtml = '
                 case "custom":
                     const startDateInput = document.getElementById("start_date").value;
                     const endDateInput = document.getElementById("end_date").value;
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
                     if (startDateInput && endDateInput) {
-                        startDate = new Date(startDateInput);
-                        endDate = new Date(endDateInput + " 23:59:59");
+                        // Combine date and time inputs for precise timestamp control
+                        const startTimeValue = startTimeInput || "00:00:00";
+                        const endTimeValue = endTimeInput || "23:59:59";
+                        startDate = new Date(startDateInput + " " + startTimeValue);
+                        endDate = new Date(endDateInput + " " + endTimeValue);
                     } else {
                         return null; // Invalid custom range
                     }
@@ -345,6 +358,14 @@ $serviceSearchHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-start-time" style="display: none;">
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" value="00:00:00" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-end-time" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" value="23:59:59" style="width: 100%;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -529,9 +550,9 @@ $serviceSearchHtml = '
             // Time range change handler
             $("#time_range").on("change", function() {
                 if ($(this).val() === "custom") {
-                    $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-dates, #custom-dates-end, #custom-start-time, #custom-end-time").show();
                 } else {
-                    $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-dates, #custom-dates-end, #custom-start-time, #custom-end-time").hide();
                 }
             });
             
@@ -680,10 +701,31 @@ $serviceSearchHtml = '
             const timeRange = $("#time_range").val();
             const startDate = $("#start_date").val();
             const endDate = $("#end_date").val();
+            const startTime = $("#start_time").val();
+            const endTime = $("#end_time").val();
             
             if (!searchValue) {
                 alert("Please enter a search value");
                 return;
+            }
+            
+            // Validate custom date and time range
+            if (timeRange === "custom") {
+                if (!startDate || !endDate) {
+                    alert("' . v2raysocks_traffic_lang('select_start_end_dates') . '");
+                    return;
+                }
+                
+                // Convert to timestamps if time is provided
+                if (startTime && endTime) {
+                    const startDateTime = new Date(startDate + " " + startTime);
+                    const endDateTime = new Date(endDate + " " + endTime);
+                    
+                    if (startDateTime >= endDateTime) {
+                        alert("' . v2raysocks_traffic_lang('start_date_after_end_date') . '");
+                        return;
+                    }
+                }
             }
             
             // Build request parameters based on search type
@@ -691,8 +733,23 @@ $serviceSearchHtml = '
                 time_range: timeRange
             };
             
-            if (startDate) requestData.start_date = startDate;
-            if (endDate) requestData.end_date = endDate;
+            // Handle custom date range with optional time
+            if (timeRange === "custom" && startDate && endDate) {
+                if (startTime && endTime) {
+                    // Use timestamps for precise time control
+                    const startDateTime = new Date(startDate + " " + startTime);
+                    const endDateTime = new Date(endDate + " " + endTime);
+                    requestData.start_timestamp = Math.floor(startDateTime.getTime() / 1000);
+                    requestData.end_timestamp = Math.floor(endDateTime.getTime() / 1000);
+                } else {
+                    // Fallback to date-only (existing behavior)
+                    requestData.start_date = startDate;
+                    requestData.end_date = endDate;
+                }
+            } else if (startDate) {
+                requestData.start_date = startDate;
+                if (endDate) requestData.end_date = endDate;
+            }
             
             // Add search parameter based on type
             switch(searchType) {
