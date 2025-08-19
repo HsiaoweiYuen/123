@@ -2941,11 +2941,11 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
 /**
  * Get detailed traffic chart data for a specific user
  */
-function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $startDate = null, $endDate = null)
+function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_chart_' . md5($userId . '_' . $timeRange . '_' . ($startDate ?: '') . '_' . ($endDate ?: ''));
+        $cacheKey = 'user_traffic_chart_' . md5($userId . '_' . $timeRange . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3005,6 +3005,18 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                     }
                 } else {
                     // Fallback to today if custom dates are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                    $interval = 3600;
+                }
+                break;
+            case 'time_range':
+                if ($startTimestamp && $endTimestamp) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                    $interval = 3600; // 1 hour intervals for custom time ranges
+                } else {
+                    // Fallback to today if timestamps are invalid
                     $startTime = strtotime('today');
                     $endTime = strtotime('tomorrow') - 1;
                     $interval = 3600;
@@ -3852,8 +3864,8 @@ function v2raysocks_traffic_groupDataByTime($data, $timeRange = 'today') {
         $date->setTimestamp($timestamp);
         
         // Time grouping using server local time (not UTC) - consistent with PR#37
-        if ($timeRange === 'today' || ($timeRange === 'custom' && $useHourlyGrouping)) {
-            // For today or custom same-day ranges, group by hour with proper time display
+        if ($timeRange === 'today' || $timeRange === 'time_range' || ($timeRange === 'custom' && $useHourlyGrouping)) {
+            // For today, custom time ranges, or custom same-day ranges, group by hour with proper time display
             $timeKey = $date->format('H') . ':00';
         } else if (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'month_including_today'])) {
             // For weekly/bi-weekly/monthly ranges, use Y-m-d format for compatibility

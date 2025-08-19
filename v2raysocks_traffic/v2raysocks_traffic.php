@@ -603,12 +603,14 @@ function v2raysocks_traffic_output($vars)
                 $timeRange = $_GET['time_range'] ?? 'today';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
+                $startTimestamp = $_GET['start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? null;
                 
                 if (!$userId) {
                     throw new Exception('User ID is required');
                 }
                 
-                $chartData = v2raysocks_traffic_getUserTrafficChart($userId, $timeRange, $startDate, $endDate);
+                $chartData = v2raysocks_traffic_getUserTrafficChart($userId, $timeRange, $startDate, $endDate, $startTimestamp, $endTimestamp);
                 $result = [
                     'status' => 'success',
                     'data' => $chartData
