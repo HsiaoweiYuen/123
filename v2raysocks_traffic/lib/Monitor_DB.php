@@ -2941,11 +2941,11 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
 /**
  * Get detailed traffic chart data for a specific user
  */
-function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $startDate = null, $endDate = null)
+function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_chart_' . md5($userId . '_' . $timeRange . '_' . ($startDate ?: '') . '_' . ($endDate ?: ''));
+        $cacheKey = 'user_traffic_chart_' . md5($userId . '_' . $timeRange . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3005,6 +3005,18 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
                     }
                 } else {
                     // Fallback to today if custom dates are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                    $interval = 3600;
+                }
+                break;
+            case 'time_range':
+                if ($startTimestamp && $endTimestamp) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                    $interval = 3600; // 1 hour intervals for custom time ranges
+                } else {
+                    // Fallback to today if timestamps are invalid
                     $startTime = strtotime('today');
                     $endTime = strtotime('tomorrow') - 1;
                     $interval = 3600;
