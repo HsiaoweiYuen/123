@@ -36,7 +36,9 @@ $serviceSearchHtml = '
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
-        .form-group#custom-dates-end {
+        .form-group#custom-dates-end,
+        .form-group#custom-times,
+        .form-group#custom-times-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -276,6 +278,21 @@ $serviceSearchHtml = '
                         return null; // Invalid custom range
                     }
                     break;
+                case "time_range":
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        // Convert time to today date + time
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        
+                        startDate = new Date(todayStr + " " + startTimeInput);
+                        endDate = new Date(todayStr + " " + endTimeInput);
+                    } else {
+                        return null; // Invalid time range
+                    }
+                    break;
                 default:
                     return null;
             }
@@ -336,6 +353,7 @@ $serviceSearchHtml = '
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
                             <option value="month_including_today">' . v2raysocks_traffic_lang('last_30_days') . '</option>
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
+                            <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
@@ -345,6 +363,14 @@ $serviceSearchHtml = '
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
                         <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times" style="display: none;">
+                        <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%;">
+                    </div>
+                    <div class="form-group" id="custom-times-end" style="display: none;">
+                        <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -528,10 +554,16 @@ $serviceSearchHtml = '
             
             // Time range change handler
             $("#time_range").on("change", function() {
-                if ($(this).val() === "custom") {
+                const value = $(this).val();
+                if (value === "custom") {
                     $("#custom-dates, #custom-dates-end").show();
+                    $("#custom-times, #custom-times-end").hide();
+                } else if (value === "time_range") {
+                    $("#custom-times, #custom-times-end").show();
+                    $("#custom-dates, #custom-dates-end").hide();
                 } else {
                     $("#custom-dates, #custom-dates-end").hide();
+                    $("#custom-times, #custom-times-end").hide();
                 }
             });
             
@@ -680,6 +712,8 @@ $serviceSearchHtml = '
             const timeRange = $("#time_range").val();
             const startDate = $("#start_date").val();
             const endDate = $("#end_date").val();
+            const startTime = $("#start_time").val();
+            const endTime = $("#end_time").val();
             
             if (!searchValue) {
                 alert("Please enter a search value");
@@ -693,6 +727,29 @@ $serviceSearchHtml = '
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
+            
+            // Handle time_range option by adding timestamp parameters
+            if (timeRange === "time_range") {
+                if (startTime && endTime) {
+                    // Convert time to today date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    requestData.start_timestamp = startTimestamp;
+                    requestData.end_timestamp = endTimestamp;
+                } else {
+                    alert("' . v2raysocks_traffic_lang('select_start_end_times') . '");
+                    return;
+                }
+            }
             
             // Add search parameter based on type
             switch(searchType) {
@@ -929,6 +986,36 @@ $serviceSearchHtml = '
                             const month = String(date.getMonth() + 1).padStart(2, "0");
                             const day = String(date.getDate()).padStart(2, "0");
                             labels.push(year + "-" + month + "-" + day);
+                        }
+                    }
+                    break;
+                    
+                case "time_range":
+                    // Generate hourly labels for custom time range (assumes today)
+                    const startTimeInput = document.getElementById("start_time").value;
+                    const endTimeInput = document.getElementById("end_time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const startHour = parseInt(startTimeInput.split(\":\")[0]);
+                        const endHour = parseInt(endTimeInput.split(\":\")[0]);
+                        
+                        if (endHour >= startHour) {
+                            for (let hour = startHour; hour <= endHour; hour++) {
+                                labels.push(String(hour).padStart(2, \"0\") + \":00\");
+                            }
+                        } else {
+                            // Cross-midnight case: start hour to 23, then 0 to end hour
+                            for (let hour = startHour; hour <= 23; hour++) {
+                                labels.push(String(hour).padStart(2, \"0\") + \":00\");
+                            }
+                            for (let hour = 0; hour <= endHour; hour++) {
+                                labels.push(String(hour).padStart(2, \"0\") + \":00\");
+                            }
+                        }
+                    } else {
+                        // Fallback to current hour range
+                        const currentHour = now.getHours();
+                        for (let hour = 0; hour <= currentHour; hour++) {
+                            labels.push(String(hour).padStart(2, \"0\") + \":00\");
                         }
                     }
                     break;
