@@ -313,8 +313,8 @@ $_LANG = [
     // ========================================
     // NODE STATISTICS (节点统计页面)
     // ========================================
-    'node_rankings_title_today' => 'Node Traffic Statistics (Today Only)',
-    'node_rankings_table_title_today' => 'Node Traffic Ranking Board (Today)',
+    'node_rankings_title_today' => 'Node Traffic Statistics',
+    'node_rankings_table_title_today' => 'Node Traffic Ranking Board',
     'node_rankings_loading' => 'Loading node ranking data...',
     'loading_node_rankings' => 'Loading node ranking data...',
     'node_details_title' => 'Node Details',
