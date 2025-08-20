@@ -2262,6 +2262,9 @@ $userRankingsHtml = '
             // Store the search value globally for use in export
             window.currentUserNodeSearchFilter = nodeSearchValue;
             
+            // Calculate and display time range before showing modal
+            updateUserExportTimeRange();
+            
             // Show the enhanced export modal instead of direct export
             document.getElementById("user-export-modal").style.display = "block";
         }
@@ -2277,8 +2280,75 @@ $userRankingsHtml = '
         }
         
         function exportUserRankings() {
+            // Calculate and display time range before showing modal
+            updateUserExportTimeRange();
+            
             // Show export confirmation dialog instead of direct export
             document.getElementById("user-export-modal").style.display = "block";
+        }
+        
+        function updateUserExportTimeRange() {
+            // Calculate and display specific time range
+            const timeFilter = document.getElementById("time-range").value;
+            const startTime = document.getElementById("start-time").value;
+            const endTime = document.getElementById("end-time").value;
+            const startDate = document.getElementById("start-date").value;
+            const endDate = document.getElementById("end-date").value;
+            
+            let timeRangeText = "-";
+            const now = new Date();
+            
+            if (timeFilter === "time_range" && startTime && endTime) {
+                // For custom time range, use the selected start and end times with today date
+                const today = now.toISOString().split(\'T\')[0]; // YYYY-MM-DD format
+                timeRangeText = today + " " + startTime + " 至 " + today + " " + endTime;
+            } else if (timeFilter === "custom" && startDate && endDate) {
+                // For custom date range, show the date range
+                timeRangeText = startDate + " 00:00:00 至 " + endDate + " 23:59:59";
+            } else {
+                // Calculate actual time ranges for predefined periods
+                let startDateTime, endDateTime;
+                
+                switch (timeFilter) {
+                    case "today":
+                        startDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        endDateTime = new Date(now);
+                        break;
+                    case "week":
+                        startDateTime = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+                        startDateTime = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate());
+                        endDateTime = new Date(now);
+                        break;
+                    case "15days":
+                        startDateTime = new Date(now.getTime() - (15 * 24 * 60 * 60 * 1000));
+                        startDateTime = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate());
+                        endDateTime = new Date(now);
+                        break;
+                    case "month":
+                        startDateTime = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                        startDateTime = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate());
+                        endDateTime = new Date(now);
+                        break;
+                    default:
+                        startDateTime = endDateTime = null;
+                }
+                
+                if (startDateTime && endDateTime) {
+                    const formatDateTime = (date) => {
+                        const year = date.getFullYear();
+                        const month = (date.getMonth() + 1).toString().padStart(2, \'0\');
+                        const day = date.getDate().toString().padStart(2, \'0\');
+                        const hours = date.getHours().toString().padStart(2, \'0\');
+                        const minutes = date.getMinutes().toString().padStart(2, \'0\');
+                        const seconds = date.getSeconds().toString().padStart(2, \'0\');
+                        return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+                    };
+                    
+                    timeRangeText = formatDateTime(startDateTime) + " 至 " + formatDateTime(endDateTime);
+                }
+            }
+            
+            document.getElementById("user-export-time-range").textContent = timeRangeText;
         }
         
         // Utility functions
@@ -2651,6 +2721,13 @@ $userRankingsHtml = '
                         <option value="csv">' . v2raysocks_traffic_lang('csv') . '</option>
                         <option value="json">' . v2raysocks_traffic_lang('json') . '</option>
                     </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <small style="color: #6c757d;">
+                        <strong>' . v2raysocks_traffic_lang('current_search_conditions') . '</strong><br>
+                        • ' . v2raysocks_traffic_lang('time_range_label') . ': <span id="user-export-time-range">-</span>
+                    </small>
                 </div>
                 
                 <div style="text-align: right;">

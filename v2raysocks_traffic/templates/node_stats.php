@@ -791,8 +791,7 @@ $nodeStatsHtml = '
                     }
                 }
                 
-                // Auto-refresh rankings when time range changes
-                loadNodeRankings();
+                // Do not auto-refresh rankings - user must click refresh button
             });
         });
         
