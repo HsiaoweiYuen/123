@@ -1191,8 +1191,7 @@ $nodeStatsHtml = '
                     const startTime = document.getElementById("node-rankings-start-time").value;
                     const endTime = document.getElementById("node-rankings-end-time").value;
                     if (startTime && endTime) {
-                        const today = now.toISOString().split(\'T\')[0]; // YYYY-MM-DD format
-                        return today + " " + startTime + " - " + endTime;
+                        return startTime + " - " + endTime;
                     }
                     return "Custom range";
                 default:
