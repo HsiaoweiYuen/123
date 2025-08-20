@@ -617,6 +617,10 @@ $userRankingsHtml = '
             <form id="user-rankings-filter">
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
+                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '">
+                    </div>
+                    <div class="form-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="time-range" name="time_range">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
@@ -642,10 +646,6 @@ $userRankingsHtml = '
                     <div class="form-group" id="custom-times-end" style="display: none;">
                         <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
                         <input type="time" id="end-time" name="end_time" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="service-id-search">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id-search" name="service_id_search" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
