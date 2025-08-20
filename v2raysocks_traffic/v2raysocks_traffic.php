@@ -587,10 +587,12 @@ function v2raysocks_traffic_output($vars)
             try {
                 $nodeId = $_GET['node_id'] ?? null;
                 $timeRange = $_GET['time_range'] ?? 'today';
+                $startTimestamp = $_GET['start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? null;
                 if (!$nodeId) {
                     throw new Exception('Node ID is required');
                 }
-                $chartData = v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange);
+                $chartData = v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange, $startTimestamp, $endTimestamp);
                 $result = [
                     'status' => 'success',
                     'data' => $chartData
@@ -645,8 +647,8 @@ function v2raysocks_traffic_output($vars)
                 $timeRange = $_GET['time_range'] ?? 'today';
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
-                $startTimestamp = $_GET['export_start_timestamp'] ?? null;
-                $endTimestamp = $_GET['export_end_timestamp'] ?? null;
+                $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
                 $limit = intval($_GET['limit'] ?? 100);
                 
                 $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
