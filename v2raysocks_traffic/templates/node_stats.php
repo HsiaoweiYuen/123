@@ -319,15 +319,7 @@ $nodeStatsHtml = '
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
             }
-            #node-custom-time-range div[style*="display: flex"] {
-                flex-direction: row !important;
-                flex-wrap: wrap !important;
-                gap: 10px !important;
-            }
-            #node-custom-time-range div[style*="flex: 0 0"] {
-                flex: 0 0 auto !important;
-                min-width: 120px !important;
-            }
+
         }
         
         /* Ensure charts stay within bounds */
@@ -648,35 +640,12 @@ $nodeStatsHtml = '
                                 <label for="node-search-value" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_value_label') . ':</label>
                                 <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             </div>
-                            <div style="flex: 0 0 180px; min-width: 150px;">
-                                <label for="node-time-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                                <select id="node-time-filter" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                                    <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
-                                    <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
-                                    <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
-                                    <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
-                                    <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
-                                    <option value="custom_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
-                                </select>
-                            </div>
+
                             <div style="display: flex; gap: 10px;">
                                 <button id="search-node-records" class="btn btn-primary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('search') . '</button>
                             </div>
                         </div>
-                        
-                        <!-- Custom Time Range Options -->
-                        <div id="node-custom-time-range" style="margin-top: 15px; display: none;">
-                            <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                                <div style="flex: 0 0 140px;">
-                                    <label for="node-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                                    <input type="time" id="node-start-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                                </div>
-                                <div style="flex: 0 0 140px;">
-                                    <label for="node-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                                    <input type="time" id="node-end-time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                     
                     <div class="usage-records-header">
@@ -1360,9 +1329,11 @@ $nodeStatsHtml = '
         }
         
         function loadNodeUsageRecords() {
-            // Get search parameters from new structure
+            // Get search parameters from search controls only
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
+            
+            // Use main page time range instead of modal time filter
             const timeFilter = document.getElementById("node-rankings-time-range").value;
             const startTime = document.getElementById("node-rankings-start-time").value;
             const endTime = document.getElementById("node-rankings-end-time").value;
@@ -1379,7 +1350,7 @@ $nodeStatsHtml = '
                 }
             }
             
-            // Handle time filtering
+            // Handle time filtering using main page selection
             if (timeFilter === "custom_range" && startTime && endTime) {
                 // Convert time values to current date + time for timestamp calculation
                 const today = new Date();
@@ -1880,7 +1851,7 @@ $nodeStatsHtml = '
                 document.getElementById("export-user-id").textContent = "-";
             }
             
-            // Calculate and display specific time range
+            // Calculate and display specific time range from main page
             const timeFilter = document.getElementById("node-rankings-time-range").value;
             const startTime = document.getElementById("node-rankings-start-time").value;
             const endTime = document.getElementById("node-rankings-end-time").value;
@@ -1998,25 +1969,7 @@ $nodeStatsHtml = '
                 $("#node-usage-limit-options").toggle(type === "limited");
                 $("#node-usage-time-range-options").toggle(type === "time_range");
             });
-            
-            // Time filter change handler for custom range
-            $("#node-time-filter").on("change", function() {
-                const isCustomRange = $(this).val() === "custom_range";
-                $("#node-custom-time-range").toggle(isCustomRange);
-                
-                // Set default time range for custom selection
-                if (isCustomRange) {
-                    const now = new Date();
-                    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
-                    
-                    if (!$("#node-start-time").val()) {
-                        $("#node-start-time").val("00:00:00");
-                    }
-                    if (!$("#node-end-time").val()) {
-                        $("#node-end-time").val(currentTime);
-                    }
-                }
-            });
+
             
             // Search handlers for new structure
             $("#search-node-records").on("click", function() {
@@ -2127,7 +2080,7 @@ $nodeStatsHtml = '
                 const exportType = $("input[name=\'node_usage_export_type\']:checked").val();
                 const format = $("#node_usage_export_format").val();
                 
-                // Get current search parameters from new structure
+                // Get current search parameters from search controls and main page time range
                 const searchType = document.getElementById("node-search-type").value;
                 const searchValue = document.getElementById("node-search-value").value.trim();
                 const timeFilter = document.getElementById("node-rankings-time-range").value;
