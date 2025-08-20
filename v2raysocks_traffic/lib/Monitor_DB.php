@@ -2848,11 +2848,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
 /**
  * Get detailed traffic chart data for a specific node (today only by default)
  */
-function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
+function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'node_traffic_chart_' . md5($nodeId . '_' . $timeRange);
+        $cacheKey = 'node_traffic_chart_' . md5($nodeId . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2908,6 +2908,28 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
                 $endTime = time();
                 $interval = 86400; // 1 day intervals
                 break;
+            case 'custom':
+                if ($startTimestamp && $endTimestamp) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                    // Determine interval based on time range duration
+                    $duration = $endTime - $startTime;
+                    if ($duration <= 3600) { // 1 hour or less
+                        $interval = 300; // 5 minute intervals
+                    } else if ($duration <= 14400) { // 4 hours or less
+                        $interval = 900; // 15 minute intervals
+                    } else if ($duration <= 86400) { // 1 day or less
+                        $interval = 3600; // 1 hour intervals
+                    } else {
+                        $interval = 86400; // 1 day intervals for longer periods
+                    }
+                } else {
+                    // Fallback to today if timestamps are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                    $interval = 3600;
+                }
+                break;
             default:
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;
@@ -2956,6 +2978,14 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             if ($timeRange === 'today') {
                 // For today, group by hour with proper time display
                 $timeKey = $date->format('H') . ':00';
+            } else if ($timeRange === 'custom') {
+                // For custom time ranges, use appropriate granularity based on duration
+                $duration = $endTime - $startTime;
+                if ($duration <= 86400) { // 1 day or less
+                    $timeKey = $date->format('H') . ':00'; // Hour granularity
+                } else {
+                    $timeKey = $date->format('Y-m-d'); // Day granularity
+                }
             } else if (in_array($timeRange, ['week', 'month'])) {
                 // For weekly/monthly ranges, group by day using Y-m-d format for frontend compatibility
                 $timeKey = $date->format('Y-m-d'); // Standardized yyyy-mm-dd format
