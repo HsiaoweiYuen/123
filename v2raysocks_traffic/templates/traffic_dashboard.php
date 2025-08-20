@@ -425,6 +425,10 @@ $trafficDashboardHtml = '
             <form id="traffic-filter">
                 <div class="filter-row">
                     <div class="filter-group">
+                        <label for="service-id">' . v2raysocks_traffic_lang('service_id') . ':</label>
+                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%;">
+                    </div>
+                    <div class="filter-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="time-range" name="time_range" style="width: 100%;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
@@ -434,10 +438,6 @@ $trafficDashboardHtml = '
                             <option value="custom">' . v2raysocks_traffic_lang('custom_date_range') . '</option>
                             <option value="time_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="service-id">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%;">
                     </div>
                     <div class="filter-group" id="custom-dates" style="display: none;">
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
