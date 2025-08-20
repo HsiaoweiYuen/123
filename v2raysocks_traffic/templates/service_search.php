@@ -480,7 +480,11 @@ $serviceSearchHtml = '
                         <label for="service_export_start_date">' . v2raysocks_traffic_lang('start_date_label') . ':</label>
                         <input type="date" id="service_export_start_date" name="export_start_date"><br><br>
                         <label for="service_export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
-                        <input type="date" id="service_export_end_date" name="export_end_date">
+                        <input type="date" id="service_export_end_date" name="export_end_date"><br><br>
+                        <label for="service_export_start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="service_export_start_time" name="export_start_time" step="1"><br><br>
+                        <label for="service_export_end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="service_export_end_time" name="export_end_time" step="1">
                     </div>
                     
                     <div style="margin-bottom: 15px;">
@@ -649,11 +653,24 @@ $serviceSearchHtml = '
                 } else if (exportType === "date_range") {
                     const startDate = $("#service_export_start_date").val();
                     const endDate = $("#service_export_end_date").val();
+                    const startTime = $("#service_export_start_time").val();
+                    const endTime = $("#service_export_end_time").val();
                     
                     // Validate export date range against main page search range
                     if (startDate && endDate) {
-                        const exportStart = new Date(startDate);
-                        const exportEnd = new Date(endDate);
+                        let exportStart = new Date(startDate);
+                        let exportEnd = new Date(endDate);
+                        
+                        // If custom time is specified, add it to the date validation
+                        if (startTime) {
+                            exportStart = new Date(startDate + " " + startTime);
+                        }
+                        if (endTime) {
+                            exportEnd = new Date(endDate + " " + endTime);
+                        } else if (endDate) {
+                            // Set end time to end of day if no time specified
+                            exportEnd = new Date(endDate + " 23:59:59");
+                        }
                         
                         if (!validateExportTimeRange(exportStart, exportEnd)) {
                             return; // Stop submission if validation fails
@@ -662,6 +679,8 @@ $serviceSearchHtml = '
                     
                     if (startDate) exportParams += "&export_start_date=" + startDate;
                     if (endDate) exportParams += "&export_end_date=" + endDate;
+                    if (startTime) exportParams += "&export_start_time=" + startTime;
+                    if (endTime) exportParams += "&export_end_time=" + endTime;
                 } else if (exportType === "all") {
                     // Check if main page has custom time range selected and include timestamps
                     const timeRange = document.getElementById("time_range").value;
