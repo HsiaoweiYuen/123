@@ -520,13 +520,21 @@ function v2raysocks_traffic_output($vars)
         case 'get_node_traffic_rankings':
             try {
                 $sortBy = $_GET['sort_by'] ?? 'traffic_desc';
-                $onlyToday = ($_GET['only_today'] ?? 'true') === 'true';
-                $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $onlyToday);
+                $timeRange = $_GET['time_range'] ?? 'today';
+                $startTimestamp = $_GET['start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? null;
+                
+                // Legacy support for only_today parameter
+                if (isset($_GET['only_today'])) {
+                    $timeRange = ($_GET['only_today'] === 'true') ? 'today' : 'all';
+                }
+                
+                $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
                 $result = [
                     'status' => 'success',
                     'data' => $rankings,
                     'sort_by' => $sortBy,
-                    'only_today' => $onlyToday
+                    'time_range' => $timeRange
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_node_traffic_rankings error: " . $e->getMessage(), 0);
