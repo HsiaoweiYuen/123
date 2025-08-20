@@ -1071,8 +1071,25 @@ $userRankingsHtml = '
             const formData = $("#user-rankings-filter").serialize();
             let url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
-            // Add timestamp parameters for time_range selection
-            if (timeRange === "time_range") {
+            // Add custom date range parameters if applicable
+            if (timeRange === "custom") {
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                
+                // Validate date format and values
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                
+                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    // Only add dates if they are valid and start <= end
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                        url += "&start_date=" + startDate + "&end_date=" + endDate;
+                    }
+                }
+            } else if (timeRange === "time_range") {
+                // Add timestamp parameters for time_range selection
                 const startTime = document.getElementById("start-time").value;
                 const endTime = document.getElementById("end-time").value;
                 
