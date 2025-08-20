@@ -746,19 +746,6 @@ $nodeStatsHtml = '
             $("#node-rankings-time-range").on("change", function() {
                 const isCustomRange = $(this).val() === "custom_range";
                 $("#node-rankings-custom-time-range").toggle(isCustomRange);
-                
-                // Set default time range for custom selection
-                if (isCustomRange) {
-                    const now = new Date();
-                    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
-                    
-                    if (!$("#node-rankings-start-time").val()) {
-                        $("#node-rankings-start-time").val("00:00:00");
-                    }
-                    if (!$("#node-rankings-end-time").val()) {
-                        $("#node-rankings-end-time").val(currentTime);
-                    }
-                }
             });
         });
         
