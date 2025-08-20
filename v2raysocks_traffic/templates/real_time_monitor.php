@@ -292,18 +292,27 @@ $realTimeMonitorHtml = '
             <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
                 <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                     <div style="flex: 0 0 200px; min-width: 150px;">
-                        <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id_search') . ':</label>
+                        <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id') . ':</label>
                         <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div style="flex: 0 0 200px; min-width: 150px;">
-                        <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_period_search') . ':</label>
+                        <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="today-time-range" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="last_1_hour">' . v2raysocks_traffic_lang('last_hour') . '</option>
                             <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
                             <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
                             <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
+                            <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
+                    </div>
+                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                        <label for="today-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="today-start-time" name="start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                    </div>
+                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                        <label for="today-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="today-end-time" name="end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button id="search-today-traffic" class="btn btn-primary">' . v2raysocks_traffic_lang('search') . '</button>
@@ -905,6 +914,16 @@ $realTimeMonitorHtml = '
                 loadTodayTrafficHistory();
             });
             
+            // Today time range change handler
+            $("#today-time-range").on("change", function() {
+                const value = $(this).val();
+                if (value === "custom_time") {
+                    $("#today-custom-times, #today-custom-times-end").show();
+                } else {
+                    $("#today-custom-times, #today-custom-times-end").hide();
+                }
+            });
+            
             $("#export-today-data").on("click", function(e) {
                 e.preventDefault();
                 $("#export-modal").show();
@@ -1144,6 +1163,29 @@ $realTimeMonitorHtml = '
             
             if (serviceId) {
                 params.service_id = serviceId;
+            }
+            
+            // Handle custom time option by adding timestamp parameters
+            if (timeRange === "custom_time") {
+                const startTime = $("#today-start-time").val();
+                const endTime = $("#today-end-time").val();
+                
+                if (startTime && endTime) {
+                    // Convert time to today date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    params.start_timestamp = startTimestamp;
+                    params.end_timestamp = endTimestamp;
+                }
             }
             
             $.ajax({
