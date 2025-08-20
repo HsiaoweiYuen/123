@@ -605,8 +605,12 @@ $trafficDashboardHtml = '
                     <div id="date-range-options" style="margin-bottom: 15px; display: none;">
                         <label for="export_start_date">' . v2raysocks_traffic_lang('start_date_label') . ':</label>
                         <input type="date" id="export_start_date" name="export_start_date"><br><br>
+                        <label for="export_start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="export_start_time" name="export_start_time" step="1"><br><br>
                         <label for="export_end_date">' . v2raysocks_traffic_lang('end_date_label') . ':</label>
-                        <input type="date" id="export_end_date" name="export_end_date">
+                        <input type="date" id="export_end_date" name="export_end_date"><br><br>
+                        <label for="export_end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="export_end_time" name="export_end_time" step="1">
                     </div>
                     
                     <div style="margin-bottom: 15px;">
@@ -764,6 +768,8 @@ $trafficDashboardHtml = '
                 } else if (exportType === "date_range") {
                     const startDate = $("#export_start_date").val();
                     const endDate = $("#export_end_date").val();
+                    const startTime = $("#export_start_time").val();
+                    const endTime = $("#export_end_time").val();
                     
                     // Validate export date range against main page search range
                     if (startDate && endDate) {
@@ -775,8 +781,18 @@ $trafficDashboardHtml = '
                         }
                     }
                     
-                    if (startDate) exportParams += "&export_start_date=" + startDate;
-                    if (endDate) exportParams += "&export_end_date=" + endDate;
+                    // If both date and time are provided, use timestamp parameters
+                    if (startDate && startTime && endDate && endTime) {
+                        const startDateTime = startDate + " " + startTime;
+                        const endDateTime = endDate + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                    } else {
+                        // Fallback to date-only parameters
+                        if (startDate) exportParams += "&export_start_date=" + startDate;
+                        if (endDate) exportParams += "&export_end_date=" + endDate;
+                    }
                 } else if (exportType === "all") {
                     // Check if main page has custom time range selected and include timestamps
                     const timeRange = document.getElementById("time-range").value;
