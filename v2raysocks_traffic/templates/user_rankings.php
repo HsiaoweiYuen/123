@@ -2319,7 +2319,7 @@ $userRankingsHtml = '
                 const endDate = document.getElementById("end-date").value;
                 
                 if (startDate && endDate) {
-                    return `${startDate} ${t("to")} ${endDate}`;
+                    return `${startDate} - ${endDate}`;
                 } else {
                     return t("custom_date_range");
                 }
@@ -2328,7 +2328,7 @@ $userRankingsHtml = '
                 const endTime = document.getElementById("end-time").value;
                 
                 if (startTime && endTime) {
-                    return `${startTime} ${t("to")} ${endTime}`;
+                    return `${startTime} - ${endTime}`;
                 } else {
                     return t("custom_time_range");
                 }
