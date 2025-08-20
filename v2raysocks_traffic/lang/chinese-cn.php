@@ -85,7 +85,6 @@ $_LANG = [
     'last_30_days' => '最近30天',
     'custom_time_range' => '自定义时间',
     'custom_date_range' => '自定义日期',
-    'to' => '至',
     
     // Common Table Headers
     'timestamp' => '时间戳',
