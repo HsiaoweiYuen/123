@@ -2376,11 +2376,11 @@ function v2raysocks_traffic_searchByServiceId($serviceId, $filters = [])
 /**
  * Get node traffic rankings with today's data only
  */
-function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $onlyToday = true)
+function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . ($onlyToday ? 'today' : 'all'));
+        $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2419,9 +2419,71 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $on
             $nodeHasNewFields = false;
         }
 
+        // Calculate time range
+        switch ($timeRange) {
+            case 'today':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'last_1_hour':
+                $startTime = strtotime('-1 hour');
+                $endTime = time();
+                break;
+            case 'last_3_hours':
+                $startTime = strtotime('-3 hours');
+                $endTime = time();
+                break;
+            case 'last_6_hours':
+                $startTime = strtotime('-6 hours');
+                $endTime = time();
+                break;
+            case 'last_12_hours':
+                $startTime = strtotime('-12 hours');
+                $endTime = time();
+                break;
+            case 'week':
+            case '7days':
+                // Fix: Use exactly 7 complete days from 7 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-6 days', strtotime('today')); // Start of 7 days ago (today - 6 = 7 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case '15days':
+                // Fix: Use exactly 15 complete days from 15 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-14 days', strtotime('today')); // Start of 15 days ago (today - 14 = 15 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case 'month':
+            case '30days':
+                // Fix: Use exactly 30 complete days from 30 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-29 days', strtotime('today')); // Start of 30 days ago (today - 29 = 30 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case 'custom':
+                if ($startTimestamp && $endTimestamp) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                } else {
+                    // Fallback to today if custom dates are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
+            case 'all':
+            default:
+                $startTime = 0;
+                $endTime = time();
+                break;
+        }
+
+        // Override time range if timestamp parameters are provided for any time range
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
+        }
+
         // Calculate today's date range and short-term time ranges
-        $todayStart = $onlyToday ? strtotime('today') : 0;
-        $todayEnd = $onlyToday ? strtotime('tomorrow') - 1 : time();
+        $todayStart = $startTime;
+        $todayEnd = $endTime;
         $currentTime = time();
         $time5min = $currentTime - 300;     // 5 minutes ago
         $time1hour = $currentTime - 3600;   // 1 hour ago  
@@ -2814,6 +2876,26 @@ function v2raysocks_traffic_getNodeTrafficChart($nodeId, $timeRange = 'today')
             case 'today':
                 $startTime = strtotime('today');
                 $endTime = strtotime('tomorrow') - 1;
+                $interval = 3600; // 1 hour intervals
+                break;
+            case 'last_1_hour':
+                $startTime = strtotime('-1 hour');
+                $endTime = time();
+                $interval = 300; // 5 minute intervals
+                break;
+            case 'last_3_hours':
+                $startTime = strtotime('-3 hours');
+                $endTime = time();
+                $interval = 900; // 15 minute intervals
+                break;
+            case 'last_6_hours':
+                $startTime = strtotime('-6 hours');
+                $endTime = time();
+                $interval = 1800; // 30 minute intervals
+                break;
+            case 'last_12_hours':
+                $startTime = strtotime('-12 hours');
+                $endTime = time();
                 $interval = 3600; // 1 hour intervals
                 break;
             case 'week':
@@ -3333,16 +3415,22 @@ function v2raysocks_traffic_exportNodeRankings($filters, $format = 'csv', $limit
 {
     try {
         $sortBy = $filters['sort_by'] ?? 'traffic_desc';
-        $onlyToday = ($filters['only_today'] ?? 'true') === 'true';
+        $timeRange = $filters['time_range'] ?? 'today';
+        $startTimestamp = $filters['start_timestamp'] ?? null;
+        $endTimestamp = $filters['end_timestamp'] ?? null;
         
-        $data = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $onlyToday);
+        // Legacy support for only_today parameter
+        if (isset($filters['only_today'])) {
+            $timeRange = ($filters['only_today'] === 'true') ? 'today' : 'all';
+        }
+        
+        $data = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
         
         // Apply limit if specified
         if ($limit && is_numeric($limit) && $limit > 0) {
             $data = array_slice($data, 0, intval($limit));
         }
         
-        $timeRange = $onlyToday ? 'today' : 'all';
         $filename = 'node_rankings_' . $timeRange . '_' . date('Y-m-d_H-i-s');
         
         switch (strtolower($format)) {

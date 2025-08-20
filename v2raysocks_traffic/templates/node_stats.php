@@ -457,7 +457,32 @@ $nodeStatsHtml = '
                     </select>
                 </div>
                 <div class="control-group">
+                    <label for="node-rankings-time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
+                    <select id="node-rankings-time-range">
+                        <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
+                        <option value="last_1_hour">' . v2raysocks_traffic_lang('last_1_hour') . '</option>
+                        <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
+                        <option value="last_6_hours">' . v2raysocks_traffic_lang('last_6_hours') . '</option>
+                        <option value="last_12_hours">' . v2raysocks_traffic_lang('last_12_hours') . '</option>
+                        <option value="custom_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
+                    </select>
+                </div>
+                <div class="control-group">
                     <button class="btn btn-primary" onclick="loadNodeRankings()">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
+                </div>
+            </div>
+            
+            <!-- Custom Time Range Options -->
+            <div id="node-rankings-custom-time-range" style="margin-top: 15px; display: none;">
+                <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+                    <div style="flex: 0 0 140px;">
+                        <label for="node-rankings-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                        <input type="time" id="node-rankings-start-time" style="width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px;" step="1">
+                    </div>
+                    <div style="flex: 0 0 140px;">
+                        <label for="node-rankings-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                        <input type="time" id="node-rankings-end-time" style="width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px;" step="1">
+                    </div>
                 </div>
             </div>
         </div>
@@ -747,15 +772,65 @@ $nodeStatsHtml = '
                     loadNodeRankings();
                 }
             });
+            
+            // Time range change handler for custom range
+            $("#node-rankings-time-range").on("change", function() {
+                const isCustomRange = $(this).val() === "custom_range";
+                $("#node-rankings-custom-time-range").toggle(isCustomRange);
+                
+                // Set default time range for custom selection
+                if (isCustomRange) {
+                    const now = new Date();
+                    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS format
+                    
+                    if (!$("#node-rankings-start-time").val()) {
+                        $("#node-rankings-start-time").val("00:00:00");
+                    }
+                    if (!$("#node-rankings-end-time").val()) {
+                        $("#node-rankings-end-time").val(currentTime);
+                    }
+                }
+                
+                // Auto-refresh rankings when time range changes
+                loadNodeRankings();
+            });
         });
         
         function loadNodeRankings() {
             const showOffline = document.getElementById("show-offline").value === "true";
+            const timeRange = document.getElementById("node-rankings-time-range").value;
             
             const tbody = document.getElementById("rankings-tbody");
             tbody.innerHTML = `<tr><td colspan="21" class="loading">${t("loading_node_rankings")}</td></tr>`;
             
-            fetch("addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings&only_today=true")
+            // Build API URL with time range parameters
+            let apiUrl = "addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_rankings";
+            
+            if (timeRange === "custom_range") {
+                const startTime = document.getElementById("node-rankings-start-time").value;
+                const endTime = document.getElementById("node-rankings-end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to today\'s date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    apiUrl += `&time_range=custom&start_timestamp=${startTimestamp}&end_timestamp=${endTimestamp}`;
+                } else {
+                    alert("Please select both start and end times for custom range");
+                    return;
+                }
+            } else {
+                apiUrl += `&time_range=${timeRange}`;
+            }
+            
+            fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
@@ -999,8 +1074,40 @@ $nodeStatsHtml = '
         }
         
         function loadNodeModalData() {
-            const chartUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}&time_range=today`;
-            const usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&time_range=today&limit=1000`;
+            // Get current time range selection
+            const timeRange = document.getElementById("node-rankings-time-range").value;
+            let timeRangeParam = timeRange;
+            let chartUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}`;
+            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&limit=1000`;
+            
+            if (timeRange === "custom_range") {
+                const startTime = document.getElementById("node-rankings-start-time").value;
+                const endTime = document.getElementById("node-rankings-end-time").value;
+                
+                if (startTime && endTime) {
+                    // Convert time to today\'s date + time for timestamp calculation
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                    today.getDate().toString().padStart(2, "0");
+                    const startDateTime = todayStr + " " + startTime;
+                    const endDateTime = todayStr + " " + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    chartUrlParams += `&time_range=custom&start_timestamp=${startTimestamp}&end_timestamp=${endTimestamp}`;
+                    usageUrlParams += `&time_range=custom&start_timestamp=${startTimestamp}&end_timestamp=${endTimestamp}`;
+                    timeRangeParam = "custom";
+                } else {
+                    // Fallback to today if custom time is not set
+                    chartUrlParams += "&time_range=today";
+                    usageUrlParams += "&time_range=today";
+                    timeRangeParam = "today";
+                }
+            } else {
+                chartUrlParams += `&time_range=${timeRange}`;
+                usageUrlParams += `&time_range=${timeRange}`;
+            }
             
             // Load chart data and usage records atomically using Promise.all
             Promise.all([
@@ -1065,8 +1172,41 @@ $nodeStatsHtml = '
             });
         }
         
+        function getTimeRangeDisplayText(timeRange) {
+            const now = new Date();
+            
+            switch (timeRange) {
+                case "today":
+                    return t("today_range");
+                case "last_1_hour":
+                    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                    return oneHourAgo.toTimeString().slice(0, 5) + " - " + now.toTimeString().slice(0, 5);
+                case "last_3_hours":
+                    const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+                    return threeHoursAgo.toTimeString().slice(0, 5) + " - " + now.toTimeString().slice(0, 5);
+                case "last_6_hours":
+                    const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+                    return sixHoursAgo.toTimeString().slice(0, 5) + " - " + now.toTimeString().slice(0, 5);
+                case "last_12_hours":
+                    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+                    return twelveHoursAgo.toTimeString().slice(0, 5) + " - " + now.toTimeString().slice(0, 5);
+                case "custom":
+                    const startTime = document.getElementById("node-rankings-start-time").value;
+                    const endTime = document.getElementById("node-rankings-end-time").value;
+                    if (startTime && endTime) {
+                        const today = now.toISOString().split(\'T\')[0]; // YYYY-MM-DD format
+                        return today + " " + startTime + " - " + endTime;
+                    }
+                    return "Custom range";
+                default:
+                    return timeRange;
+            }
+        }
+        
         function updateNodeInfoWithChartData(chartData) {
             const nodeInfo = document.getElementById("node-info");
+            const timeRange = document.getElementById("node-rankings-time-range").value;
+            const timeRangeParam = timeRange === "custom_range" ? "custom" : timeRange;
             
             // Calculate totals from chart data (already in GB from API)
             const totalUpload = chartData.upload ? chartData.upload.reduce((sum, val) => sum + (val || 0), 0) : 0;
@@ -1086,7 +1226,7 @@ $nodeStatsHtml = '
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("time_range_label")}</div>
-                        <div class="info-value">${t("today_range")}</div>
+                        <div class="info-value">${getTimeRangeDisplayText(timeRangeParam)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${t("upload_traffic")}</div>
@@ -1227,9 +1367,9 @@ $nodeStatsHtml = '
             // Get search parameters from new structure
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
-            const timeFilter = document.getElementById("node-time-filter").value;
-            const startTime = document.getElementById("node-start-time").value;
-            const endTime = document.getElementById("node-end-time").value;
+            const timeFilter = document.getElementById("node-rankings-time-range").value;
+            const startTime = document.getElementById("node-rankings-start-time").value;
+            const endTime = document.getElementById("node-rankings-end-time").value;
             
             // Build query parameters
             let queryParams = `node_id=${currentNodeId}&limit=1000`;
@@ -1745,9 +1885,9 @@ $nodeStatsHtml = '
             }
             
             // Calculate and display specific time range
-            const timeFilter = document.getElementById("node-time-filter").value;
-            const startTime = document.getElementById("node-start-time").value;
-            const endTime = document.getElementById("node-end-time").value;
+            const timeFilter = document.getElementById("node-rankings-time-range").value;
+            const startTime = document.getElementById("node-rankings-start-time").value;
+            const endTime = document.getElementById("node-rankings-end-time").value;
             
             let timeRangeText = "-";
             const now = new Date();
@@ -1929,8 +2069,33 @@ $nodeStatsHtml = '
                 
                 // Use current sorting state instead of just dropdown
                 const currentSortParam = `${currentSort.field}_${currentSort.direction}`;
+                const timeRange = document.getElementById("node-rankings-time-range").value;
                 
-                let exportParams = `export_type=node_rankings&sort_by=${currentSortParam}&only_today=true&show_offline=${showOffline}&format=${format}`;
+                let exportParams = `export_type=node_rankings&sort_by=${currentSortParam}&show_offline=${showOffline}&format=${format}`;
+                
+                // Add time range parameters
+                if (timeRange === "custom_range") {
+                    const startTime = document.getElementById("node-rankings-start-time").value;
+                    const endTime = document.getElementById("node-rankings-end-time").value;
+                    
+                    if (startTime && endTime) {
+                        // Convert time to today\'s date + time for timestamp calculation
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                        (today.getMonth() + 1).toString().padStart(2, "0") + "-" + 
+                                        today.getDate().toString().padStart(2, "0");
+                        const startDateTime = todayStr + " " + startTime;
+                        const endDateTime = todayStr + " " + endTime;
+                        const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                        const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                        
+                        exportParams += `&time_range=custom&start_timestamp=${startTimestamp}&end_timestamp=${endTimestamp}`;
+                    } else {
+                        exportParams += "&time_range=today";
+                    }
+                } else {
+                    exportParams += `&time_range=${timeRange}`;
+                }
                 
                 // Add specific export options
                 if (exportType === "limited") {
@@ -1970,9 +2135,9 @@ $nodeStatsHtml = '
                 // Get current search parameters from new structure
                 const searchType = document.getElementById("node-search-type").value;
                 const searchValue = document.getElementById("node-search-value").value.trim();
-                const timeFilter = document.getElementById("node-time-filter").value;
-                const startTime = document.getElementById("node-start-time").value;
-                const endTime = document.getElementById("node-end-time").value;
+                const timeFilter = document.getElementById("node-rankings-time-range").value;
+                const startTime = document.getElementById("node-rankings-start-time").value;
+                const endTime = document.getElementById("node-rankings-end-time").value;
                 
                 let exportParams = `export_type=usage_records&node_id=${currentNodeId}&format=${format}`;
                 
