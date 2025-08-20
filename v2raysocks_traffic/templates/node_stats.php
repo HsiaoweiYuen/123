@@ -790,9 +790,6 @@ $nodeStatsHtml = '
                         $("#node-rankings-end-time").val(currentTime);
                     }
                 }
-                
-                // Auto-refresh rankings when time range changes
-                loadNodeRankings();
             });
         });
         
@@ -1893,9 +1890,8 @@ $nodeStatsHtml = '
             const now = new Date();
             
             if (timeFilter === "custom_range" && startTime && endTime) {
-                // For custom range, use the selected start and end times with today\'s date
-                const today = now.toISOString().split(\'T\')[0]; // YYYY-MM-DD format
-                timeRangeText = today + " " + startTime + " 至 " + today + " " + endTime;
+                // For custom range, show only the time range without date
+                timeRangeText = startTime + " - " + endTime;
             } else {
                 // Calculate actual time ranges for predefined periods
                 let startDate, endDate;
@@ -1936,7 +1932,7 @@ $nodeStatsHtml = '
                         return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
                     };
                     
-                    timeRangeText = formatDateTime(startDate) + " 至 " + formatDateTime(endDate);
+                    timeRangeText = formatDateTime(startDate) + " - " + formatDateTime(endDate);
                 }
             }
             
