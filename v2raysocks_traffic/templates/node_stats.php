@@ -459,22 +459,19 @@ $nodeStatsHtml = '
                         <option value="custom_range">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                     </select>
                 </div>
+                
+                <!-- Custom Time Range Options - Now inline -->
+                <div class="control-group" id="node-rankings-start-time-group" style="display: none;">
+                    <label for="node-rankings-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
+                    <input type="time" id="node-rankings-start-time" step="1">
+                </div>
+                <div class="control-group" id="node-rankings-end-time-group" style="display: none;">
+                    <label for="node-rankings-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
+                    <input type="time" id="node-rankings-end-time" step="1">
+                </div>
+                
                 <div class="control-group">
                     <button class="btn btn-primary" onclick="loadNodeRankings()">' . v2raysocks_traffic_lang('refresh_rankings') . '</button>
-                </div>
-            </div>
-            
-            <!-- Custom Time Range Options -->
-            <div id="node-rankings-custom-time-range" style="margin-top: 15px; display: none;">
-                <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                    <div style="flex: 0 0 140px;">
-                        <label for="node-rankings-start-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="node-rankings-start-time" style="width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px;" step="1">
-                    </div>
-                    <div style="flex: 0 0 140px;">
-                        <label for="node-rankings-end-time" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="node-rankings-end-time" style="width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px;" step="1">
-                    </div>
                 </div>
             </div>
         </div>
@@ -745,7 +742,7 @@ $nodeStatsHtml = '
             // Time range change handler for custom range
             $("#node-rankings-time-range").on("change", function() {
                 const isCustomRange = $(this).val() === "custom_range";
-                $("#node-rankings-custom-time-range").toggle(isCustomRange);
+                $("#node-rankings-start-time-group, #node-rankings-end-time-group").toggle(isCustomRange);
             });
         });
         
