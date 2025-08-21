@@ -326,14 +326,14 @@ $userRankingsHtml = '
             /* Optimize form layout for mobile - make inputs more compact */
             .form-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             .form-group#custom-dates,
             .form-group#custom-dates-end,
             .form-group#custom-times,
             .form-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             /* Search button should be full width on mobile */
             .form-group:last-child {
@@ -414,10 +414,9 @@ $userRankingsHtml = '
             .form-group#custom-dates-end input,
             .form-group#custom-times input,
             .form-group#custom-times-end input {
-                width: auto;
+                width: 100%;
                 margin-bottom: 0;
                 margin-right: 10px !important;
-                min-width: 120px;
             }
             
             /* Mobile responsive search controls for user records */
@@ -511,7 +510,7 @@ $userRankingsHtml = '
         #user-export-modal input[type="date"], 
         #user-export-modal input[type="time"], 
         #user-export-modal input[type="number"] {
-            width: 200px;
+            width: 100%;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;

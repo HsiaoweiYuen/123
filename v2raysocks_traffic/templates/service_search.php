@@ -145,12 +145,12 @@ $serviceSearchHtml = '
             /* Optimize form layout for mobile - make inputs more compact */
             .form-group:not(#custom-dates):not(#custom-dates-end) {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             .form-group#custom-dates,
             .form-group#custom-dates-end {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             /* Search button should be full width on mobile */
             .form-group:last-child {

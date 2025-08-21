@@ -157,14 +157,14 @@ $trafficDashboardHtml = '
             /* Optimize filter layout for mobile - make inputs more compact */
             .filter-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 120px;
+                min-width: auto;
             }
             .filter-group#custom-dates,
             .filter-group#custom-dates-end,
             .filter-group#custom-times,
             .filter-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             /* Filter button should be full width on mobile */
             .filter-group:last-child {
@@ -230,7 +230,7 @@ $trafficDashboardHtml = '
         #export-modal input[type="date"], 
         #export-modal input[type="time"], 
         #export-modal input[type="number"] {
-            width: 200px;
+            width: 100%;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;
