@@ -126,6 +126,9 @@ $todayTrafficChartHtml = '
             .control-group label {
                 min-width: auto;
             }
+            .chart-container {
+                height: 320px;
+            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

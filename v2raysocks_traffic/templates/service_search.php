@@ -167,6 +167,9 @@ $serviceSearchHtml = '
                 padding: 8px 4px;
                 font-size: 0.9em;
             }
+            .chart-container {
+                height: 320px;
+            }
         }
         
         /* Responsive styles for very small devices */

@@ -112,6 +112,9 @@ $realTimeMonitorHtml = '
                 transform: translateY(-50%) !important;
                 padding: 15px !important;
             }
+            .chart-container {
+                height: 320px;
+            }
         }
         
         /* Standard styles for export modal inputs */
