@@ -127,6 +127,12 @@ function v2raysocks_traffic_getUnifiedStyles() {
             flex: 1;
             min-width: auto;
         }
+        /* Constrain time input controls to prevent them from growing too wide */
+        #node-rankings-start-time-group,
+        #node-rankings-end-time-group {
+            flex: 0 0 140px;
+            min-width: 140px;
+        }
         .control-group label {
             display: block;
             margin-bottom: 5px;
