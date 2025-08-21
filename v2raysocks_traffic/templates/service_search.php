@@ -115,6 +115,19 @@ $serviceSearchHtml = '
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-secondary { background: #6c757d; color: white; }
         
+        /* Unified Chart Container Styles */
+        .unified-chart-container {
+            position: relative;
+            width: 100%;
+            height: 200px; /* Desktop standard height */
+            overflow: hidden;
+        }
+        
+        .unified-chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
         /* Responsive styles for mobile devices */
         @media (max-width: 768px) {
             .dashboard-container {
@@ -166,6 +179,11 @@ $serviceSearchHtml = '
             .table th, .table td {
                 padding: 8px 4px;
                 font-size: 0.9em;
+            }
+            
+            /* Mobile Chart Sizing - Use Real-Time Monitor Standard */
+            .unified-chart-container {
+                height: 400px; /* Mobile standard height */
             }
         }
         
@@ -397,7 +415,10 @@ $serviceSearchHtml = '
                         <option value="TB">TB</option>
                     </select>
                 </div>
-                <canvas id="service-traffic-chart" width="400" height="200"></canvas>
+                <!-- Unified Chart Container for Responsive Sizing -->
+                <div class="unified-chart-container">
+                    <canvas id="service-traffic-chart"></canvas>
+                </div>
             </div>
             
             <!-- Traffic Data Table -->

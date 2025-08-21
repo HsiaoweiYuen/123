@@ -38,6 +38,19 @@ $realTimeMonitorHtml = '
         .btn:hover { opacity: 0.9; }
         .btn-secondary { background: #6c757d; color: white; }
         
+        /* Unified Chart Container Styles */
+        .unified-chart-container {
+            position: relative;
+            width: 100%;
+            height: 200px; /* Desktop standard height */
+            overflow: hidden;
+        }
+        
+        .unified-chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
         /* Responsive styles for mobile devices */
         @media (max-width: 768px) {
             .dashboard-container {
@@ -76,6 +89,11 @@ $realTimeMonitorHtml = '
             #today-custom-times, #today-custom-times-end {
                 max-width: 100% !important;
                 flex: 1 1 100% !important;
+            }
+            
+            /* Mobile Chart Sizing - Use Real-Time Monitor Standard */
+            .unified-chart-container {
+                height: 400px; /* Mobile standard height */
             }
         }
         
@@ -293,7 +311,8 @@ $realTimeMonitorHtml = '
                     </select>
                 </div>
             </div>
-            <div style="position: relative; height: 400px; width: 100%; overflow: hidden;">
+            <!-- Unified Chart Container for Responsive Sizing -->
+            <div class="unified-chart-container">
                 <canvas id="todayTrafficChart"></canvas>
             </div>
         </div>
