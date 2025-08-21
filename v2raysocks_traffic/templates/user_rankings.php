@@ -377,6 +377,7 @@ $userRankingsHtml = '
             }
             .chart-container {
                 padding: 10px;
+                height: 320px; /* Increase height on mobile for better visibility */
             }
             .usage-records-section {
                 margin-top: 10px;

@@ -112,6 +112,10 @@ $realTimeMonitorHtml = '
                 transform: translateY(-50%) !important;
                 padding: 15px !important;
             }
+            /* Override inline chart height for better mobile display */
+            div[style*="height: 400px"] {
+                height: 320px !important;
+            }
         }
         
         /* Standard styles for export modal inputs */
