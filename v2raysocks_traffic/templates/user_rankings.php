@@ -1723,7 +1723,6 @@ $userRankingsHtml = '
                     urlParams = urlParams.replace("time_range=time_range", "time_range=today");
                 }
             }
-            }
             
             fetch(urlParams)
                 .then(response => response.json())
