@@ -3,22 +3,22 @@
 
 const CHART_COLORS = {
     // Primary traffic colors - aligned with search service chart colors  
-    upload: '#28a745',        // Green for upload
+    upload: '#6f42c1',        // Light purple for upload
     download: '#007bff',      // Blue for download (previously used for upload)
     total: '#007bff',         // Blue for total traffic
     
     // Secondary colors for variations - aligned with v2raysocks palette
     secondary: '#6c757d',     // Gray
     warning: '#ffc107',       // Yellow/Orange
-    success: '#28a745'        // Green (same as upload)
+    success: '#6f42c1'        // Purple (same as upload)
 };
 
 // Legacy compatibility - keep the old structure for any code that might use it
 const V2RAYSOCKS_CHART_COLORS = {
     upload: {
         border: CHART_COLORS.upload,
-        background: 'rgba(40, 167, 69, 0.1)',
-        backgroundFilled: 'rgba(40, 167, 69, 0.2)'
+        background: 'rgba(111, 66, 193, 0.1)',
+        backgroundFilled: 'rgba(111, 66, 193, 0.2)'
     },
     download: {
         border: CHART_COLORS.download,
@@ -42,8 +42,8 @@ const V2RAYSOCKS_CHART_COLORS = {
     },
     success: {
         border: CHART_COLORS.success,
-        background: 'rgba(40, 167, 69, 0.1)',
-        backgroundFilled: 'rgba(40, 167, 69, 0.2)'
+        background: 'rgba(111, 66, 193, 0.1)',
+        backgroundFilled: 'rgba(111, 66, 193, 0.2)'
     }
 };
 
@@ -61,7 +61,7 @@ function getStandardDatasetConfig(type, label, data, options = {}) {
         borderWidth: 2,
         pointBorderWidth: 2,
         pointRadius: 3,
-        pointHoverRadius: 5
+        pointHoverRadius: 6
     };
     
     // Add any additional options

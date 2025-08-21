@@ -1649,6 +1649,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         },
                         {
@@ -1660,6 +1661,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         }
                     ];
@@ -1676,6 +1678,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         }
                     ];
@@ -1704,6 +1707,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         },
                         {
@@ -1715,6 +1719,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         }
                     ];
@@ -1739,6 +1744,7 @@ $nodeStatsHtml = '
                             fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
+                            pointBorderWidth: 2,
                             pointHoverRadius: 6
                         }
                     ];
