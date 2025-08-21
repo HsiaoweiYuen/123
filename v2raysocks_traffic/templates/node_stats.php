@@ -520,8 +520,8 @@ $nodeStatsHtml = '
                                 ' . v2raysocks_traffic_lang('remaining_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
-                            <th style="min-width: 100px;" class="sortable-header" data-sort="today_traffic">
-                                ' . v2raysocks_traffic_lang('today_traffic') . '
+                            <th style="min-width: 100px;" class="sortable-header" data-sort="used_traffic">
+                                ' . v2raysocks_traffic_lang('used_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 120px;" class="sortable-header" data-sort="traffic_usage_rate">
@@ -854,7 +854,7 @@ $nodeStatsHtml = '
                         aValue = a.remaining_traffic || 0;
                         bValue = b.remaining_traffic || 0;
                         break;
-                    case "today_traffic":
+                    case "used_traffic":
                         aValue = a.total_traffic || 0;
                         bValue = b.total_traffic || 0;
                         break;
