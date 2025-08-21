@@ -811,11 +811,11 @@ $realTimeMonitorHtml = '
                         getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (" + unit + ")", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             return stats.upload / unitDivisor;
-                        })),
+                        }), {fill: true}),
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (" + unit + ")", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             return stats.download / unitDivisor;
-                        }))
+                        }), {fill: true})
                     ];
                     break;
                 case "total":
@@ -834,12 +834,12 @@ $realTimeMonitorHtml = '
                             const stats = timeData[timeKey];
                             cumulativeUpload += stats.upload;
                             return cumulativeUpload / unitDivisor;
-                        }), {fill: false}),
+                        }), {fill: true}),
                         getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('cumulative_download') . ' (" + unit + ")", labels.map(timeKey => {
                             const stats = timeData[timeKey];
                             cumulativeDownload += stats.download;
                             return cumulativeDownload / unitDivisor;
-                        }), {fill: false})
+                        }), {fill: true})
                     ];
                     break;
                 case "total_cumulative":

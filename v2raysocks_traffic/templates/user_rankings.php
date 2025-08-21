@@ -2065,7 +2065,7 @@ $userRankingsHtml = '
                             borderColor: CHART_COLORS.upload,
                             backgroundColor: CHART_COLORS.upload + "20",
                             tension: 0.4,
-                            fill: false,
+                            fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
                             pointHoverRadius: 6
@@ -2076,7 +2076,7 @@ $userRankingsHtml = '
                             borderColor: CHART_COLORS.download,
                             backgroundColor: CHART_COLORS.download + "20",
                             tension: 0.4,
-                            fill: false,
+                            fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
                             pointHoverRadius: 6
@@ -2120,7 +2120,7 @@ $userRankingsHtml = '
                             borderColor: CHART_COLORS.upload,
                             backgroundColor: CHART_COLORS.upload + "20",
                             tension: 0.4,
-                            fill: false,
+                            fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
                             pointHoverRadius: 6
@@ -2131,7 +2131,7 @@ $userRankingsHtml = '
                             borderColor: CHART_COLORS.download,
                             backgroundColor: CHART_COLORS.download + "20",
                             tension: 0.4,
-                            fill: false,
+                            fill: true,
                             borderWidth: 2,
                             pointRadius: 3,
                             pointHoverRadius: 6

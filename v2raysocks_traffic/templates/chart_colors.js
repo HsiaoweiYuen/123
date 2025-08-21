@@ -3,22 +3,22 @@
 
 const CHART_COLORS = {
     // Primary traffic colors - aligned with search service chart colors  
-    upload: '#17a2b8',        // Cyan for upload
+    upload: '#007bff',        // Blue for upload (same as total)
     download: '#e83e8c',      // Pink for download  
     total: '#007bff',         // Blue for total traffic
     
     // Secondary colors for variations - aligned with v2raysocks palette
     secondary: '#6c757d',     // Gray
     warning: '#ffc107',       // Yellow/Orange
-    success: '#17a2b8'        // Teal
+    success: '#007bff'        // Blue (same as upload/total)
 };
 
 // Legacy compatibility - keep the old structure for any code that might use it
 const V2RAYSOCKS_CHART_COLORS = {
     upload: {
         border: CHART_COLORS.upload,
-        background: 'rgba(23, 162, 184, 0.1)',
-        backgroundFilled: 'rgba(23, 162, 184, 0.2)'
+        background: 'rgba(0, 123, 255, 0.1)',
+        backgroundFilled: 'rgba(0, 123, 255, 0.2)'
     },
     download: {
         border: CHART_COLORS.download,
@@ -42,8 +42,8 @@ const V2RAYSOCKS_CHART_COLORS = {
     },
     success: {
         border: CHART_COLORS.success,
-        background: 'rgba(23, 162, 184, 0.1)',
-        backgroundFilled: 'rgba(23, 162, 184, 0.2)'
+        background: 'rgba(0, 123, 255, 0.1)',
+        backgroundFilled: 'rgba(0, 123, 255, 0.2)'
     }
 };
 
@@ -53,7 +53,7 @@ function getStandardDatasetConfig(type, label, data, options = {}) {
         label: label,
         data: data,
         borderColor: V2RAYSOCKS_CHART_COLORS[type].border,
-        backgroundColor: options.filled ? 
+        backgroundColor: (options.fill === true || options.filled) ? 
             V2RAYSOCKS_CHART_COLORS[type].backgroundFilled : 
             V2RAYSOCKS_CHART_COLORS[type].background,
         tension: options.tension || 0.4,
