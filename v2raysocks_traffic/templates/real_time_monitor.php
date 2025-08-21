@@ -69,6 +69,14 @@ $realTimeMonitorHtml = '
                 font-size: 0.9em;
                 text-align: left;
             }
+            /* Make custom time/date inputs full width on mobile */
+            #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end {
+                max-width: 100% !important;
+            }
+            #today-custom-times, #today-custom-times-end {
+                max-width: 100% !important;
+                flex: 1 1 100% !important;
+            }
         }
         
         /* Responsive styles for very small devices */
@@ -87,6 +95,14 @@ $realTimeMonitorHtml = '
             }
             .refresh-status {
                 font-size: 0.8em;
+            }
+            /* Ensure custom time/date inputs are full width on very small devices */
+            #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end {
+                max-width: 100% !important;
+            }
+            #today-custom-times, #today-custom-times-end {
+                max-width: 100% !important;
+                flex: 1 1 100% !important;
             }
             /* Fix modal dialogs for mobile */
             div[id$="-modal"] > div {
