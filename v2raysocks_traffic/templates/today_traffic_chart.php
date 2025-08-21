@@ -116,6 +116,17 @@ $todayTrafficChartHtml = '
             margin-left: 10px;
         }
         @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+            .nav-links {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .nav-link {
+                text-align: center;
+                padding: 10px;
+            }
             .stats-summary {
                 flex-direction: column;
             }

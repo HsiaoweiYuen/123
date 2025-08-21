@@ -259,6 +259,17 @@ $nodeStatsHtml = '
         
         /* Responsive styles for mobile devices */
         @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+            .nav-links {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .nav-link {
+                text-align: center;
+                padding: 10px;
+            }
             .rank-badge {
                 min-width: 25px;
                 padding: 2px 4px;

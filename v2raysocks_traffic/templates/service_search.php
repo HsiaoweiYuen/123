@@ -132,30 +132,11 @@ $serviceSearchHtml = '
                 padding: 15px;
             }
             .form-row {
-                flex-direction: row;
-                flex-wrap: wrap;
-                gap: 8px;
-                justify-content: flex-start;
+                flex-direction: column;
+                gap: 10px;
             }
             .form-group {
-                min-width: auto;
-                width: auto;
-                flex: 0 0 auto;
-            }
-            /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
-                flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
-            }
-            .form-group#custom-dates,
-            .form-group#custom-dates-end {
-                flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
-            }
-            /* Search button should be full width on mobile */
-            .form-group:last-child {
-                flex: 1 1 100%;
-                margin-top: 5px;
+                width: 100%;
             }
             .table-responsive {
                 font-size: 0.9em;
