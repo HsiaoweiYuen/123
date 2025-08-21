@@ -51,7 +51,7 @@ $userRankingsHtml = '
             font-weight: bold; 
         }
         .form-group input, .form-group select { 
-            width: 100%; 
+            width: 200px; 
             padding: 8px; 
             border: 1px solid #ced4da; 
             border-radius: 4px; 
@@ -819,7 +819,7 @@ $userRankingsHtml = '
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                             <div style="flex: 0 0 200px; min-width: 150px;">
                                 <label for="user-node-search" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('node_search_label') . ':</label>
-                                <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" style="width: 200px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button id="search-user-records" class="btn btn-primary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('search') . '</button>

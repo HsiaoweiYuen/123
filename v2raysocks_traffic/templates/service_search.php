@@ -46,7 +46,7 @@ $serviceSearchHtml = '
             font-weight: bold; 
         }
         .form-group input, .form-group select { 
-            width: 100%; 
+            width: 200px; 
             padding: 8px; 
             border: 1px solid #ced4da; 
             border-radius: 4px; 
@@ -111,7 +111,7 @@ $serviceSearchHtml = '
         .close:hover { color: #000; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; }
+        .form-group input, .form-group select { width: 200px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-secondary { background: #6c757d; color: white; }
         
@@ -355,19 +355,19 @@ $serviceSearchHtml = '
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
                         <label for="start_date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start_date" name="start_date" style="width: 100%;">
+                        <input type="date" id="start_date" name="start_date" style="width: 200px;">
                     </div>
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                        <input type="date" id="end_date" name="end_date" style="width: 200px;">
                     </div>
                     <div class="form-group" id="custom-times" style="display: none;">
                         <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%;">
+                        <input type="time" id="start_time" name="start_time" step="1" style="width: 200px;">
                     </div>
                     <div class="form-group" id="custom-times-end" style="display: none;">
                         <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%;">
+                        <input type="time" id="end_time" name="end_time" step="1" style="width: 200px;">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>

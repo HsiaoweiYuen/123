@@ -139,7 +139,7 @@ function v2raysocks_traffic_getUnifiedStyles() {
             font-weight: bold;
         }
         .control-group select, .control-group input {
-            width: 100%;
+            width: 200px;
             padding: 8px;
             border: 1px solid #ced4da;
             border-radius: 4px;

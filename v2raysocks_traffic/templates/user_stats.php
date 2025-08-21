@@ -66,7 +66,7 @@ $userStatsHtml = '
             font-weight: bold; 
         }
         .form-group input, .form-group select { 
-            width: 100%; 
+            width: 200px; 
             padding: 8px; 
             border: 1px solid #ced4da; 
             border-radius: 4px; 

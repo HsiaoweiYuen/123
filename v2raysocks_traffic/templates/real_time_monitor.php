@@ -309,11 +309,11 @@ $realTimeMonitorHtml = '
                 <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                     <div style="flex: 0 0 200px; min-width: 150px;">
                         <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 200px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div style="flex: 0 0 200px; min-width: 150px;">
                         <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="today-time-range" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <select id="today-time-range" style="width: 200px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="last_1_hour">' . v2raysocks_traffic_lang('last_hour') . '</option>
                             <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
@@ -324,11 +324,11 @@ $realTimeMonitorHtml = '
                     </div>
                     <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: 160px;">
                         <label for="today-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="today-start-time" name="start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="today-start-time" name="start_time" step="1" style="width: 200px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: 160px;">
                         <label for="today-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="today-end-time" name="end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="today-end-time" name="end_time" step="1" style="width: 200px; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button id="search-today-traffic" class="btn btn-primary">' . v2raysocks_traffic_lang('search') . '</button>

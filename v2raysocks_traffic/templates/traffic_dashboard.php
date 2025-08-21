@@ -426,11 +426,11 @@ $trafficDashboardHtml = '
                 <div class="filter-row">
                     <div class="filter-group">
                         <label for="service-id">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%;">
+                        <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 200px;">
                     </div>
                     <div class="filter-group">
                         <label for="time-range">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="time-range" name="time_range" style="width: 100%;">
+                        <select id="time-range" name="time_range" style="width: 200px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="week">' . v2raysocks_traffic_lang('last_7_days') . '</option>
                             <option value="halfmonth">' . v2raysocks_traffic_lang('last_15_days') . '</option>
@@ -441,19 +441,19 @@ $trafficDashboardHtml = '
                     </div>
                     <div class="filter-group" id="custom-dates" style="display: none;">
                         <label for="start-date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start-date" name="start_date" style="width: 100%;">
+                        <input type="date" id="start-date" name="start_date" style="width: 200px;">
                     </div>
                     <div class="filter-group" id="custom-dates-end" style="display: none;">
                         <label for="end-date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end-date" name="end_date" style="width: 100%;">
+                        <input type="date" id="end-date" name="end_date" style="width: 200px;">
                     </div>
                     <div class="filter-group" id="custom-times" style="display: none;">
                         <label for="start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="start-time" name="start_time" step="1" style="width: 100%;">
+                        <input type="time" id="start-time" name="start_time" step="1" style="width: 200px;">
                     </div>
                     <div class="filter-group" id="custom-times-end" style="display: none;">
                         <label for="end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="end-time" name="end_time" step="1" style="width: 100%;">
+                        <input type="time" id="end-time" name="end_time" step="1" style="width: 200px;">
                     </div>
                     <div class="filter-group">
                         <label>&nbsp;</label>
