@@ -521,7 +521,7 @@ $nodeStatsHtml = '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 100px;" class="sortable-header" data-sort="today_traffic">
-                                ' . v2raysocks_traffic_lang('today_traffic') . '
+                                ' . v2raysocks_traffic_lang('used_traffic') . '
                                 <span class="sort-indicator"></span>
                             </th>
                             <th style="min-width: 120px;" class="sortable-header" data-sort="traffic_usage_rate">
