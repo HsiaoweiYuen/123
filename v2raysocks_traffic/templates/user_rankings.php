@@ -1668,13 +1668,31 @@ $userRankingsHtml = '
                 
                 if (startTime && endTime) {
                     // Convert time to todays date + time for timestamp calculation
-                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
+                    // Use local date instead of ISO string to avoid timezone issues
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                    String(today.getDate()).padStart(2, "0");
+                    
+                    // Normalize time format - add seconds if missing
+                    const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                              startTime + ":00" : startTime;
+                    const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                            endTime + ":00" : endTime;
+                    
+                    const startDateTime = todayStr + " " + normalizedStartTime;
+                    const endDateTime = todayStr + " " + normalizedEndTime;
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
-                    apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    // Validate timestamps before using them
+                    if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                        apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    } else {
+                        console.error("Invalid timestamp conversion in user traffic chart:", {
+                            startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                        });
+                    }
                 }
             }
             

@@ -678,20 +678,40 @@ $serviceSearchHtml = '
                     
                     if (startTime && endTime) {
                         // Convert time to todays date + time for timestamp calculation
-                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
+                        // Use local date instead of ISO string to avoid timezone issues
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                        String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                        String(today.getDate()).padStart(2, "0");
+                        
+                        // Normalize time format - add seconds if missing
+                        const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                                  startTime + ":00" : startTime;
+                        const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                                endTime + ":00" : endTime;
+                        
+                        const startDateTime = todayStr + " " + normalizedStartTime;
+                        const endDateTime = todayStr + " " + normalizedEndTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                        // Validate timestamps before using them
+                        if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                            // Validate time range against main page bounds
+                            const exportStartDate = new Date(startDateTime);
+                            const exportEndDate = new Date(endDateTime);
+                            if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                                return;
+                            }
+                            
+                            exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                        } else {
+                            console.error("Invalid timestamp conversion in service search export:", {
+                                startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                            });
+                            alert("Invalid time range selected");
                             return;
                         }
-                        
-                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
                     } else {
                         alert("Please select both start and end times");
                         return;
