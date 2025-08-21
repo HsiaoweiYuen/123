@@ -181,6 +181,10 @@ $trafficDashboardHtml = '
                 padding: 8px 4px;
                 font-size: 0.9em;
             }
+            /* Mobile chart container sizing */
+            .chart-container [style*="height: 400px"] {
+                height: 300px !important;
+            }
         }
         
         /* Responsive styles for very small devices */
@@ -525,7 +529,9 @@ $trafficDashboardHtml = '
                 </div>
             </div>
             
-            <canvas id="traffic-chart" width="400" height="200"></canvas>
+            <div style="position: relative; height: 400px; width: 100%; overflow: hidden;">
+                <canvas id="traffic-chart"></canvas>
+            </div>
         </div>
         
         <!-- Recent Traffic Data -->

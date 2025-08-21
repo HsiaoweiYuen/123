@@ -77,6 +77,10 @@ $realTimeMonitorHtml = '
                 max-width: 100% !important;
                 flex: 1 1 100% !important;
             }
+            /* Mobile chart container sizing */
+            [style*="height: 400px"] {
+                height: 300px !important;
+            }
         }
         
         /* Responsive styles for very small devices */

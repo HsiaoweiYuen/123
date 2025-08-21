@@ -167,6 +167,10 @@ $serviceSearchHtml = '
                 padding: 8px 4px;
                 font-size: 0.9em;
             }
+            /* Mobile chart container sizing */
+            .chart-container [style*="height: 400px"] {
+                height: 300px !important;
+            }
         }
         
         /* Responsive styles for very small devices */
@@ -397,7 +401,9 @@ $serviceSearchHtml = '
                         <option value="TB">TB</option>
                     </select>
                 </div>
-                <canvas id="service-traffic-chart" width="400" height="200"></canvas>
+                <div style="position: relative; height: 400px; width: 100%; overflow: hidden;">
+                    <canvas id="service-traffic-chart"></canvas>
+                </div>
             </div>
             
             <!-- Traffic Data Table -->
