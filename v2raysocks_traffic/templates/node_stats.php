@@ -1524,10 +1524,28 @@ $nodeStatsHtml = '
                     break;
                     
                 case "custom":
-                    // For custom time ranges, do not generate complete series
-                    // The backend already provides the appropriate time labels
-                    // Return empty array to indicate no complete series needed
-                    return [];
+                    // Generate hours for custom time range to show continuous curve
+                    const startTimeInput = document.getElementById("node-rankings-start-time").value;
+                    const endTimeInput = document.getElementById("node-rankings-end-time").value;
+                    if (startTimeInput && endTimeInput) {
+                        const [startHour, startMin] = startTimeInput.split(":").map(Number);
+                        const [endHour, endMin] = endTimeInput.split(":").map(Number);
+                        
+                        // Generate hourly labels within the selected time range
+                        // If end time is earlier than start time, assume next day
+                        let currentHour = startHour;
+                        const maxHour = endHour < startHour ? endHour + 24 : endHour;
+                        
+                        while (currentHour <= maxHour) {
+                            const displayHour = currentHour % 24;
+                            labels.push(displayHour.toString().padStart(2, "0") + ":00");
+                            currentHour++;
+                        }
+                    } else {
+                        // Fallback: return empty array if custom time inputs are not available
+                        return [];
+                    }
+                    break;
             }
             
             return labels;
@@ -1554,37 +1572,37 @@ $nodeStatsHtml = '
                     node_id: chartData.node_id || "Unknown"
                 };
             } else {
-                // Ensure complete time series to prevent gaps (but not for custom ranges)
+                // Ensure complete time series to prevent gaps
                 const completeLabels = generateCompleteTimeSeriesForNodeChart(actualTimeRange);
                 
-                // For custom time ranges or when no complete series is needed, use data as-is
-                if (actualTimeRange === "custom" || completeLabels.length === 0) {
-                    // Use the chart data as-is for custom time ranges
-                    // This preserves the exact time filtering applied by the backend
-                } else {
-                    // For predefined time ranges, ensure complete time series
+                // If complete labels are available, use them to fill gaps
+                if (completeLabels.length > 0) {
+                    // Store original data for processing
                     const originalData = {
-                    labels: [...chartData.labels],
-                    upload: [...chartData.upload],
-                    download: [...chartData.download],
-                    total: [...chartData.total]
-                };
-                
-                // Reset arrays to match complete time series
-                chartData.labels = completeLabels;
-                chartData.upload = new Array(completeLabels.length).fill(0);
-                chartData.download = new Array(completeLabels.length).fill(0);
-                chartData.total = new Array(completeLabels.length).fill(0);
-                
-                // Fill in actual data where available
-                originalData.labels.forEach((label, index) => {
-                    const completeIndex = completeLabels.indexOf(label);
-                    if (completeIndex !== -1) {
-                        chartData.upload[completeIndex] = originalData.upload[index] || 0;
-                        chartData.download[completeIndex] = originalData.download[index] || 0;
-                        chartData.total[completeIndex] = originalData.total[index] || 0;
-                    }
-                });
+                        labels: [...chartData.labels],
+                        upload: [...chartData.upload],
+                        download: [...chartData.download],
+                        total: [...chartData.total]
+                    };
+                    
+                    // Reset arrays to match complete time series
+                    chartData.labels = completeLabels;
+                    chartData.upload = new Array(completeLabels.length).fill(0);
+                    chartData.download = new Array(completeLabels.length).fill(0);
+                    chartData.total = new Array(completeLabels.length).fill(0);
+                    
+                    // Fill in actual data where available
+                    originalData.labels.forEach((label, index) => {
+                        const completeIndex = completeLabels.indexOf(label);
+                        if (completeIndex !== -1) {
+                            chartData.upload[completeIndex] = originalData.upload[index] || 0;
+                            chartData.download[completeIndex] = originalData.download[index] || 0;
+                            chartData.total[completeIndex] = originalData.total[index] || 0;
+                        }
+                    });
+                } else {
+                    // Use the chart data as-is when no complete series is needed
+                    // This preserves the exact time filtering applied by the backend
                 }
             }
             
