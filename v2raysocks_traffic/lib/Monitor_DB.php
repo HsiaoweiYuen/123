@@ -2701,6 +2701,22 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 if ($startTimestamp !== null && $endTimestamp !== null) {
                     $startTime = intval($startTimestamp);
                     $endTime = intval($endTimestamp);
+                    
+                    // Validate timestamp sanity (should be reasonable Unix timestamps)
+                    $currentTime = time();
+                    $oneYearAgo = $currentTime - (365 * 24 * 60 * 60);
+                    $oneYearFromNow = $currentTime + (365 * 24 * 60 * 60);
+                    
+                    // Check if timestamps are within reasonable range and startTime < endTime
+                    if ($startTime < $oneYearAgo || $startTime > $oneYearFromNow || 
+                        $endTime < $oneYearAgo || $endTime > $oneYearFromNow ||
+                        $startTime >= $endTime) {
+                        // Log the invalid timestamp issue for debugging
+                        logActivity("V2RaySocks Traffic Analysis: Invalid timestamps provided - start: $startTimestamp, end: $endTimestamp", 0);
+                        // Fallback to today if timestamps are invalid
+                        $startTime = strtotime('today');
+                        $endTime = strtotime('tomorrow') - 1;
+                    }
                 } else {
                     // Fallback to today if timestamps are invalid
                     $startTime = strtotime('today');
@@ -2716,8 +2732,24 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
 
         // Override time range if timestamp parameters are provided for any time range
         if ($startTimestamp !== null && $endTimestamp !== null) {
-            $startTime = intval($startTimestamp);
-            $endTime = intval($endTimestamp);
+            $candidateStartTime = intval($startTimestamp);
+            $candidateEndTime = intval($endTimestamp);
+            
+            // Validate timestamp sanity (should be reasonable Unix timestamps)
+            $currentTime = time();
+            $oneYearAgo = $currentTime - (365 * 24 * 60 * 60);
+            $oneYearFromNow = $currentTime + (365 * 24 * 60 * 60);
+            
+            // Only override if timestamps are valid
+            if ($candidateStartTime >= $oneYearAgo && $candidateStartTime <= $oneYearFromNow && 
+                $candidateEndTime >= $oneYearAgo && $candidateEndTime <= $oneYearFromNow &&
+                $candidateStartTime < $candidateEndTime) {
+                $startTime = $candidateStartTime;
+                $endTime = $candidateEndTime;
+            } else {
+                // Log the invalid timestamp override attempt
+                logActivity("V2RaySocks Traffic Analysis: Invalid timestamp override attempted - start: $startTimestamp, end: $endTimestamp", 0);
+            }
         }
 
         // Calculate short-term time ranges

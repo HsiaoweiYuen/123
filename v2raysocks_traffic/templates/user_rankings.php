@@ -1049,7 +1049,8 @@ $userRankingsHtml = '
                 }
                 
                 // Validate time range logic (both times should be valid)
-                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)$/;
+                // Support both HH:MM and HH:MM:SS formats
+                const timeRegex = /^([01]?\d|2[0-3]):([0-5]?\d)(?::([0-5]?\d))?$/;
                 
                 if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
                     alert(t("date_format_incorrect")); // Reuse same translation for time format
@@ -1057,9 +1058,26 @@ $userRankingsHtml = '
                 }
                 
                 // Convert times to today date for comparison
-                const today = new Date().toISOString().split("T")[0];
-                const startDateTime = new Date(today + " " + startTime);
-                const endDateTime = new Date(today + " " + endTime);
+                // Use local date instead of ISO string to avoid timezone issues
+                const today = new Date();
+                const todayStr = today.getFullYear() + "-" + 
+                                String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                String(today.getDate()).padStart(2, "0");
+                
+                // Normalize time format - add seconds if missing
+                const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                          startTime + ":00" : startTime;
+                const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                        endTime + ":00" : endTime;
+                
+                const startDateTime = new Date(todayStr + " " + normalizedStartTime);
+                const endDateTime = new Date(todayStr + " " + normalizedEndTime);
+                
+                // Validate that dates are valid
+                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+                    alert(t("date_invalid"));
+                    return;
+                }
                 
                 if (startDateTime >= endDateTime) {
                     alert(t("start_date_after_end_date")); // Reuse same translation for time range logic
@@ -1078,13 +1096,33 @@ $userRankingsHtml = '
                 
                 if (startTime && endTime) {
                     // Convert time to todays date + time for timestamp calculation
-                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
+                    // Use local date instead of ISO string to avoid timezone issues
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                    String(today.getDate()).padStart(2, "0");
+                    
+                    // Normalize time format - add seconds if missing
+                    const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                              startTime + ":00" : startTime;
+                    const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                            endTime + ":00" : endTime;
+                    
+                    const startDateTime = todayStr + " " + normalizedStartTime;
+                    const endDateTime = todayStr + " " + normalizedEndTime;
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
-                    url += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    // Validate timestamps before adding to URL
+                    if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                        url += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    } else {
+                        console.error("Invalid timestamp conversion:", {
+                            startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                        });
+                        alert(t("date_invalid"));
+                        return;
+                    }
                 }
             }
             
@@ -1402,15 +1440,33 @@ $userRankingsHtml = '
                 
                 if (startTime && endTime) {
                     // Convert time to todays date + time for timestamp calculation
-                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
+                    // Use local date instead of ISO string to avoid timezone issues
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                    String(today.getDate()).padStart(2, "0");
+                    
+                    // Normalize time format - add seconds if missing
+                    const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                              startTime + ":00" : startTime;
+                    const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                            endTime + ":00" : endTime;
+                    
+                    const startDateTime = todayStr + " " + normalizedStartTime;
+                    const endDateTime = todayStr + " " + normalizedEndTime;
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
-                    const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
-                    chartUrlParams += timeParams;
-                    usageUrlParams += timeParams;
+                    // Validate timestamps before using them
+                    if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                        const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        chartUrlParams += timeParams;
+                        usageUrlParams += timeParams;
+                    } else {
+                        console.error("Invalid timestamp conversion in loadUserModalData:", {
+                            startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                        });
+                    }
                 }
             }
             
@@ -1700,13 +1756,31 @@ $userRankingsHtml = '
                 
                 if (startTime && endTime) {
                     // Convert time to todays date + time for timestamp calculation
-                    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                    const startDateTime = today + " " + startTime;
-                    const endDateTime = today + " " + endTime;
+                    // Use local date instead of ISO string to avoid timezone issues
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + "-" + 
+                                    String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                    String(today.getDate()).padStart(2, "0");
+                    
+                    // Normalize time format - add seconds if missing
+                    const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                              startTime + ":00" : startTime;
+                    const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                            endTime + ":00" : endTime;
+                    
+                    const startDateTime = todayStr + " " + normalizedStartTime;
+                    const endDateTime = todayStr + " " + normalizedEndTime;
                     const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
-                    urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    // Validate timestamps before using them
+                    if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                        urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                    } else {
+                        console.error("Invalid timestamp conversion in loadUserUsageRecords:", {
+                            startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                        });
+                    }
                 }
             }
             
@@ -2531,13 +2605,33 @@ $userRankingsHtml = '
                     
                     if (startTime && endTime) {
                         // Convert time to todays date + time for timestamp calculation
-                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
+                        // Use local date instead of ISO string to avoid timezone issues
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                        String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                        String(today.getDate()).padStart(2, "0");
+                        
+                        // Normalize time format - add seconds if missing
+                        const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                                  startTime + ":00" : startTime;
+                        const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                                endTime + ":00" : endTime;
+                        
+                        const startDateTime = todayStr + " " + normalizedStartTime;
+                        const endDateTime = todayStr + " " + normalizedEndTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         
-                        exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        // Validate timestamps before using them
+                        if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                            exportParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                        } else {
+                            console.error("Invalid timestamp conversion in user export:", {
+                                startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                            });
+                            alert("Invalid time range selected");
+                            return;
+                        }
                     }
                 }
                 
@@ -2580,20 +2674,40 @@ $userRankingsHtml = '
                     
                     if (startTime && endTime) {
                         // Convert time to todays date + time for timestamp calculation
-                        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-                        const startDateTime = today + " " + startTime;
-                        const endDateTime = today + " " + endTime;
+                        // Use local date instead of ISO string to avoid timezone issues
+                        const today = new Date();
+                        const todayStr = today.getFullYear() + "-" + 
+                                        String(today.getMonth() + 1).padStart(2, "0") + "-" + 
+                                        String(today.getDate()).padStart(2, "0");
+                        
+                        // Normalize time format - add seconds if missing
+                        const normalizedStartTime = startTime.includes(":") && startTime.split(":").length === 2 ? 
+                                                  startTime + ":00" : startTime;
+                        const normalizedEndTime = endTime.includes(":") && endTime.split(":").length === 2 ? 
+                                                endTime + ":00" : endTime;
+                        
+                        const startDateTime = todayStr + " " + normalizedStartTime;
+                        const endDateTime = todayStr + " " + normalizedEndTime;
                         const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                         const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                         
-                        // Validate time range against main page bounds
-                        const exportStartDate = new Date(startDateTime);
-                        const exportEndDate = new Date(endDateTime);
-                        if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                        // Validate timestamps before using them
+                        if (!isNaN(startTimestamp) && !isNaN(endTimestamp) && startTimestamp < endTimestamp) {
+                            // Validate time range against main page bounds
+                            const exportStartDate = new Date(startDateTime);
+                            const exportEndDate = new Date(endDateTime);
+                            if (!validateExportTimeRange(exportStartDate, exportEndDate)) {
+                                return;
+                            }
+                            
+                            exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
+                        } else {
+                            console.error("Invalid timestamp conversion in export time range:", {
+                                startTime, endTime, startDateTime, endDateTime, startTimestamp, endTimestamp
+                            });
+                            alert("Invalid time range selected");
                             return;
                         }
-                        
-                        exportParams += "&export_start_timestamp=" + startTimestamp + "&export_end_timestamp=" + endTimestamp;
                     } else {
                         alert("Please select both start and end times");
                         return;
