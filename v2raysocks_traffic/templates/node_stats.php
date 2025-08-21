@@ -319,6 +319,32 @@ $nodeStatsHtml = '
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
             }
+            
+            /* Custom time range styling for mobile - keep time inputs closer together */
+            #node-rankings-start-time-group,
+            #node-rankings-end-time-group {
+                flex-direction: row !important;
+                align-items: center !important;
+                flex-wrap: wrap !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+                margin-bottom: 8px !important;
+            }
+            #node-rankings-start-time-group label,
+            #node-rankings-end-time-group label {
+                margin-bottom: 0;
+                margin-right: 8px;
+                white-space: nowrap;
+                min-width: auto;
+            }
+            #node-rankings-start-time-group input,
+            #node-rankings-end-time-group input {
+                width: auto;
+                margin-bottom: 0;
+                margin-right: 10px !important;
+                min-width: 120px;
+                flex: 0 0 auto;
+            }
 
         }
         
