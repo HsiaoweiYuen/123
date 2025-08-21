@@ -1243,8 +1243,8 @@ $trafficDashboardHtml = '
                 
                 trafficChart.data.labels = defaultLabels;
                 trafficChart.data.datasets = [
-                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0)),
-                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0))
+                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0), {fill: true}),
+                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0), {fill: true})
                 ];
                 trafficChart.update();
                 hideCustomTimeRangeSummary();
@@ -1378,8 +1378,8 @@ $trafficDashboardHtml = '
                     const downloadData = labels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, downloadData)
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData, {fill: true}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, downloadData, {fill: true})
                     ];
                     break;
                     
@@ -1406,8 +1406,8 @@ $trafficDashboardHtml = '
                     });
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . ' (${unit})`, cumulativeUploadData, {fill: false}),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . ' (${unit})`, cumulativeDownloadData, {fill: false})
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . ' (${unit})`, cumulativeUploadData, {fill: true}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . ' (${unit})`, cumulativeDownloadData, {fill: true})
                     ];
                     break;
                     

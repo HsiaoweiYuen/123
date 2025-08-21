@@ -1083,8 +1083,8 @@ $serviceSearchHtml = '
                 switch(mode) {
                     case "separate":
                         datasets = [
-                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData),
-                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData)
+                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData, {fill: true}),
+                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData, {fill: true})
                         ];
                         break;
                     case "total":
@@ -1094,8 +1094,8 @@ $serviceSearchHtml = '
                         break;
                     case "cumulative":
                         datasets = [
-                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData, {fill: false}),
-                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData, {fill: false})
+                            getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, emptyData, {fill: true}),
+                            getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, emptyData, {fill: true})
                         ];
                         break;
                     case "total_cumulative":
@@ -1248,8 +1248,8 @@ $serviceSearchHtml = '
             switch(mode) {
                 case "separate":
                     datasets = [
-                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (timeData[time].upload / unitDivisor))),
-                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (timeData[time].download / unitDivisor)))
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => (timeData[time].upload / unitDivisor)), {fill: true}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => (timeData[time].download / unitDivisor)), {fill: true})
                     ];
                     break;
                 case "total":
@@ -1264,11 +1264,11 @@ $serviceSearchHtml = '
                         getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('upload') . ' (${unit})`, labels.map(time => {
                             cumulativeUpload += timeData[time].upload;
                             return cumulativeUpload / unitDivisor;
-                        }), {fill: false}),
+                        }), {fill: true}),
                         getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_traffic') . ' ' . v2raysocks_traffic_lang('download') . ' (${unit})`, labels.map(time => {
                             cumulativeDownload += timeData[time].download;
                             return cumulativeDownload / unitDivisor;
-                        }), {fill: false})
+                        }), {fill: true})
                     ];
                     break;
                 case "total_cumulative":

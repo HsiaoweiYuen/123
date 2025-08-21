@@ -555,8 +555,8 @@ $userStatsHtml = '
                 data: {
                     labels: labels,
                     datasets: [
-                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", uploadData),
-                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", downloadData)
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . ' (GB)", uploadData, {fill: true}),
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . ' (GB)", downloadData, {fill: true})
                     ]
                 },
                 options: {
