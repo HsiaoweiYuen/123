@@ -1522,6 +1522,12 @@ $nodeStatsHtml = '
                         labels.push(year + "-" + month + "-" + day);
                     }
                     break;
+                    
+                case "custom":
+                    // For custom time ranges, do not generate complete series
+                    // The backend already provides the appropriate time labels
+                    // Return empty array to indicate no complete series needed
+                    return [];
             }
             
             return labels;
@@ -1534,6 +1540,9 @@ $nodeStatsHtml = '
                 currentNodeChart.destroy();
             }
             
+            // Get the actual time range from chart data, fallback to "today"
+            const actualTimeRange = chartData.time_range || "today";
+            
             // Handle empty data case - use proper time labels instead of placeholder
             if (!chartData.labels || chartData.labels.length === 0) {
                 const defaultLabels = generateDefaultTimeLabels("today", 8);
@@ -1545,9 +1554,16 @@ $nodeStatsHtml = '
                     node_id: chartData.node_id || "Unknown"
                 };
             } else {
-                // Ensure complete time series to prevent gaps
-                const completeLabels = generateCompleteTimeSeriesForNodeChart("today");
-                const originalData = {
+                // Ensure complete time series to prevent gaps (but not for custom ranges)
+                const completeLabels = generateCompleteTimeSeriesForNodeChart(actualTimeRange);
+                
+                // For custom time ranges or when no complete series is needed, use data as-is
+                if (actualTimeRange === "custom" || completeLabels.length === 0) {
+                    // Use the chart data as-is for custom time ranges
+                    // This preserves the exact time filtering applied by the backend
+                } else {
+                    // For predefined time ranges, ensure complete time series
+                    const originalData = {
                     labels: [...chartData.labels],
                     upload: [...chartData.upload],
                     download: [...chartData.download],
@@ -1569,6 +1585,7 @@ $nodeStatsHtml = '
                         chartData.total[completeIndex] = originalData.total[index] || 0;
                     }
                 });
+                }
             }
             
             // Get current unit and mode settings
