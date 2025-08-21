@@ -1085,6 +1085,9 @@ $userRankingsHtml = '
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
                     url += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                } else {
+                    // Fallback to today\'s data when time inputs are empty
+                    url = url.replace("time_range=time_range", "time_range=today");
                 }
             }
             
@@ -1411,6 +1414,10 @@ $userRankingsHtml = '
                     const timeParams = "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
                     chartUrlParams += timeParams;
                     usageUrlParams += timeParams;
+                } else {
+                    // Fallback to today\'s data when time inputs are empty
+                    chartUrlParams = chartUrlParams.replace("time_range=time_range", "time_range=today");
+                    usageUrlParams = usageUrlParams.replace("time_range=time_range", "time_range=today");
                 }
             }
             
@@ -1619,6 +1626,9 @@ $userRankingsHtml = '
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
                     apiUrl += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                } else {
+                    // Fallback to today\'s data when time inputs are empty
+                    apiUrl = apiUrl.replace("time_range=time_range", "time_range=today");
                 }
             }
             
@@ -1707,6 +1717,9 @@ $userRankingsHtml = '
                     const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
                     
                     urlParams += "&start_timestamp=" + startTimestamp + "&end_timestamp=" + endTimestamp;
+                } else {
+                    // Fallback to today\'s data when time inputs are empty
+                    urlParams = urlParams.replace("time_range=time_range", "time_range=today");
                 }
             }
             
@@ -2456,7 +2469,9 @@ $userRankingsHtml = '
                             startDate = new Date(todayStr + " " + startTimeInput);
                             endDate = new Date(todayStr + " " + endTimeInput);
                         } else {
-                            return null; // Invalid custom time range
+                            // Fallback to today when time inputs are empty
+                            startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                            endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                         }
                         break;
                     default:
