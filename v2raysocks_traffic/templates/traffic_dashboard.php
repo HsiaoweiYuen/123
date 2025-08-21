@@ -63,7 +63,7 @@ $trafficDashboardHtml = '
         }
         .filter-group {
             flex: 0 0 auto;
-            min-width: 120px;
+            min-width: auto;
         }
         /* Compact layout for time inputs */
         .filter-group#custom-dates,
@@ -157,14 +157,14 @@ $trafficDashboardHtml = '
             /* Optimize filter layout for mobile - make inputs more compact */
             .filter-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 120px;
+                min-width: auto;
             }
             .filter-group#custom-dates,
             .filter-group#custom-dates-end,
             .filter-group#custom-times,
             .filter-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             /* Filter button should be full width on mobile */
             .filter-group:last-child {
