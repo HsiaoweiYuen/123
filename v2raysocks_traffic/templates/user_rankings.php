@@ -464,6 +464,14 @@ $userRankingsHtml = '
             .form-group#custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
+                margin-bottom: 0; /* Remove bottom margin */
+            }
+            /* Group time inputs closer together */
+            .form-group#custom-times {
+                margin-bottom: 5px; /* Small gap between start and end time */
+            }
+            .form-group#custom-times-end {
+                margin-top: 0; /* Remove top margin */
             }
             .form-group#custom-dates input,
             .form-group#custom-dates-end input,
