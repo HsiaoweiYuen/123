@@ -230,7 +230,7 @@ $trafficDashboardHtml = '
         #export-modal input[type="date"], 
         #export-modal input[type="time"], 
         #export-modal input[type="number"] {
-            width: 200px;
+            width: 100%;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;

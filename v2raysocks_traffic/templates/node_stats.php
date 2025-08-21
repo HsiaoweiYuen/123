@@ -342,7 +342,7 @@ $nodeStatsHtml = '
         #node-export-usage-modal input[type="date"], 
         #node-export-usage-modal input[type="time"], 
         #node-export-usage-modal input[type="number"] {
-            width: 200px;
+            width: 100%;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;
