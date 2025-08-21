@@ -238,6 +238,13 @@ function v2raysocks_traffic_getUnifiedStyles() {
                 min-width: auto;
                 width: 100%;
             }
+            /* Override time input constraints for mobile */
+            #node-rankings-start-time-group,
+            #node-rankings-end-time-group {
+                flex: 1 1 auto;
+                min-width: auto;
+                width: 100%;
+            }
             .table-responsive {
                 font-size: 0.9em;
             }
