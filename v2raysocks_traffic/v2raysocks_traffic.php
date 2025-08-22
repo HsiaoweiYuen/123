@@ -179,12 +179,16 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
+                // Add pagination support
+                $pageSize = !empty($_GET['page_size']) ? intval($_GET['page_size']) : null;
+                $offset = !empty($_GET['offset']) ? intval($_GET['offset']) : 0;
+                
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
                     $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getTrafficData($filters, $pageSize, $offset);
                 }
                 
                 // Apply PR#37 time grouping if requested
@@ -683,25 +687,71 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
+                $limit = !empty($_GET['limit']) ? intval($_GET['limit']) : null;
+                $offset = !empty($_GET['offset']) ? intval($_GET['offset']) : 0;
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $offset);
                 $result = [
                     'status' => 'success',
                     'data' => $records,
+                    'count' => count($records),
+                    'pagination' => [
+                        'limit' => $limit,
+                        'offset' => $offset
+                    ],
                     'node_id' => $nodeId,
                     'user_id' => $userId,
                     'uuid' => $uuid,
                     'time_range' => $timeRange,
                     'start_timestamp' => $startTimestamp,
-                    'end_timestamp' => $endTimestamp,
-                    'limit' => $limit
+                    'end_timestamp' => $endTimestamp
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_usage_records error: " . $e->getMessage(), 0);
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to get usage records: ' . $e->getMessage(),
+                    'data' => []
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'get_user_rankings':
+            try {
+                $sortBy = $_GET['sort_by'] ?? 'traffic_desc';
+                $timeRange = $_GET['time_range'] ?? 'today';
+                $limit = !empty($_GET['limit']) ? intval($_GET['limit']) : null;
+                $offset = !empty($_GET['offset']) ? intval($_GET['offset']) : 0;
+                $startDate = $_GET['start_date'] ?? null;
+                $endDate = $_GET['end_date'] ?? null;
+                $startTimestamp = $_GET['start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? null;
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $offset);
+                $result = [
+                    'status' => 'success',
+                    'data' => $rankings,
+                    'count' => count($rankings),
+                    'pagination' => [
+                        'limit' => $limit,
+                        'offset' => $offset
+                    ],
+                    'filters' => [
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                        'start_timestamp' => $startTimestamp,
+                        'end_timestamp' => $endTimestamp
+                    ]
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_user_rankings error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get user rankings: ' . $e->getMessage(),
                     'data' => []
                 ];
             }
