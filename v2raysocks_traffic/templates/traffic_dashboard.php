@@ -62,12 +62,6 @@ $trafficDashboardHtml = '
             align-items: end;
         }
         .filter-group {
-            flex: 0 0 auto;
-            min-width: 120px;
-        }
-        /* Compact layout for time inputs */
-        .filter-group#custom-dates,
-        .filter-group#custom-dates-end {
             flex: 1 1 auto;
             min-width: auto;
         }
@@ -152,19 +146,19 @@ $trafficDashboardHtml = '
             .filter-group {
                 min-width: auto;
                 width: auto;
-                flex: 0 0 auto;
+                flex: 1 1 auto;
             }
             /* Optimize filter layout for mobile - make inputs more compact */
-            .filter-group:not(#custom-dates):not(#custom-dates-end):not(#custom-times):not(#custom-times-end) {
+            .filter-group:not(:last-child) {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 120px;
+                min-width: auto;
             }
             .filter-group#custom-dates,
             .filter-group#custom-dates-end,
             .filter-group#custom-times,
             .filter-group#custom-times-end {
                 flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
+                min-width: auto;
             }
             /* Filter button should be full width on mobile */
             .filter-group:last-child {
@@ -204,12 +198,16 @@ $trafficDashboardHtml = '
                 flex: 1 1 auto;
             }
             .filter-group#custom-dates,
-            .filter-group#custom-dates-end {
+            .filter-group#custom-dates-end,
+            .filter-group#custom-times,
+            .filter-group#custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
             }
             .filter-group#custom-dates input,
-            .filter-group#custom-dates-end input {
+            .filter-group#custom-dates-end input,
+            .filter-group#custom-times input,
+            .filter-group#custom-times-end input {
                 width: 100%;
             }
             .table th, .table td {
