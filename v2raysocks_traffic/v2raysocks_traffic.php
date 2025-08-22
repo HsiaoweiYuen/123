@@ -152,27 +152,41 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
+                // Pagination parameters
+                $paginationOptions = [
+                    'cursor' => $_GET['cursor'] ?? null,
+                    'limit' => intval($_GET['limit'] ?? 1000),
+                    'order_by' => $_GET['order_by'] ?? 't',
+                    'order_dir' => $_GET['order_dir'] ?? 'DESC',
+                    'cursor_field' => $_GET['cursor_field'] ?? 't'
+                ];
+                
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
-                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters, $paginationOptions);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getTrafficData($filters, $paginationOptions);
                 }
+                
+                // Extract data and pagination info
+                $dataArray = is_array($trafficData) && isset($trafficData['data']) ? $trafficData['data'] : $trafficData;
+                $paginationInfo = is_array($trafficData) && isset($trafficData['pagination']) ? $trafficData['pagination'] : null;
                 
                 // Apply PR#37 time grouping if requested
                 $grouped = $_GET['grouped'] ?? 'false';
                 $groupedData = null;
                 if ($grouped === 'true') {
                     $timeRange = $filters['time_range'] ?? 'today';
-                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData, $timeRange);
+                    $groupedData = v2raysocks_traffic_groupDataByTime($dataArray, $timeRange);
                 }
                 
                 $result = [
                     'status' => 'success',
-                    'data' => $trafficData,
+                    'data' => $dataArray,
+                    'pagination' => $paginationInfo,
                     'grouped_data' => $groupedData,
-                    'count' => count($trafficData),
+                    'count' => count($dataArray),
                     'filters_applied' => array_filter($filters),
                     'enhanced_mode' => $useEnhanced === 'true'
                 ];
@@ -181,7 +195,8 @@ function v2raysocks_traffic_output($vars)
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to retrieve traffic data: ' . $e->getMessage(),
-                    'data' => []
+                    'data' => [],
+                    'pagination' => null
                 ];
             }
             

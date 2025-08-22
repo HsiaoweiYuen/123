@@ -432,10 +432,18 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $paginationOptions = [])
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Create pagination parameters
+        $paginationParams = v2raysocks_traffic_createPaginationParams(array_merge([
+            'limit' => 1000,
+            'order_by' => 't',
+            'order_dir' => 'DESC',
+            'cursor_field' => 't'
+        ], $paginationOptions));
+        
+        $cacheKey = 'traffic_data_' . md5(serialize($filters) . serialize($paginationParams));
         
         // Try to get from cache first, but don't fail if caching is unavailable
         try {
@@ -590,33 +598,47 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC';
+        // Build cursor-based pagination WHERE clause
+        $cursorWhere = v2raysocks_traffic_buildCursorWhere($paginationParams, 'uu');
+        $sql .= $cursorWhere['where_clause'];
+        $params = array_merge($params, $cursorWhere['params']);
+
+        // Add ORDER BY and LIMIT for pagination
+        $sql .= v2raysocks_traffic_buildPaginationClause($paginationParams, 'uu');
         
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Validate and clean the traffic data to prevent extreme values
-        v2raysocks_traffic_validateTrafficData($data);
-        
-        // Add current_node_name field for "used node name" functionality
-        $todayStart = strtotime('today');
-        foreach ($data as &$row) {
-            // Ensure node_name is not empty; if it is, try to use the node identifier
-            if (empty($row['node_name']) && !empty($row['node_identifier'])) {
-                // If node_name is null/empty but we have a node identifier, use it
-                $row['node_name'] = $row['node_identifier'];
-            }
+        // Execute query with async support
+        $data = v2raysocks_traffic_executeAsyncQuery($pdo, $sql, $params, function($results) {
+            // Validate and clean the traffic data to prevent extreme values
+            v2raysocks_traffic_validateTrafficData($results);
             
-            // For today's data, show the node name as "current_node_name"
-            if ($row['t'] >= $todayStart) {
-                $row['current_node_name'] = $row['node_name'];
-            } else {
-                // For historical data, leave empty
-                $row['current_node_name'] = '';
+            // Add current_node_name field for "used node name" functionality
+            $todayStart = strtotime('today');
+            foreach ($results as &$row) {
+                // Ensure node_name is not empty; if it is, try to use the node identifier
+                if (empty($row['node_name']) && !empty($row['node_identifier'])) {
+                    // If node_name is null/empty but we have a node identifier, use it
+                    $row['node_name'] = $row['node_identifier'];
+                }
+                
+                // For today's data, show the node name as "current_node_name"
+                if ($row['t'] >= $todayStart) {
+                    $row['current_node_name'] = $row['node_name'];
+                } else {
+                    // For historical data, leave empty
+                    $row['current_node_name'] = '';
+                }
             }
-        }
-        unset($row); // Break reference
+            unset($row); // Break reference
+            return $results;
+        });
+        
+        // Extract pagination metadata
+        $paginationMeta = v2raysocks_traffic_extractPaginationMeta($data, $paginationParams);
+        
+        $result = [
+            'data' => $data,
+            'pagination' => $paginationMeta
+        ];
         
         // Try to cache with shorter time for real-time data using unified cache function
         try {
@@ -642,7 +664,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                 'data_type' => 'traffic_data',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => !$isRealTime
@@ -652,21 +674,32 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
         }
         
-        return $data;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams ?? v2raysocks_traffic_createPaginationParams())
+        ];
     }
 }
 
 /**
- * Get enhanced traffic data with improved node name resolution
+ * Get enhanced traffic data with improved node name resolution and cursor-based pagination
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $paginationOptions = [])
 {
     try {
-        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
+        // Create pagination parameters
+        $paginationParams = v2raysocks_traffic_createPaginationParams(array_merge([
+            'limit' => 1000,
+            'order_by' => 't',
+            'order_dir' => 'DESC',
+            'cursor_field' => 't'
+        ], $paginationOptions));
+        
+        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters) . serialize($paginationParams));
         
         // Try to get from cache first
         try {
@@ -766,11 +799,10 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 $dayParams[':day_timestamp_end'] = $filters['end_timestamp'];
             }
             
-            $dayTrafficSql .= ' ORDER BY uu.t DESC';
+            // Build cursor-based pagination for day traffic
+            $dayTrafficSql .= v2raysocks_traffic_buildPaginationClause($paginationParams, 'uu');
             
-            $dayStmt = $pdo->prepare($dayTrafficSql);
-            $dayStmt->execute($dayParams);
-            $dayData = $dayStmt->fetchAll(PDO::FETCH_ASSOC);
+            $dayData = v2raysocks_traffic_executeAsyncQuery($pdo, $dayTrafficSql, $dayParams);
             
             if (!empty($dayData)) {
                 $allData = array_merge($allData, $dayData);
@@ -869,11 +901,10 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             $regularParams[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $regularTrafficSql .= ' ORDER BY uu.t DESC';
+        // Build cursor-based pagination for regular traffic
+        $regularTrafficSql .= v2raysocks_traffic_buildPaginationClause($paginationParams, 'uu');
         
-        $regularStmt = $pdo->prepare($regularTrafficSql);
-        $regularStmt->execute($regularParams);
-        $regularData = $regularStmt->fetchAll(PDO::FETCH_ASSOC);
+        $regularData = v2raysocks_traffic_executeAsyncQuery($pdo, $regularTrafficSql, $regularParams);
         
         if (!empty($regularData)) {
             $allData = array_merge($allData, $regularData);
@@ -884,29 +915,41 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Apply overall pagination limit to combined results
+        $allData = array_slice($allData, 0, $paginationParams['limit']);
         
-        // Validate and clean the traffic data
-        v2raysocks_traffic_validateTrafficData($allData);
-        
-        // Add current_node_name field for "used node name" functionality
-        $todayStart = strtotime('today');
-        foreach ($allData as &$row) {
-            // Ensure node_name is not empty; if it is, try to use the node identifier
-            if (empty($row['node_name']) && !empty($row['node_identifier'])) {
-                $row['node_name'] = $row['node_identifier'];
-            }
+        // Process data with callback-style processing for consistency
+        $allData = v2raysocks_traffic_executeAsyncQuery($pdo, '', [], function($results) use ($allData) {
+            // Validate and clean the traffic data
+            v2raysocks_traffic_validateTrafficData($allData);
             
-            // For today's data, show the node name as "current_node_name"
-            if ($row['t'] >= $todayStart) {
-                $row['current_node_name'] = $row['node_name'];
-            } else {
-                // For historical data, leave empty
-                $row['current_node_name'] = '';
+            // Add current_node_name field for "used node name" functionality
+            $todayStart = strtotime('today');
+            foreach ($allData as &$row) {
+                // Ensure node_name is not empty; if it is, try to use the node identifier
+                if (empty($row['node_name']) && !empty($row['node_identifier'])) {
+                    $row['node_name'] = $row['node_identifier'];
+                }
+                
+                // For today's data, show the node name as "current_node_name"
+                if ($row['t'] >= $todayStart) {
+                    $row['current_node_name'] = $row['node_name'];
+                } else {
+                    // For historical data, leave empty
+                    $row['current_node_name'] = '';
+                }
             }
-        }
-        unset($row); // Break reference
+            unset($row); // Break reference
+            return $allData;
+        });
+        
+        // Extract pagination metadata
+        $paginationMeta = v2raysocks_traffic_extractPaginationMeta($allData, $paginationParams);
+        
+        $result = [
+            'data' => $allData,
+            'pagination' => $paginationMeta
+        ];
         
         // Try to cache the results using unified cache function
         try {
@@ -926,7 +969,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                 'data_type' => 'enhanced_traffic',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => ($timeRangeForCache === 'historical')
@@ -936,10 +979,13 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for enhanced traffic data: " . $e->getMessage(), 0);
         }
         
-        return $allData;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams ?? v2raysocks_traffic_createPaginationParams())
+        ];
     }
 }
 
