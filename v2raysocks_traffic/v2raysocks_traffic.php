@@ -7,6 +7,7 @@ if (!defined("WHMCS")) {
 use WHMCS\Database\Capsule;
 
 require_once(__DIR__ . '/lib/Monitor_DB.php');
+require_once(__DIR__ . '/lib/Pagination.php');
 
 function v2raysocks_traffic_config()
 {
@@ -105,6 +106,19 @@ function v2raysocks_traffic_config()
                 ],
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
+            ],
+            'default_page_size' => [
+                'FriendlyName' => isset($lang['default_page_size']) ? $lang['default_page_size'] : 'Default Pagination Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '500' => '500 records per page',
+                    '1000' => '1000 records per page (recommended)',
+                    '3000' => '3000 records per page',
+                    '5000' => '5000 records per page',
+                    '10000' => '10000 records per page'
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['default_page_size_description']) ? $lang['default_page_size_description'] : 'Default number of records displayed per page for high-concurrency scenarios. Larger sizes may impact performance.',
             ],
         ]
     ];
@@ -563,21 +577,40 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
-                $limitValue = $_GET['limit'] ?? 'all';
                 
-                // Handle "all" option properly - remove limit restriction
-                $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
-                if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
+                // Support both legacy limit parameter and new pagination
+                $page = intval($_GET['page'] ?? 1);
+                $pageSize = intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+                $usePagination = isset($_GET['page']) || isset($_GET['page_size']);
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
-                $result = [
-                    'status' => 'success',
-                    'data' => $rankings,
-                    'sort_by' => $sortBy,
-                    'time_range' => $timeRange,
-                    'limit' => $limitValue, // Return original value for frontend
-                    'actual_limit' => $limit // Return actual numeric limit used
-                ];
+                if ($usePagination) {
+                    $pagination = new V2RaySocksPagination($page, $pageSize);
+                    $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, PHP_INT_MAX, $startDate, $endDate, $startTimestamp, $endTimestamp, $pagination);
+                    
+                    $result = [
+                        'status' => 'success',
+                        'data' => $rankings['data'] ?? [],
+                        'pagination' => $rankings['pagination'] ?? [],
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange
+                    ];
+                } else {
+                    // Legacy mode for backward compatibility
+                    $limitValue = $_GET['limit'] ?? 'all';
+                    $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
+                    if ($limit <= 0) $limit = PHP_INT_MAX;
+                    
+                    $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+                    
+                    $result = [
+                        'status' => 'success',
+                        'data' => $rankings,
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'limit' => $limitValue,
+                        'actual_limit' => $limit
+                    ];
+                }
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_user_traffic_rankings error: " . $e->getMessage(), 0);
                 $result = [
@@ -656,20 +689,44 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
-                $result = [
-                    'status' => 'success',
-                    'data' => $records,
-                    'node_id' => $nodeId,
-                    'user_id' => $userId,
-                    'uuid' => $uuid,
-                    'time_range' => $timeRange,
-                    'start_timestamp' => $startTimestamp,
-                    'end_timestamp' => $endTimestamp,
-                    'limit' => $limit
-                ];
+                // Support both legacy limit parameter and new pagination
+                $page = intval($_GET['page'] ?? 1);
+                $pageSize = intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+                $usePagination = isset($_GET['page']) || isset($_GET['page_size']);
+                
+                if ($usePagination) {
+                    $pagination = new V2RaySocksPagination($page, $pageSize);
+                    $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, PHP_INT_MAX, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $pagination);
+                    
+                    $result = [
+                        'status' => 'success',
+                        'data' => $records['data'] ?? [],
+                        'pagination' => $records['pagination'] ?? [],
+                        'node_id' => $nodeId,
+                        'user_id' => $userId,
+                        'uuid' => $uuid,
+                        'time_range' => $timeRange,
+                        'start_timestamp' => $startTimestamp,
+                        'end_timestamp' => $endTimestamp
+                    ];
+                } else {
+                    // Legacy mode for backward compatibility
+                    $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
+                    $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                    
+                    $result = [
+                        'status' => 'success',
+                        'data' => $records,
+                        'node_id' => $nodeId,
+                        'user_id' => $userId,
+                        'uuid' => $uuid,
+                        'time_range' => $timeRange,
+                        'start_timestamp' => $startTimestamp,
+                        'end_timestamp' => $endTimestamp,
+                        'limit' => $limit
+                    ];
+                }
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_usage_records error: " . $e->getMessage(), 0);
                 $result = [

@@ -31,6 +31,8 @@ $_LANG = [
     'default_unit_description' => '显示流量数据的默认单位',
     'chart_display_unit' => '图表显示单位',
     'chart_unit_description' => '图表和图形中使用的单位',
+    'default_page_size' => '默认分页大小',
+    'default_page_size_description' => '高并发场景下每页显示的默认记录数。较大的尺寸可能会影响性能。',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)

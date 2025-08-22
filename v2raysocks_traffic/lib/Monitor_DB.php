@@ -5,6 +5,7 @@ if (!defined("WHMCS")) {
 }
 
 require_once __DIR__ . '/Monitor_Redis.php';
+require_once __DIR__ . '/Pagination.php';
 
 use WHMCS\Database\Capsule;
 
@@ -2618,13 +2619,16 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 }
 
 /**
- * Get user traffic rankings
+ * Get user traffic rankings with unified pagination support
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $pagination = null)
 {
     try {
-        // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        // Use pagination if provided, otherwise fallback to legacy limit
+        $usePagination = ($pagination instanceof V2RaySocksPagination);
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . 
+            ($usePagination ? $pagination->getPage() . '_' . $pagination->getPageSize() : $limit) . '_' . 
+            ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2779,7 +2783,25 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 $sql .= ' ORDER BY period_traffic DESC';
         }
 
-        $sql .= ' LIMIT :limit';
+        // Get total count for pagination if needed
+        if ($usePagination) {
+            $countSql = V2RaySocksPagination::getCountQuery($sql);
+            $totalRecords = V2RaySocksPagination::getAsyncTotalCount($pdo, $countSql, [
+                ':start_time' => $startTime,
+                ':end_time' => $endTime,
+                ':time_5min' => $time5min,
+                ':time_1hour' => $time1hour,
+                ':time_4hour' => $time4hour
+            ]);
+            $pagination->setTotalRecords($totalRecords);
+        }
+
+        // Add pagination or legacy limit
+        if ($usePagination) {
+            $sql .= ' ' . $pagination->getSqlLimit();
+        } else {
+            $sql .= ' LIMIT :limit';
+        }
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
@@ -2787,7 +2809,12 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $stmt->bindValue(':time_5min', $time5min, PDO::PARAM_INT);
         $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
         $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        
+        if ($usePagination) {
+            $pagination->bindPdoParams($stmt);
+        } else {
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        }
         $stmt->execute();
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -2824,24 +2851,45 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }
         
-        // Try to cache with optimized TTL using unified cache function
-        if (!empty($users)) {
-            try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
-                    'data_type' => 'rankings',
-                    'time_range' => $timeRange
-                ]);
-            } catch (\Exception $e) {
-                // Cache write failed, but we can still return the data
-                logActivity("V2RaySocks Traffic Monitor: Cache write failed for user rankings: " . $e->getMessage(), 0);
+        // Prepare return data based on pagination usage
+        if ($usePagination) {
+            $result = [
+                'data' => $users,
+                'pagination' => $pagination->getPaginationInfo()
+            ];
+            
+            // Try to cache paginated result
+            if (!empty($result)) {
+                try {
+                    v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                        'data_type' => 'rankings_paginated',
+                        'time_range' => $timeRange
+                    ]);
+                } catch (\Exception $e) {
+                    logActivity("V2RaySocks Traffic Monitor: Cache write failed for paginated user rankings: " . $e->getMessage(), 0);
+                }
             }
+            
+            return $result;
+        } else {
+            // Legacy return format for backward compatibility
+            if (!empty($users)) {
+                try {
+                    v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
+                        'data_type' => 'rankings',
+                        'time_range' => $timeRange
+                    ]);
+                } catch (\Exception $e) {
+                    logActivity("V2RaySocks Traffic Monitor: Cache write failed for user rankings: " . $e->getMessage(), 0);
+                }
+            }
+            
+            return $users;
         }
-        
-        return $users;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficRankings error: " . $e->getMessage(), 0);
-        return [];
+        return $usePagination ? ['data' => [], 'pagination' => $pagination ? $pagination->getPaginationInfo() : []] : [];
     }
 }
 
@@ -3243,13 +3291,17 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 }
 
 /**
- * Get usage records for a specific node or user
+ * Get usage records for a specific node or user with unified pagination support
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $pagination = null)
 {
     try {
-        // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        // Use pagination if provided, otherwise fallback to legacy limit
+        $usePagination = ($pagination instanceof V2RaySocksPagination);
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . 
+            ($usePagination ? $pagination->getPage() . '_' . $pagination->getPageSize() : $limit) . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . 
+            ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3265,7 +3317,7 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return $usePagination ? ['data' => [], 'pagination' => $pagination->getPaginationInfo()] : [];
         }
 
         // Calculate time range
@@ -3381,12 +3433,27 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
+        // Build the base query for counting total records if using pagination
+        if ($usePagination) {
+            $countSql = V2RaySocksPagination::getCountQuery($sql);
+            $totalRecords = V2RaySocksPagination::getAsyncTotalCount($pdo, $countSql, $params);
+            $pagination->setTotalRecords($totalRecords);
+        }
+
+        // Add ordering and pagination
+        $sql .= ' ORDER BY uu.t DESC';
+        
+        if ($usePagination) {
+            $sql .= ' ' . $pagination->getSqlLimit();
+            $params = array_merge($params, $pagination->getPdoParams());
+        } else {
+            $sql .= ' LIMIT :limit';
+            $params[':limit'] = $limit;
+        }
 
         $stmt = $pdo->prepare($sql);
         foreach ($params as $key => $value) {
-            if ($key === ':limit') {
+            if (in_array($key, [':limit', ':offset'])) {
                 $stmt->bindValue($key, $value, PDO::PARAM_INT);
             } else {
                 $stmt->bindValue($key, $value);
@@ -3417,24 +3484,45 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
         }
         
-        // Try to cache using unified cache function
-        if (!empty($records)) {
-            try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
-                    'data_type' => 'usage_records',
-                    'time_range' => $timeRange === 'today' ? 'today' : 'historical'
-                ]);
-            } catch (\Exception $e) {
-                // Cache write failed, but we can still return the data
-                logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
+        // Prepare return data based on pagination usage
+        if ($usePagination) {
+            $result = [
+                'data' => $records,
+                'pagination' => $pagination->getPaginationInfo()
+            ];
+            
+            // Try to cache paginated result
+            if (!empty($result)) {
+                try {
+                    v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                        'data_type' => 'usage_records_paginated',
+                        'time_range' => $timeRange === 'today' ? 'today' : 'historical'
+                    ]);
+                } catch (\Exception $e) {
+                    logActivity("V2RaySocks Traffic Monitor: Cache write failed for paginated usage records: " . $e->getMessage(), 0);
+                }
             }
+            
+            return $result;
+        } else {
+            // Legacy return format for backward compatibility
+            if (!empty($records)) {
+                try {
+                    v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
+                        'data_type' => 'usage_records',
+                        'time_range' => $timeRange === 'today' ? 'today' : 'historical'
+                    ]);
+                } catch (\Exception $e) {
+                    logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
+                }
+            }
+            
+            return $records;
         }
-        
-        return $records;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
-        return [];
+        return $usePagination ? ['data' => [], 'pagination' => $pagination ? $pagination->getPaginationInfo() : []] : [];
     }
 }
 
