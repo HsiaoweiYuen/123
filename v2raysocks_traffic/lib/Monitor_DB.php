@@ -2426,11 +2426,11 @@ function v2raysocks_traffic_searchByServiceId($serviceId, $filters = [])
 /**
  * Get node traffic rankings with today's data only
  */
-function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_' . serialize($paginationOptions));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2446,7 +2446,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return ['data' => [], 'pagination' => ['total_records' => 0]];
         }
 
         // Check if new columns exist in the node table
@@ -2646,10 +2646,38 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
             $node['avg_traffic_per_user'] = $node['unique_users'] > 0 ? $node['total_traffic'] / $node['unique_users'] : 0;
         }
         
+        // Apply pagination if enabled
+        $paginationMeta = null;
+        if (!empty($paginationOptions) && $paginationOptions !== false) {
+            $totalRecords = count($nodes);
+            $page = max(1, intval($paginationOptions['page'] ?? 1));
+            $pageSize = intval($paginationOptions['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+            $offset = ($page - 1) * $pageSize;
+            
+            $paginatedNodes = array_slice($nodes, $offset, $pageSize);
+            $totalPages = ceil($totalRecords / $pageSize);
+            
+            $paginationMeta = [
+                'current_page' => $page,
+                'page_size' => $pageSize,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'has_next_page' => $page < $totalPages,
+                'has_prev_page' => $page > 1,
+                'next_cursor' => !empty($paginatedNodes) ? end($paginatedNodes)['id'] : null,
+                'prev_cursor' => !empty($paginatedNodes) ? $paginatedNodes[0]['id'] : null
+            ];
+            
+            $nodes = $paginatedNodes;
+        }
+        
+        // Prepare result
+        $result = $paginationMeta ? ['data' => $nodes, 'pagination' => $paginationMeta] : $nodes;
+        
         // Try to cache using unified cache function
         if (!empty($nodes)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodes), [
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                     'data_type' => 'rankings',
                     'time_range' => $onlyToday ? 'today' : 'historical'
                 ]);
@@ -2659,11 +2687,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
             }
         }
         
-        return $nodes;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getNodeTrafficRankings error: " . $e->getMessage(), 0);
-        return [];
+        return ['data' => [], 'pagination' => ['total_records' => 0]];
     }
 }
 
@@ -3295,11 +3323,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_' . serialize($paginationOptions));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3315,7 +3343,7 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return ['data' => [], 'pagination' => ['total_records' => 0]];
         }
 
         // Calculate time range
@@ -3431,20 +3459,35 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
-
-        $stmt = $pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            if ($key === ':limit') {
-                $stmt->bindValue($key, $value, PDO::PARAM_INT);
-            } else {
-                $stmt->bindValue($key, $value);
+        // Apply pagination if enabled, otherwise use legacy LIMIT behavior
+        if (!empty($paginationOptions) && $paginationOptions !== false) {
+            // Set default order for pagination
+            if (empty($paginationOptions['order_by'])) {
+                $paginationOptions['order_by'] = 'uu.t';
             }
+            
+            // Execute paginated query
+            $result = v2raysocks_traffic_executePaginatedQuery($pdo, $sql, $params, $paginationOptions);
+            $records = $result['data'];
+            $paginationMeta = $result['pagination'];
+        } else {
+            // Non-paginated query for backward compatibility
+            $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
+            $params[':limit'] = $limit;
+
+            $stmt = $pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                if ($key === ':limit') {
+                    $stmt->bindValue($key, $value, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($key, $value);
+                }
+            }
+            $stmt->execute();
+            
+            $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $paginationMeta = null;
         }
-        $stmt->execute();
-        
-        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Process results
         foreach ($records as &$record) {
@@ -3467,10 +3510,13 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
         }
         
+        // Prepare result
+        $result = $paginationMeta ? ['data' => $records, 'pagination' => $paginationMeta] : $records;
+        
         // Try to cache using unified cache function
         if (!empty($records)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                     'data_type' => 'usage_records',
                     'time_range' => $timeRange === 'today' ? 'today' : 'historical'
                 ]);
@@ -3480,11 +3526,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             }
         }
         
-        return $records;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
-        return [];
+        return ['data' => [], 'pagination' => ['total_records' => 0]];
     }
 }
 

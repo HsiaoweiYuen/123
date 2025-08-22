@@ -574,12 +574,37 @@ function v2raysocks_traffic_output($vars)
                     $timeRange = ($_GET['only_today'] === 'true') ? 'today' : 'all';
                 }
                 
-                $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
+                // Check if pagination is requested
+                $usePagination = ($_GET['paginate'] ?? 'true') === 'true';
+                $paginationOptions = [];
+                
+                if ($usePagination) {
+                    $paginationOptions = [
+                        'page' => max(1, intval($_GET['page'] ?? 1)),
+                        'page_size' => intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize()),
+                        'order_by' => $_GET['order_by'] ?? 'id',
+                        'order_direction' => $_GET['order_direction'] ?? 'ASC',
+                        'cursor' => $_GET['cursor'] ?? null
+                    ];
+                }
+                
+                $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp, $usePagination ? $paginationOptions : false);
+                
+                // Handle different return formats for backward compatibility
+                if ($usePagination && isset($rankings['data'])) {
+                    $dataArray = $rankings['data'];
+                    $paginationMeta = $rankings['pagination'];
+                } else {
+                    $dataArray = is_array($rankings) ? $rankings : [];
+                    $paginationMeta = null;
+                }
+                
                 $result = [
                     'status' => 'success',
-                    'data' => $rankings,
+                    'data' => $dataArray,
                     'sort_by' => $sortBy,
-                    'time_range' => $timeRange
+                    'time_range' => $timeRange,
+                    'pagination' => $paginationMeta
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_node_traffic_rankings error: " . $e->getMessage(), 0);
@@ -696,17 +721,42 @@ function v2raysocks_traffic_output($vars)
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
                 $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                // Check if pagination is requested
+                $usePagination = ($_GET['paginate'] ?? 'true') === 'true';
+                $paginationOptions = [];
+                
+                if ($usePagination) {
+                    $paginationOptions = [
+                        'page' => max(1, intval($_GET['page'] ?? 1)),
+                        'page_size' => intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize()),
+                        'order_by' => $_GET['order_by'] ?? 'uu.t',
+                        'order_direction' => $_GET['order_direction'] ?? 'DESC',
+                        'cursor' => $_GET['cursor'] ?? null
+                    ];
+                }
+                
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $usePagination ? $paginationOptions : false);
+                
+                // Handle different return formats for backward compatibility
+                if ($usePagination && isset($records['data'])) {
+                    $dataArray = $records['data'];
+                    $paginationMeta = $records['pagination'];
+                } else {
+                    $dataArray = is_array($records) ? $records : [];
+                    $paginationMeta = null;
+                }
+                
                 $result = [
                     'status' => 'success',
-                    'data' => $records,
+                    'data' => $dataArray,
                     'node_id' => $nodeId,
                     'user_id' => $userId,
                     'uuid' => $uuid,
                     'time_range' => $timeRange,
                     'start_timestamp' => $startTimestamp,
                     'end_timestamp' => $endTimestamp,
-                    'limit' => $limit
+                    'limit' => $limit,
+                    'pagination' => $paginationMeta
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_usage_records error: " . $e->getMessage(), 0);
