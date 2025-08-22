@@ -135,12 +135,57 @@ All functions maintain the `v2raysocks_traffic_` prefix for consistency:
 ## Performance Considerations
 
 - **Enhanced Caching**: 5-minute intervals for optimal WHMCS sync
+- **Server-side Pagination**: Handles millions of records efficiently with LIMIT/OFFSET
+- **Streaming Exports**: Large dataset exports without memory exhaustion
 - **Optimized Queries**: Improved database performance for large datasets
 - **Responsive Design**: Better performance on mobile devices
 - **Smart Loading**: Efficient data loading with proper pagination
 
+### Large-Scale Data Handling
+
+The system now supports millions or tens of millions of records through:
+
+- **Server-side Pagination**: API endpoints support `page` and `limit` parameters
+- **Chunked Processing**: Data processed in configurable chunks (100-2000 records)
+- **Memory Optimization**: From O(n) to O(limit) memory usage
+- **Streaming Exports**: New `/export_data_stream` endpoint for unlimited dataset sizes
+- **Database Optimization**: See `DATABASE_OPTIMIZATION.md` for recommended indexes
+
+### API Pagination
+
+All major endpoints now support pagination:
+
+```
+GET /get_traffic_data?page=1&limit=50
+GET /get_user_traffic_rankings?page=2&limit=100
+GET /export_data_stream?export_type=traffic_data&format=csv&chunk_size=1000
+```
+
+Response format includes pagination metadata:
+```json
+{
+  "status": "success",
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total_records": 1000000,
+    "total_pages": 20000,
+    "has_next_page": true,
+    "has_prev_page": false
+  }
+}
+```
+
 ## Version History
 
+- **v2025-01-15 Large-Scale Optimization**: 
+  - **Server-side pagination** for millions of records
+  - **Streaming export system** for unlimited dataset sizes
+  - **Memory optimization** from O(n) to O(limit) usage
+  - **Database query optimization** with LIMIT/OFFSET
+  - **Chunked processing** for large data operations
+  - **Backward compatibility** maintained for existing APIs
 - **v2025-01-01 Enhanced**: 
   - Multi-timeframe active user statistics
   - Configurable unit conversion system

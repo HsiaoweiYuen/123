@@ -977,36 +977,40 @@ $userRankingsHtml = '
             // Rankings pagination event handlers
             $("#rankings-records-per-page").on("change", function() {
                 currentRankingsPage = 1;
-                updateRankingsPagination();
+                // Use server-side pagination for better performance
+                loadUserRankings(1);
             });
             
             $("#rankings-first-page").on("click", function() {
-                currentRankingsPage = 1;
-                updateRankingsPagination();
+                if (currentRankingsPage !== 1) {
+                    loadUserRankings(1);
+                }
             });
             
             $("#rankings-prev-page").on("click", function() {
                 if (currentRankingsPage > 1) {
-                    currentRankingsPage--;
-                    updateRankingsPagination();
+                    loadUserRankings(currentRankingsPage - 1);
                 }
             });
             
             $("#rankings-next-page").on("click", function() {
                 if (currentRankingsPage < totalRankingsPages) {
-                    currentRankingsPage++;
-                    updateRankingsPagination();
+                    loadUserRankings(currentRankingsPage + 1);
                 }
             });
             
             $("#rankings-last-page").on("click", function() {
-                currentRankingsPage = totalRankingsPages;
-                updateRankingsPagination();
+                if (currentRankingsPage !== totalRankingsPages && totalRankingsPages > 0) {
+                    loadUserRankings(totalRankingsPages);
+                }
             });
         });
         
-        function loadUserRankings() {
+        function loadUserRankings(page = 1) {
             const timeRange = document.getElementById("time-range").value;
+            
+            // Store current page for pagination controls
+            currentRankingsPage = page;
             
             // Validate custom date range if selected
             if (timeRange === "custom") {
@@ -1072,6 +1076,10 @@ $userRankingsHtml = '
             const formData = $("#user-rankings-filter").serialize();
             let url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
+            // Add pagination parameters
+            const recordsPerPage = parseInt($("#rankings-records-per-page").val()) || 50;
+            url += "&page=" + page + "&limit=" + recordsPerPage;
+            
             // Add timestamp parameters for time_range selection
             if (timeRange === "time_range") {
                 const startTime = document.getElementById("start-time").value;
@@ -1099,8 +1107,16 @@ $userRankingsHtml = '
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        allUserRankings = data.data || [];
-                        sortAndDisplayUserRankings();
+                        // Check if server-side pagination is available
+                        if (data.pagination) {
+                            // Use server-side pagination
+                            allUserRankings = data.data || [];
+                            updateRankingsWithPagination(data.data, data.pagination);
+                        } else {
+                            // Fallback to client-side pagination
+                            allUserRankings = data.data || [];
+                            sortAndDisplayUserRankings();
+                        }
                     } else {
                         tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
@@ -1109,6 +1125,67 @@ $userRankingsHtml = '
                     console.error("Error loading user rankings:", error);
                     tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
+        }
+        
+        function updateRankingsWithPagination(data, pagination) {
+            const tbody = document.getElementById("rankings-tbody");
+            const paginationDiv = document.getElementById("rankings-pagination-controls");
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_data")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Generate table rows for received data (already paginated)
+            let html = "";
+            data.forEach((user, index) => {
+                const rankNumber = (pagination.page - 1) * pagination.limit + index + 1;
+                
+                html += `
+                    <tr data-user-id="${user.user_id}">
+                        <td style="text-align: center; font-weight: bold; color: #2c3e50;">${rankNumber}</td>
+                        <td><span class="user-highlight">${user.user_id}</span></td>
+                        <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
+                        <td><span class="service-highlight">${user.sid || "-"}</span></td>
+                        <td><span class="traffic-value">${formatBytes(user.period_traffic)}</span></td>
+                        <td>${formatBytes(user.period_upload)}</td>
+                        <td>${formatBytes(user.period_download)}</td>
+                        <td>${formatBytes(user.transfer_enable)}</td>
+                        <td><span class="quota-value">${formatBytes(user.remaining_quota)}</span></td>
+                        <td><span class="utilization-value">${user.quota_utilization.toFixed(1)}%</span></td>
+                        <td>${user.nodes_used || 0}</td>
+                        <td>${formatBytes(user.traffic_5min)}</td>
+                        <td>${formatBytes(user.traffic_1hour)}</td>
+                        <td>${formatBytes(user.traffic_4hour)}</td>
+                        <td>${user.speedlimitss || "-"}</td>
+                        <td>${user.speedlimitother || "-"}</td>
+                        <td>${user.last_usage ? formatDateTime(user.last_usage) : t("no_activity")}</td>
+                        <td>${user.enable ? '<span class="status-enabled">✓</span>' : '<span class="status-disabled">✗</span>'}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination controls with server data
+            $("#rankings-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '"
+                .replace("{start}", pagination.start_record)
+                .replace("{end}", pagination.end_record)
+                .replace("{total}", pagination.total_records));
+            $("#rankings-page-info").text("' . v2raysocks_traffic_lang('page_info') . '"
+                .replace("{current}", pagination.page)
+                .replace("{total}", pagination.total_pages));
+            
+            // Update global pagination variables
+            currentRankingsPage = pagination.page;
+            totalRankingsPages = pagination.total_pages;
+            
+            // Enable/disable pagination buttons
+            $("#rankings-first-page, #rankings-prev-page").prop("disabled", !pagination.has_prev_page);
+            $("#rankings-next-page, #rankings-last-page").prop("disabled", !pagination.has_next_page);
+            
+            paginationDiv.style.display = "block";
         }
         
         function updateSortIndicators() {
