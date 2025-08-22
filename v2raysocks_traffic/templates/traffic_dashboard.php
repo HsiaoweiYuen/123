@@ -1282,18 +1282,39 @@ $trafficDashboardHtml = '
             } else {
                 // Fallback to client-side grouping if no server grouping available
                 data.forEach(function(row) {
-                    // Validate row data
+                    // Enhanced validation for row data to prevent data loss
                     if (!row || !row.t) {
-                        console.warn("Invalid data row:", row);
+                        console.warn("Invalid data row - missing timestamp:", row);
                         return;
                     }
                     
-                    const date = new Date(row.t * 1000);
+                    // Validate timestamp is a valid number
+                    const timestamp = parseFloat(row.t);
+                    if (isNaN(timestamp) || timestamp <= 0) {
+                        console.warn("Invalid timestamp in data row:", row);
+                        return;
+                    }
+                    
+                    const date = new Date(timestamp * 1000);
+                    
+                    // Validate date is valid
+                    if (isNaN(date.getTime())) {
+                        console.warn("Invalid date from timestamp:", timestamp, row);
+                        return;
+                    }
+                    
                     let timeKey;
                     
-                    // Add to totals
+                    // Add to totals with enhanced validation
                     const upload = parseFloat(row.u) || 0;
                     const download = parseFloat(row.d) || 0;
+                    
+                    // Validate traffic values are reasonable (catch corrupted data)
+                    if (upload < 0 || download < 0) {
+                        console.warn("Invalid negative traffic values:", {upload, download}, row);
+                        return;
+                    }
+                    
                     totalUpload += upload;
                     totalDownload += download;
                     allDataPoints.push(upload);
@@ -1360,12 +1381,29 @@ $trafficDashboardHtml = '
             // Generate complete time series to avoid time gaps in chart
             const labels = generateCompleteTimeSeriesForTrafficChart(timeRange);
             
+            // Validate and count existing vs missing data points
+            let existingDataPoints = 0;
+            let missingDataPoints = 0;
+            
             // Fill missing time points with zero values
             labels.forEach(timeKey => {
                 if (!timeData[timeKey]) {
                     timeData[timeKey] = { upload: 0, download: 0 };
+                    missingDataPoints++;
+                } else {
+                    existingDataPoints++;
                 }
             });
+            
+            // Log data integrity info for debugging
+            if (existingDataPoints > 0 || missingDataPoints > 0) {
+                console.log("Traffic chart data integrity:", {
+                    totalPoints: labels.length,
+                    existingData: existingDataPoints,
+                    filledGaps: missingDataPoints,
+                    dataCompleteness: ((existingDataPoints / labels.length) * 100).toFixed(1) + "%"
+                });
+            }
             
             let datasets = [];
             

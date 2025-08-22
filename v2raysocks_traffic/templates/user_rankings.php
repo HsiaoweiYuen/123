@@ -2013,14 +2013,31 @@ $userRankingsHtml = '
                 chartData.total = new Array(completeLabels.length).fill(0);
                 
                 // Fill in actual data where available
+                let dataLossCount = 0;
                 originalData.labels.forEach((label, index) => {
                     const completeIndex = completeLabels.indexOf(label);
                     if (completeIndex !== -1) {
                         chartData.upload[completeIndex] = originalData.upload[index] || 0;
                         chartData.download[completeIndex] = originalData.download[index] || 0;
                         chartData.total[completeIndex] = originalData.total[index] || 0;
+                    } else {
+                        // Log data loss to help debug chart accuracy issues
+                        console.warn("Chart data loss: Could not match label", label, "in complete series", {
+                            originalLabel: label,
+                            availableLabels: completeLabels,
+                            dataValues: {
+                                upload: originalData.upload[index],
+                                download: originalData.download[index],
+                                total: originalData.total[index]
+                            }
+                        });
+                        dataLossCount++;
                     }
                 });
+                
+                if (dataLossCount > 0) {
+                    console.warn("User chart data processing:", dataLossCount, "data points lost due to label mismatches");
+                }
             }
             
             // Get current unit and mode settings
@@ -2106,12 +2123,18 @@ $userRankingsHtml = '
                     let uploadSum = 0;
                     let downloadSum = 0;
                     
-                    chartData.upload.forEach((val, index) => {
-                        uploadSum += val;
-                        downloadSum += chartData.download[index];
+                    // Ensure arrays have the same length to prevent data loss
+                    const maxLength = Math.max(chartData.upload.length, chartData.download.length);
+                    
+                    for (let index = 0; index < maxLength; index++) {
+                        const uploadVal = chartData.upload[index] || 0;
+                        const downloadVal = chartData.download[index] || 0;
+                        
+                        uploadSum += uploadVal;
+                        downloadSum += downloadVal;
                         cumulativeUpload.push(uploadSum * 1000000000 / unitMultiplier);
                         cumulativeDownload.push(downloadSum * 1000000000 / unitMultiplier);
-                    });
+                    }
                     
                     datasets = [
                         {
