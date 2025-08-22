@@ -298,10 +298,18 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $pagination = null)
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Include pagination in cache key if provided
+        $cacheKeyData = ['filters' => $filters];
+        if ($pagination instanceof V2RaySocksPagination) {
+            $cacheKeyData['pagination'] = [
+                'page' => $pagination->getPage(),
+                'page_size' => $pagination->getPageSize()
+            ];
+        }
+        $cacheKey = 'traffic_data_' . md5(serialize($cacheKeyData));
         
         // Try to get from cache first, but don't fail if caching is unavailable
         try {
@@ -458,8 +466,24 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         
         $sql .= ' ORDER BY uu.t DESC';
         
+        $usePagination = ($pagination instanceof V2RaySocksPagination);
+        
+        if ($usePagination) {
+            // Get total count for pagination
+            $countQuery = V2RaySocksPagination::getCountQuery($sql);
+            $totalRecords = V2RaySocksPagination::getAsyncTotalCount($pdo, $countQuery, $params);
+            $pagination->setTotalRecords($totalRecords);
+            
+            // Apply pagination to the main query
+            $sql .= ' ' . $pagination->getSqlLimit();
+            $params = array_merge($params, $pagination->getPdoParams());
+        }
+        
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Validate and clean the traffic data to prevent extreme values
@@ -518,7 +542,16 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
         }
         
-        return $data;
+        if ($usePagination) {
+            // Return paginated result
+            return [
+                'data' => $data,
+                'pagination' => $pagination->getPaginationInfo()
+            ];
+        } else {
+            // Legacy mode - return data directly
+            return $data;
+        }
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getTrafficData error: " . $e->getMessage(), 0);
         return [];
@@ -529,7 +562,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
  * Get enhanced traffic data with improved node name resolution
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $pagination = null)
 {
     try {
         $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
