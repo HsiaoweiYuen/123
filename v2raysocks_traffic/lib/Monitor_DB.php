@@ -300,20 +300,35 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
 function v2raysocks_traffic_getTrafficData($filters = [])
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Extract pagination parameters
+        $limit = isset($filters['limit']) ? intval($filters['limit']) : PHP_INT_MAX;
+        $offset = isset($filters['offset']) ? intval($filters['offset']) : 0;
+        $cursor = isset($filters['cursor']) ? $filters['cursor'] : null;
         
-        // Try to get from cache first, but don't fail if caching is unavailable
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        // For cursor pagination, we'll use the timestamp as cursor
+        $cursorTimestamp = null;
+        if ($cursor) {
+            $cursorTimestamp = intval($cursor);
+        }
+        
+        // Don't cache paginated results to ensure fresh data
+        $shouldCache = ($limit === PHP_INT_MAX && $offset === 0 && !$cursor);
+        $cacheKey = 'traffic_data_' . md5(serialize(array_diff_key($filters, ['limit' => '', 'offset' => '', 'cursor' => ''])));
+        
+        // Try to get from cache first only for non-paginated requests
+        if ($shouldCache) {
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for traffic data: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for traffic data: " . $e->getMessage(), 0);
         }
         
         // Use monitor module's PDO creation for independence
@@ -455,10 +470,42 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
+        // Add cursor pagination support
+        if ($cursorTimestamp) {
+            $sql .= ' AND uu.t < :cursor_timestamp';
+            $params[':cursor_timestamp'] = $cursorTimestamp;
+        }
+        
         $sql .= ' ORDER BY uu.t DESC';
         
+        // Add pagination limits
+        if ($limit !== PHP_INT_MAX) {
+            $sql .= ' LIMIT :limit';
+            if ($offset > 0) {
+                $sql .= ' OFFSET :offset';
+            }
+        }
+        
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        
+        // Bind all parameters including pagination
+        foreach ($params as $key => $value) {
+            if (is_int($value)) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        // Bind pagination parameters
+        if ($limit !== PHP_INT_MAX) {
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            if ($offset > 0) {
+                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            }
+        }
+        
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Validate and clean the traffic data to prevent extreme values
@@ -483,38 +530,84 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         }
         unset($row); // Break reference
         
-        // Try to cache with shorter time for real-time data using unified cache function
-        try {
-            $timeRangeForCache = 'historical';
-            $isRealTime = false;
-            
-            if (isset($filters['time_range'])) {
-                switch ($filters['time_range']) {
-                    case 'today':
-                        $timeRangeForCache = 'today';
-                        $isRealTime = true;
-                        break;
-                    case 'last_1_hour':
-                    case 'last_3_hours':
-                    case 'last_6_hours':
-                    case 'last_12_hours':
-                        $timeRangeForCache = 'today';
-                        $isRealTime = true;
-                        break;
-                    default:
-                        $timeRangeForCache = 'historical';
-                        break;
+        // Try to cache with shorter time for real-time data using unified cache function (only for non-paginated results)
+        if ($shouldCache) {
+            try {
+                $timeRangeForCache = 'historical';
+                $isRealTime = false;
+                
+                if (isset($filters['time_range'])) {
+                    switch ($filters['time_range']) {
+                        case 'today':
+                            $timeRangeForCache = 'today';
+                            $isRealTime = true;
+                            break;
+                        case 'last_1_hour':
+                        case 'last_3_hours':
+                        case 'last_6_hours':
+                        case 'last_12_hours':
+                            $timeRangeForCache = 'today';
+                            $isRealTime = true;
+                            break;
+                        default:
+                            $timeRangeForCache = 'historical';
+                            break;
+                    }
                 }
+                
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+                    'data_type' => 'traffic_data',
+                    'time_range' => $timeRangeForCache,
+                    'is_historical' => !$isRealTime
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
+            }
+        }
+        
+        // If pagination was requested, prepare metadata
+        if ($limit !== PHP_INT_MAX || $offset > 0 || $cursor) {
+            $nextCursor = null;
+            $hasMore = false;
+            
+            if (!empty($data)) {
+                // Use the timestamp of the last record as the next cursor
+                $lastRecord = end($data);
+                $nextCursor = $lastRecord['t'];
+                
+                // Check if there are more records by trying to fetch one more
+                $checkSql = str_replace(' LIMIT :limit', ' LIMIT 1', $sql);
+                if ($offset > 0) {
+                    $checkSql = str_replace(' OFFSET :offset', ' OFFSET ' . ($offset + $limit), $checkSql);
+                } else {
+                    $checkSql .= ' OFFSET ' . $limit;
+                }
+                
+                $checkStmt = $pdo->prepare($checkSql);
+                foreach ($params as $key => $value) {
+                    if (is_int($value)) {
+                        $checkStmt->bindValue($key, $value, PDO::PARAM_INT);
+                    } else {
+                        $checkStmt->bindValue($key, $value);
+                    }
+                }
+                $checkStmt->bindValue(':limit', 1, PDO::PARAM_INT);
+                $checkStmt->execute();
+                $hasMore = $checkStmt->rowCount() > 0;
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
-                'data_type' => 'traffic_data',
-                'time_range' => $timeRangeForCache,
-                'is_historical' => !$isRealTime
-            ]);
-        } catch (\Exception $e) {
-            // Cache write failed, but we can still return the data
-            logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
+            return [
+                'data' => $data,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'cursor' => $cursor,
+                    'next_cursor' => $nextCursor,
+                    'has_more' => $hasMore,
+                    'count' => count($data)
+                ]
+            ];
         }
         
         return $data;
@@ -2376,22 +2469,27 @@ function v2raysocks_traffic_searchByServiceId($serviceId, $filters = [])
 /**
  * Get node traffic rankings with today's data only
  */
-function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null, $limit = PHP_INT_MAX, $offset = 0, $cursor = null)
 {
     try {
-        // Try cache first, but don't fail if cache is unavailable
+        // Don't cache paginated results
+        $shouldCache = ($limit === PHP_INT_MAX && $offset === 0 && !$cursor);
         $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        
+        // Try cache first only for non-paginated requests
+        if ($shouldCache) {
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for node rankings: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for node rankings: " . $e->getMessage(), 0);
         }
         
         $pdo = v2raysocks_traffic_createPDO();
@@ -2549,14 +2647,32 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
                 $sql .= ' ORDER BY total_traffic DESC';
         }
 
+        // Add pagination limits
+        if ($limit !== PHP_INT_MAX) {
+            $sql .= ' LIMIT :limit';
+            if ($offset > 0) {
+                $sql .= ' OFFSET :offset';
+            }
+        }
+
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             ':start_time' => $todayStart,
             ':end_time' => $todayEnd,
             ':time_5min' => $time5min,
             ':time_1hour' => $time1hour,
             ':time_4hour' => $time4hour
-        ]);
+        ];
+        
+        // Add pagination parameters
+        if ($limit !== PHP_INT_MAX) {
+            $params[':limit'] = $limit;
+            if ($offset > 0) {
+                $params[':offset'] = $offset;
+            }
+        }
+        
+        $stmt->execute($params);
         
         $nodes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $currentTime = time();
@@ -2596,8 +2712,8 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
             $node['avg_traffic_per_user'] = $node['unique_users'] > 0 ? $node['total_traffic'] / $node['unique_users'] : 0;
         }
         
-        // Try to cache using unified cache function
-        if (!empty($nodes)) {
+        // Try to cache using unified cache function (only for non-paginated results)
+        if ($shouldCache && !empty($nodes)) {
             try {
                 v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($nodes), [
                     'data_type' => 'rankings',
@@ -2607,6 +2723,44 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
                 // Cache write failed, but we can still return the data
                 logActivity("V2RaySocks Traffic Monitor: Cache write failed for node rankings: " . $e->getMessage(), 0);
             }
+        }
+        
+        // If pagination was requested, prepare metadata
+        if ($limit !== PHP_INT_MAX || $offset > 0 || $cursor) {
+            $hasMore = false;
+            
+            if (!empty($nodes)) {
+                // Check if there are more records by trying to fetch one more
+                $checkSql = str_replace(' LIMIT :limit', ' LIMIT 1', $sql);
+                if ($offset > 0) {
+                    $checkSql = str_replace(' OFFSET :offset', ' OFFSET ' . ($offset + $limit), $checkSql);
+                } else {
+                    $checkSql .= ' OFFSET ' . $limit;
+                }
+                
+                $checkStmt = $pdo->prepare($checkSql);
+                $checkParams = [
+                    ':start_time' => $todayStart,
+                    ':end_time' => $todayEnd,
+                    ':time_5min' => $time5min,
+                    ':time_1hour' => $time1hour,
+                    ':time_4hour' => $time4hour,
+                    ':limit' => 1
+                ];
+                $checkStmt->execute($checkParams);
+                $hasMore = $checkStmt->rowCount() > 0;
+            }
+            
+            return [
+                'data' => $nodes,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'cursor' => $cursor,
+                    'has_more' => $hasMore,
+                    'count' => count($nodes)
+                ]
+            ];
         }
         
         return $nodes;
@@ -2620,22 +2774,27 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 /**
  * Get user traffic rankings
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $offset = 0, $cursor = null)
 {
     try {
-        // Try cache first, but don't fail if cache is unavailable
+        // Don't cache paginated results
+        $shouldCache = ($limit === PHP_INT_MAX && $offset === 0 && !$cursor);
         $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        
+        // Try cache first only for non-paginated requests
+        if ($shouldCache) {
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for user rankings: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for user rankings: " . $e->getMessage(), 0);
         }
         
         $pdo = v2raysocks_traffic_createPDO();
@@ -2780,6 +2939,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         }
 
         $sql .= ' LIMIT :limit';
+        
+        // Add offset for pagination
+        if ($offset > 0) {
+            $sql .= ' OFFSET :offset';
+        }
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
@@ -2788,6 +2952,9 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
         $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        if ($offset > 0) {
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        }
         $stmt->execute();
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -2824,8 +2991,8 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }
         
-        // Try to cache with optimized TTL using unified cache function
-        if (!empty($users)) {
+        // Try to cache with optimized TTL using unified cache function (only for non-paginated results)
+        if ($shouldCache && !empty($users)) {
             try {
                 v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
                     'data_type' => 'rankings',
@@ -2835,6 +3002,42 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 // Cache write failed, but we can still return the data
                 logActivity("V2RaySocks Traffic Monitor: Cache write failed for user rankings: " . $e->getMessage(), 0);
             }
+        }
+        
+        // If pagination was requested, prepare metadata
+        if ($limit !== PHP_INT_MAX || $offset > 0 || $cursor) {
+            $hasMore = false;
+            
+            if (!empty($users)) {
+                // Check if there are more records by trying to fetch one more
+                $checkSql = str_replace(' LIMIT :limit', ' LIMIT 1', $sql);
+                if ($offset > 0) {
+                    $checkSql = str_replace(' OFFSET :offset', ' OFFSET ' . ($offset + $limit), $checkSql);
+                } else {
+                    $checkSql .= ' OFFSET ' . $limit;
+                }
+                
+                $checkStmt = $pdo->prepare($checkSql);
+                $checkStmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
+                $checkStmt->bindValue(':end_time', $endTime, PDO::PARAM_INT);
+                $checkStmt->bindValue(':time_5min', $time5min, PDO::PARAM_INT);
+                $checkStmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
+                $checkStmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
+                $checkStmt->bindValue(':limit', 1, PDO::PARAM_INT);
+                $checkStmt->execute();
+                $hasMore = $checkStmt->rowCount() > 0;
+            }
+            
+            return [
+                'data' => $users,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'cursor' => $cursor,
+                    'has_more' => $hasMore,
+                    'count' => count($users)
+                ]
+            ];
         }
         
         return $users;
@@ -3245,7 +3448,7 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $offset = 0, $cursor = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
@@ -3381,12 +3584,26 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
+        // Add cursor pagination support
+        $cursorTimestamp = null;
+        if ($cursor) {
+            $cursorTimestamp = intval($cursor);
+            $sql .= ' AND uu.t < :cursor_timestamp';
+            $params[':cursor_timestamp'] = $cursorTimestamp;
+        }
+
         $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
         $params[':limit'] = $limit;
+        
+        // Add offset for pagination
+        if ($offset > 0) {
+            $sql .= ' OFFSET :offset';
+            $params[':offset'] = $offset;
+        }
 
         $stmt = $pdo->prepare($sql);
         foreach ($params as $key => $value) {
-            if ($key === ':limit') {
+            if ($key === ':limit' || $key === ':offset' || $key === ':cursor_timestamp') {
                 $stmt->bindValue($key, $value, PDO::PARAM_INT);
             } else {
                 $stmt->bindValue($key, $value);
@@ -3417,8 +3634,9 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
         }
         
-        // Try to cache using unified cache function
-        if (!empty($records)) {
+        // Try to cache using unified cache function (only cache non-paginated results)
+        $shouldCache = ($limit === PHP_INT_MAX && $offset === 0 && !$cursor);
+        if ($shouldCache && !empty($records)) {
             try {
                 v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
                     'data_type' => 'usage_records',
@@ -3428,6 +3646,52 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
                 // Cache write failed, but we can still return the data
                 logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
             }
+        }
+        
+        // If pagination was requested, prepare metadata
+        if ($limit !== PHP_INT_MAX || $offset > 0 || $cursor) {
+            $nextCursor = null;
+            $hasMore = false;
+            
+            if (!empty($records)) {
+                // Use the timestamp of the last record as the next cursor
+                $lastRecord = end($records);
+                $nextCursor = $lastRecord['t'];
+                
+                // Check if there are more records by trying to fetch one more
+                $checkSql = str_replace(' LIMIT :limit', ' LIMIT 1', $sql);
+                if ($offset > 0) {
+                    $checkSql = str_replace(' OFFSET :offset', ' OFFSET ' . ($offset + $limit), $checkSql);
+                } else {
+                    $checkSql .= ' OFFSET ' . $limit;
+                }
+                
+                $checkStmt = $pdo->prepare($checkSql);
+                $checkParams = array_diff_key($params, [':limit' => '', ':offset' => '']);
+                $checkParams[':limit'] = 1;
+                
+                foreach ($checkParams as $key => $value) {
+                    if ($key === ':limit' || $key === ':cursor_timestamp') {
+                        $checkStmt->bindValue($key, $value, PDO::PARAM_INT);
+                    } else {
+                        $checkStmt->bindValue($key, $value);
+                    }
+                }
+                $checkStmt->execute();
+                $hasMore = $checkStmt->rowCount() > 0;
+            }
+            
+            return [
+                'data' => $records,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'cursor' => $cursor,
+                    'next_cursor' => $nextCursor,
+                    'has_more' => $hasMore,
+                    'count' => count($records)
+                ]
+            ];
         }
         
         return $records;

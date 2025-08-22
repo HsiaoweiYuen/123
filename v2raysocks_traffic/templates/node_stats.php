@@ -681,9 +681,15 @@ $nodeStatsHtml = '
                                     <label for="node-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                                     <select id="node-records-per-page" style="margin-right: 15px; padding: 5px;">
                                         <option value="25">25</option>
-                                        <option value="50" selected>50</option>
+                                        <option value="50">50</option>
                                         <option value="100">100</option>
                                         <option value="200">200</option>
+                                        <option value="500" selected>500</option>
+                                        <option value="1000">1000</option>
+                                        <option value="1500">1500</option>
+                                        <option value="2000">2000</option>
+                                        <option value="3000">3000</option>
+                                        <option value="5000">5000</option>
                                     </select>
                                     
                                     <button id="node-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
