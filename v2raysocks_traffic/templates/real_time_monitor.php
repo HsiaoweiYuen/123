@@ -30,7 +30,7 @@ $realTimeMonitorHtml = '
         .filter-group label { font-weight: 500; }
         .filter-group input, .filter-group select { padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; }
         /* Make custom date inputs more compact */
-        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 0 0 auto; max-width: 160px; }
+        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 0 0 auto; max-width: auto; }
         #rt-custom-dates input, #rt-custom-dates-end input, #rt-custom-times input, #rt-custom-times-end input { width: 100%; max-width: 100%; }
         .btn { padding: 8px 15px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background: #007bff; color: white; }
@@ -322,11 +322,11 @@ $realTimeMonitorHtml = '
                             <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
-                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: auto;">
                         <label for="today-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
                         <input type="time" id="today-start-time" name="start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
-                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: auto;">
                         <label for="today-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
                         <input type="time" id="today-end-time" name="end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
