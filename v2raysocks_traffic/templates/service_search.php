@@ -32,7 +32,7 @@ $serviceSearchHtml = '
         }
         .form-group { 
             flex: 1;
-            min-width: 120px;
+            min-width: auto;
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
@@ -217,7 +217,7 @@ $serviceSearchHtml = '
         #service-export-modal input[type="date"], 
         #service-export-modal input[type="time"], 
         #service-export-modal input[type="number"] {
-            width: 200px;
+            width: auto;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;

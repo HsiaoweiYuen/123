@@ -35,7 +35,7 @@ $userRankingsHtml = '
         }
         .form-group { 
             flex: 1;
-            min-width: 120px;
+            min-width: auto;
         }
         /* Compact layout for time inputs and search button */
         .form-group#custom-dates,
@@ -817,7 +817,7 @@ $userRankingsHtml = '
                     <!-- Node-based Search Area -->
                     <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                            <div style="flex: 0 0 200px; min-width: 150px;">
+                            <div style="flex: 1 1 auto;">
                                 <label for="user-node-search" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('node_search_label') . ':</label>
                                 <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             </div>

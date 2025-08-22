@@ -29,8 +29,8 @@ $realTimeMonitorHtml = '
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-group label { font-weight: 500; }
         .filter-group input, .filter-group select { padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; }
-        /* Make custom date inputs more compact */
-        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 0 0 auto; max-width: 160px; }
+        /* Make custom date inputs responsive */
+        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 1 1 auto; }
         #rt-custom-dates input, #rt-custom-dates-end input, #rt-custom-times input, #rt-custom-times-end input { width: 100%; max-width: 100%; }
         .btn { padding: 8px 15px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background: #007bff; color: white; }
@@ -307,11 +307,11 @@ $realTimeMonitorHtml = '
             <!-- Independent Search Controls -->
             <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
                 <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 1 1 auto;">
                         <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id') . ':</label>
                         <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 1 1 auto;">
                         <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
                         <select id="today-time-range" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
@@ -322,11 +322,11 @@ $realTimeMonitorHtml = '
                             <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
-                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times" style="display: none;">
                         <label for="today-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
                         <input type="time" id="today-start-time" name="start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
-                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times-end" style="display: none;">
                         <label for="today-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
                         <input type="time" id="today-end-time" name="end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
                     </div>
