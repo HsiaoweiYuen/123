@@ -717,6 +717,163 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+        case 'get_traffic_data_paginated':
+            try {
+                $filters = [
+                    'user_id' => $_GET['user_id'] ?? null,
+                    'service_id' => $_GET['service_id'] ?? null,
+                    'node_id' => $_GET['node_id'] ?? null,
+                    'start_date' => $_GET['start_date'] ?? null,
+                    'end_date' => $_GET['end_date'] ?? null,
+                    'time_range' => $_GET['time_range'] ?? 'month_including_today',
+                    'uuid' => $_GET['uuid'] ?? null,
+                    'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
+                    'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                    'limit' => !empty($_GET['limit']) ? ($_GET['limit'] === 'unlimited' ? null : intval($_GET['limit'])) : null,
+                ];
+                
+                $paginationOptions = [
+                    'cursor_value' => $_GET['cursor'] ?? null,
+                    'page_size' => !empty($_GET['page_size']) ? intval($_GET['page_size']) : null,
+                ];
+                
+                $trafficData = v2raysocks_traffic_getTrafficDataPaginated($filters, $paginationOptions);
+                
+                $result = [
+                    'status' => 'success',
+                    'data' => $trafficData,
+                    'count' => count($trafficData),
+                    'filters_applied' => array_filter($filters),
+                    'pagination_options' => $paginationOptions,
+                    'high_performance_mode' => true
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_traffic_data_paginated error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to retrieve paginated traffic data: ' . $e->getMessage(),
+                    'data' => []
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'get_usage_records_paginated':
+            try {
+                $nodeId = $_GET['node_id'] ?? null;
+                $userId = $_GET['user_id'] ?? null;
+                $uuid = $_GET['uuid'] ?? null;
+                $timeRange = $_GET['time_range'] ?? 'today';
+                $startDate = $_GET['start_date'] ?? null;
+                $endDate = $_GET['end_date'] ?? null;
+                $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
+                $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
+                $limit = !empty($_GET['limit']) ? ($_GET['limit'] === 'unlimited' ? null : intval($_GET['limit'])) : null;
+                
+                $paginationOptions = [
+                    'cursor_value' => $_GET['cursor'] ?? null,
+                    'page_size' => !empty($_GET['page_size']) ? intval($_GET['page_size']) : null,
+                ];
+                
+                $records = v2raysocks_traffic_getUsageRecordsPaginated($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $paginationOptions);
+                
+                $result = [
+                    'status' => 'success',
+                    'data' => $records,
+                    'count' => count($records),
+                    'node_id' => $nodeId,
+                    'user_id' => $userId,
+                    'uuid' => $uuid,
+                    'time_range' => $timeRange,
+                    'start_timestamp' => $startTimestamp,
+                    'end_timestamp' => $endTimestamp,
+                    'limit' => $limit,
+                    'pagination_options' => $paginationOptions,
+                    'high_performance_mode' => true
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_usage_records_paginated error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get paginated usage records: ' . $e->getMessage(),
+                    'data' => []
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'pagination_status':
+            try {
+                // Get pagination manager status and performance metrics
+                $paginationManager = v2raysocks_traffic_createPaginationManager();
+                
+                if ($paginationManager) {
+                    $status = [
+                        'available' => true,
+                        'high_performance_mode' => true,
+                        'memory_usage' => memory_get_usage(true),
+                        'memory_peak' => memory_get_peak_usage(true),
+                        'configuration' => v2raysocks_traffic_getModuleConfig()
+                    ];
+                } else {
+                    $status = [
+                        'available' => false,
+                        'high_performance_mode' => false,
+                        'fallback_mode' => true,
+                        'message' => 'PaginationManager not available, using fallback methods'
+                    ];
+                }
+                
+                $result = [
+                    'status' => 'success',
+                    'data' => $status,
+                    'timestamp' => time()
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis pagination_status error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get pagination status: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'clear_pagination_cache':
+            try {
+                $paginationManager = v2raysocks_traffic_createPaginationManager();
+                
+                if ($paginationManager) {
+                    $pattern = $_GET['pattern'] ?? null;
+                    $cleared = $paginationManager->clearCache($pattern);
+                    
+                    $result = [
+                        'status' => 'success',
+                        'message' => 'Pagination cache cleared successfully',
+                        'pattern' => $pattern,
+                        'cleared' => $cleared,
+                        'timestamp' => time()
+                    ];
+                } else {
+                    $result = [
+                        'status' => 'error',
+                        'message' => 'PaginationManager not available'
+                    ];
+                }
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis clear_pagination_cache error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to clear pagination cache: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
         case 'debug':
             // Debug action for troubleshooting (should be removed in production)
             require_once(__DIR__ . '/debug.php');

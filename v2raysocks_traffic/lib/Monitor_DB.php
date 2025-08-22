@@ -5,6 +5,7 @@ if (!defined("WHMCS")) {
 }
 
 require_once __DIR__ . '/Monitor_Redis.php';
+require_once __DIR__ . '/PaginationManager.php';
 
 use WHMCS\Database\Capsule;
 
@@ -4265,5 +4266,310 @@ function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities 
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation failed for trigger '{$triggerType}': " . $e->getMessage(), 0);
         return false;
+    }
+}
+
+/**
+ * Enhanced traffic data function using PaginationManager for high-performance queries
+ * Supports unlimited data retrieval with cursor-based pagination
+ */
+function v2raysocks_traffic_getTrafficDataPaginated($filters = [], $paginationOptions = [])
+{
+    try {
+        // Create pagination manager
+        $paginationManager = v2raysocks_traffic_createPaginationManager();
+        if (!$paginationManager) {
+            // Fallback to regular function if pagination manager fails
+            return v2raysocks_traffic_getTrafficData($filters, $filters['limit'] ?? null);
+        }
+        
+        // Build base query
+        $baseQuery = 'SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    n.address as node_address,
+                    uu.node as node_identifier
+                FROM user_usage AS uu
+                LEFT JOIN user AS u ON uu.user_id = u.id
+                LEFT JOIN node AS n ON uu.node = n.name
+                WHERE 1=1';
+        
+        $params = [];
+        
+        // Apply filters
+        if (!empty($filters['user_id'])) {
+            $baseQuery .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $filters['user_id'];
+        }
+        
+        if (!empty($filters['service_id']) || !empty($filters['sid'])) {
+            $sid = $filters['service_id'] ?: $filters['sid'];
+            $baseQuery .= ' AND u.sid = :service_id';
+            $params[':service_id'] = $sid;
+        }
+        
+        if (!empty($filters['node_id'])) {
+            $baseQuery .= ' AND uu.node = :node_id';
+            $params[':node_id'] = $filters['node_id'];
+        }
+        
+        if (!empty($filters['uuid'])) {
+            $baseQuery .= ' AND u.uuid LIKE :uuid';
+            $params[':uuid'] = '%' . $filters['uuid'] . '%';
+        }
+        
+        // Add time range filtering
+        v2raysocks_traffic_addTimeRangeFilters($baseQuery, $params, $filters);
+        
+        // Set pagination options
+        $defaultOptions = [
+            'cursor_field' => 't',
+            'cursor_direction' => 'DESC',
+            'page_size' => $filters['limit'] ?? null,
+            'use_cache' => true,
+            'cache_key_suffix' => '_traffic_paginated'
+        ];
+        $paginationOptions = array_merge($defaultOptions, $paginationOptions);
+        
+        // Execute paginated query
+        if ($paginationOptions['page_size'] === null || $paginationOptions['page_size'] <= 0) {
+            // Unlimited query - fetch all data
+            $result = $paginationManager->fetchAllData($baseQuery, $params, $paginationOptions);
+            $data = $result['data'];
+        } else {
+            // Paginated query
+            $result = $paginationManager->paginatedQuery($baseQuery, $params, $paginationOptions);
+            $data = $result['data'];
+        }
+        
+        // Validate and clean the traffic data
+        v2raysocks_traffic_validateTrafficData($data);
+        
+        // Add current_node_name field
+        $todayStart = strtotime('today');
+        foreach ($data as &$row) {
+            if (empty($row['node_name']) && !empty($row['node_identifier'])) {
+                $row['node_name'] = $row['node_identifier'];
+            }
+            
+            if ($row['t'] >= $todayStart) {
+                $row['current_node_name'] = $row['node_name'];
+            } else {
+                $row['current_node_name'] = '';
+            }
+            
+            // Convert numeric fields
+            $row['id'] = intval($row['id']);
+            $row['user_id'] = intval($row['user_id']);
+            $row['t'] = intval($row['t']);
+            $row['u'] = intval($row['u']);
+            $row['d'] = intval($row['d']);
+        }
+        
+        return $data;
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Paginated traffic data error: " . $e->getMessage(), 0);
+        // Fallback to regular function
+        return v2raysocks_traffic_getTrafficData($filters, $filters['limit'] ?? null);
+    }
+}
+
+/**
+ * Helper function to add time range filters to query
+ */
+function v2raysocks_traffic_addTimeRangeFilters(&$query, &$params, $filters)
+{
+    // Time range filtering
+    if (!empty($filters['time_range'])) {
+        switch ($filters['time_range']) {
+            case 'today':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('today');
+                break;
+            case 'last_1_hour':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-1 hour');
+                break;
+            case 'last_3_hours':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-3 hours');
+                break;
+            case 'last_6_hours':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-6 hours');
+                break;
+            case 'last_12_hours':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-12 hours');
+                break;
+            case 'week':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-6 days', strtotime('today'));
+                break;
+            case 'halfmonth':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-14 days', strtotime('today'));
+                break;
+            case 'month':
+            case 'month_including_today':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('-29 days', strtotime('today'));
+                break;
+            case 'current_month':
+                $query .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = strtotime('first day of this month 00:00:00');
+                break;
+            case 'custom':
+                // For custom range, skip time_range filtering and rely on start_date/end_date filters
+                break;
+            default:
+                if (is_numeric($filters['time_range'])) {
+                    $query .= ' AND uu.t >= :start_time';
+                    $params[':start_time'] = time() - (intval($filters['time_range']) * 60);
+                }
+                break;
+        }
+    }
+    
+    // Custom date range
+    if (!empty($filters['start_date']) || !empty($filters['start'])) {
+        $startDate = $filters['start_date'] ?: $filters['start'];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startTime = strtotime($startDate . ' 00:00:00');
+            if ($startTime !== false) {
+                $query .= ' AND uu.t >= :custom_start';
+                $params[':custom_start'] = $startTime;
+            }
+        }
+    }
+    
+    if (!empty($filters['end_date']) || !empty($filters['end'])) {
+        $endDate = $filters['end_date'] ?: $filters['end'];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endTime = strtotime($endDate . ' 23:59:59');
+            if ($endTime !== false) {
+                $query .= ' AND uu.t <= :custom_end';
+                $params[':custom_end'] = $endTime;
+            }
+        }
+    }
+    
+    // Timestamp-based filtering
+    if (!empty($filters['start_timestamp'])) {
+        $query .= ' AND uu.t >= :timestamp_start';
+        $params[':timestamp_start'] = $filters['start_timestamp'];
+    }
+    
+    if (!empty($filters['end_timestamp'])) {
+        $query .= ' AND uu.t <= :timestamp_end';
+        $params[':timestamp_end'] = $filters['end_timestamp'];
+    }
+}
+
+/**
+ * Enhanced usage records function with pagination support
+ */
+function v2raysocks_traffic_getUsageRecordsPaginated($nodeId = null, $userId = null, $timeRange = 'today', $limit = null, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
+{
+    try {
+        // Create pagination manager
+        $paginationManager = v2raysocks_traffic_createPaginationManager();
+        if (!$paginationManager) {
+            // Fallback to regular function
+            return v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit ?? 100, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+        }
+        
+        // Build base query
+        $baseQuery = 'SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    n.address as node_address
+                FROM user_usage AS uu
+                LEFT JOIN user AS u ON uu.user_id = u.id
+                LEFT JOIN node AS n ON uu.node = n.name
+                WHERE 1=1';
+        
+        $params = [];
+        
+        // Apply filters
+        if ($nodeId !== null) {
+            $baseQuery .= ' AND uu.node = :node_id';
+            $params[':node_id'] = $nodeId;
+        }
+        
+        if ($userId !== null) {
+            $baseQuery .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $userId;
+        }
+        
+        if ($uuid !== null) {
+            $baseQuery .= ' AND u.uuid = :uuid';
+            $params[':uuid'] = $uuid;
+        }
+        
+        // Add time range filtering
+        $filters = [
+            'time_range' => $timeRange,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'start_timestamp' => $startTimestamp,
+            'end_timestamp' => $endTimestamp
+        ];
+        v2raysocks_traffic_addTimeRangeFilters($baseQuery, $params, $filters);
+        
+        // Set pagination options
+        $defaultOptions = [
+            'cursor_field' => 't',
+            'cursor_direction' => 'DESC',
+            'page_size' => $limit,
+            'use_cache' => true,
+            'cache_key_suffix' => '_usage_records_paginated'
+        ];
+        $paginationOptions = array_merge($defaultOptions, $paginationOptions);
+        
+        // Execute query
+        if ($limit === null || $limit <= 0) {
+            // Unlimited query
+            $result = $paginationManager->fetchAllData($baseQuery, $params, $paginationOptions);
+            $records = $result['data'];
+        } else {
+            // Paginated query
+            $result = $paginationManager->paginatedQuery($baseQuery, $params, $paginationOptions);
+            $records = $result['data'];
+        }
+        
+        // Process results
+        foreach ($records as &$record) {
+            $record['id'] = intval($record['id']);
+            $record['user_id'] = intval($record['user_id']);
+            $record['t'] = intval($record['t']);
+            $record['u'] = intval($record['u']);
+            $record['d'] = intval($record['d']);
+            $record['total_usage'] = $record['u'] + $record['d'];
+        }
+        
+        return $records;
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Paginated usage records error: " . $e->getMessage(), 0);
+        // Fallback to regular function
+        return v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit ?? 100, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
     }
 }
