@@ -415,6 +415,10 @@ function v2raysocks_traffic_output($vars)
                     'end_date' => $_GET['end_date'] ?? null,
                     'start_timestamp' => $_GET['start_timestamp'] ?? null,
                     'end_timestamp' => $_GET['end_timestamp'] ?? null,
+                    // Add pagination parameters
+                    'limit' => !empty($_GET['limit']) ? intval($_GET['limit']) : PHP_INT_MAX,
+                    'offset' => !empty($_GET['offset']) ? intval($_GET['offset']) : 0,
+                    'cursor' => $_GET['cursor'] ?? null
                 ];
                 
                 if (empty($serviceId)) {
@@ -425,13 +429,26 @@ function v2raysocks_traffic_output($vars)
                     ];
                 } else {
                     $searchResults = v2raysocks_traffic_searchByServiceId($serviceId, $filters);
-                    $result = [
-                        'status' => 'success',
-                        'data' => $searchResults,
-                        'count' => count($searchResults),
-                        'service_id_searched' => $serviceId,
-                        'filters_applied' => array_filter($filters)
-                    ];
+                    
+                    // Handle paginated vs non-paginated response
+                    if (is_array($searchResults) && isset($searchResults['pagination'])) {
+                        $result = [
+                            'status' => 'success',
+                            'data' => $searchResults['data'],
+                            'pagination' => $searchResults['pagination'],
+                            'count' => $searchResults['pagination']['count'],
+                            'service_id_searched' => $serviceId,
+                            'filters_applied' => array_filter($filters)
+                        ];
+                    } else {
+                        $result = [
+                            'status' => 'success',
+                            'data' => $searchResults,
+                            'count' => count($searchResults),
+                            'service_id_searched' => $serviceId,
+                            'filters_applied' => array_filter($filters)
+                        ];
+                    }
                 }
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis search_service_advanced error: " . $e->getMessage(), 0);

@@ -624,6 +624,17 @@ function v2raysocks_traffic_getTrafficData($filters = [])
 function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
 {
     try {
+        // Extract pagination parameters for delegation
+        $hasPagination = isset($filters['limit']) && $filters['limit'] !== PHP_INT_MAX || 
+                        isset($filters['offset']) && $filters['offset'] > 0 || 
+                        isset($filters['cursor']);
+        
+        // For paginated requests, delegate to the base getTrafficData function
+        if ($hasPagination) {
+            return v2raysocks_traffic_getTrafficData($filters);
+        }
+        
+        // Continue with enhanced logic for non-paginated requests
         $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
         
         // Try to get from cache first

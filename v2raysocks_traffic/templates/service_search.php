@@ -519,10 +519,12 @@ $serviceSearchHtml = '
     <script>
         let serviceChart;
         let currentSearchParams = {};
-        let allServiceData = []; // Store all service data for pagination
+        let allServiceData = []; // Store all service data for legacy client-side pagination
         let serviceCurrentPage = 1;
         let serviceRecordsPerPage = 500;
         let serviceTotalPages = 1;
+        let serviceCurrentOffset = 0; // For server-side offset pagination
+        let serviceCurrentCursor = null; // For server-side cursor pagination
         let moduleConfig = {
             chart_unit: "auto"
         };
@@ -722,39 +724,49 @@ $serviceSearchHtml = '
                 $("#service-export-modal").hide();
             });
             
-            // Service search pagination event handlers
+            // Service search pagination event handlers - updated for server-side pagination
             $("#service-records-per-page").on("change", function() {
                 serviceRecordsPerPage = parseInt($(this).val());
                 serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentOffset = 0;
+                serviceCurrentCursor = null;
+                searchServiceTraffic(false); // Don't reset search params
             });
             
             $("#service-first-page").on("click", function() {
                 serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentOffset = 0;
+                serviceCurrentCursor = null;
+                searchServiceTraffic(false);
             });
             
             $("#service-prev-page").on("click", function() {
                 if (serviceCurrentPage > 1) {
                     serviceCurrentPage--;
-                    updateServicePaginatedTable();
+                    serviceCurrentOffset = Math.max(0, serviceCurrentOffset - serviceRecordsPerPage);
+                    searchServiceTraffic(false);
                 }
             });
             
             $("#service-next-page").on("click", function() {
-                if (serviceCurrentPage < serviceTotalPages) {
-                    serviceCurrentPage++;
-                    updateServicePaginatedTable();
-                }
+                serviceCurrentPage++;
+                serviceCurrentOffset += serviceRecordsPerPage;
+                searchServiceTraffic(false);
             });
             
             $("#service-last-page").on("click", function() {
-                serviceCurrentPage = serviceTotalPages;
-                updateServicePaginatedTable();
+                // For server-side pagination, continue to next pages
+                $("#service-next-page").click();
             });
         });
         
-        function searchServiceTraffic() {
+        function searchServiceTraffic(resetPage = true) {
+            if (resetPage) {
+                serviceCurrentPage = 1;
+                serviceCurrentOffset = 0;
+                serviceCurrentCursor = null;
+            }
+            
             const searchType = $("#search_type").val();
             const searchValue = $("#search_value").val().trim();
             const timeRange = $("#time_range").val();
@@ -770,8 +782,15 @@ $serviceSearchHtml = '
             
             // Build request parameters based on search type
             let requestData = {
-                time_range: timeRange
+                time_range: timeRange,
+                // Add pagination parameters for server-side pagination
+                limit: serviceRecordsPerPage,
+                offset: serviceCurrentOffset
             };
+            
+            if (serviceCurrentCursor) {
+                requestData.cursor = serviceCurrentCursor;
+            }
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
@@ -826,7 +845,12 @@ $serviceSearchHtml = '
                         console.log("Advanced service search response:", response);
                         if (response.status === "success") {
                             if (response.data && response.data.length > 0) {
-                                updateServiceTrafficTable(response.data);
+                                // Check if this is a paginated response
+                                if (response.pagination) {
+                                    updateServiceTrafficTableFromAPI(response);
+                                } else {
+                                    updateServiceTrafficTable(response.data);
+                                }
                                 updateServiceTrafficChart(response.data);
                             } else {
                                 // Try fallback to regular search
@@ -882,9 +906,54 @@ $serviceSearchHtml = '
         }
         
         function updateServiceTrafficTable(data) {
-            // Store all data for pagination
+            // Store all data for legacy client-side pagination
             allServiceData = data;
             updateServicePaginatedTable();
+        }
+        
+        function updateServiceTrafficTableFromAPI(response) {
+            const data = response.data;
+            const pagination = response.pagination;
+            let html = "";
+            
+            if (data.length === 0) {
+                html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
+                $("#service-pagination-controls").hide();
+            } else {
+                // Generate table rows for current page
+                data.forEach(function(row) {
+                    // use actual data timestamp for consistent local timezone formatting
+                    const displayTime = formatDateTime(row.t);
+                    html += `<tr>
+                        <td>${displayTime}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination controls with server-side data
+                const startIndex = (Math.floor(pagination.offset / serviceRecordsPerPage) * serviceRecordsPerPage) + 1;
+                const endIndex = startIndex + pagination.count - 1;
+                
+                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . '`.replace("{start}", startIndex).replace("{end}", endIndex).replace("{total}", "..."));
+                $("#service-page-info").text(`' . v2raysocks_traffic_lang('page_info') . '`.replace("{current}", serviceCurrentPage).replace("{total}", pagination.has_more ? "..." : serviceCurrentPage));
+                
+                // Enable/disable pagination buttons
+                $("#service-first-page, #service-prev-page").prop("disabled", pagination.offset === 0);
+                $("#service-next-page, #service-last-page").prop("disabled", !pagination.has_more);
+                
+                $("#service-pagination-controls").show();
+            }
+            
+            $("#service-traffic-data").html(html);
         }
         
         function updateServicePaginatedTable() {
