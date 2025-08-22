@@ -908,6 +908,8 @@ $userRankingsHtml = '
         let currentRankingsPage = 1;
         let rankingsRecordsPerPage = 500;
         let totalRankingsPages = 1;
+        let rankingsCurrentOffset = 0; // For server-side offset pagination
+        let rankingsCurrentCursor = null; // For server-side cursor pagination
         let filteredRankings = [];
         
         // Load user rankings on page load
@@ -986,38 +988,49 @@ $userRankingsHtml = '
                 }
             });
             
-            // Rankings pagination event handlers
+            // Rankings pagination event handlers - updated for server-side pagination
             $("#rankings-records-per-page").on("change", function() {
+                rankingsRecordsPerPage = parseInt($(this).val());
                 currentRankingsPage = 1;
-                updateRankingsPagination();
+                rankingsCurrentOffset = 0;
+                rankingsCurrentCursor = null;
+                loadUserRankings(false);
             });
             
             $("#rankings-first-page").on("click", function() {
                 currentRankingsPage = 1;
-                updateRankingsPagination();
+                rankingsCurrentOffset = 0;
+                rankingsCurrentCursor = null;
+                loadUserRankings(false);
             });
             
             $("#rankings-prev-page").on("click", function() {
                 if (currentRankingsPage > 1) {
                     currentRankingsPage--;
-                    updateRankingsPagination();
+                    rankingsCurrentOffset = Math.max(0, rankingsCurrentOffset - rankingsRecordsPerPage);
+                    loadUserRankings(false);
                 }
             });
             
             $("#rankings-next-page").on("click", function() {
-                if (currentRankingsPage < totalRankingsPages) {
-                    currentRankingsPage++;
-                    updateRankingsPagination();
-                }
+                currentRankingsPage++;
+                rankingsCurrentOffset += rankingsRecordsPerPage;
+                loadUserRankings(false);
             });
             
             $("#rankings-last-page").on("click", function() {
-                currentRankingsPage = totalRankingsPages;
-                updateRankingsPagination();
+                // For server-side pagination, continue to next pages
+                $("#rankings-next-page").click();
             });
         });
         
-        function loadUserRankings() {
+        function loadUserRankings(resetPage = true) {
+            if (resetPage) {
+                currentRankingsPage = 1;
+                rankingsCurrentOffset = 0;
+                rankingsCurrentCursor = null;
+            }
+            
             const timeRange = document.getElementById("time-range").value;
             
             // Validate custom date range if selected
@@ -1084,6 +1097,15 @@ $userRankingsHtml = '
             const formData = $("#user-rankings-filter").serialize();
             let url = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&" + formData + "&sort_by=traffic_desc";
             
+            // Add pagination parameters for server-side pagination
+            url += "&limit=" + rankingsRecordsPerPage;
+            if (rankingsCurrentOffset > 0) {
+                url += "&offset=" + rankingsCurrentOffset;
+            }
+            if (rankingsCurrentCursor) {
+                url += "&cursor=" + rankingsCurrentCursor;
+            }
+            
             // Add timestamp parameters for time_range selection
             if (timeRange === "time_range") {
                 const startTime = document.getElementById("start-time").value;
@@ -1111,16 +1133,91 @@ $userRankingsHtml = '
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        allUserRankings = data.data || [];
-                        sortAndDisplayUserRankings();
+                        // Check if this is a paginated response
+                        if (data.data && data.pagination) {
+                            updateUserRankingsFromAPI(data);
+                        } else {
+                            // Legacy non-paginated response
+                            allUserRankings = data.data || [];
+                            sortAndDisplayUserRankings();
+                        }
                     } else {
+                        const tbody = document.getElementById("rankings-tbody");
                         tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("loading_failed")} ${data.message || t("unknown_error")}</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error("Error loading user rankings:", error);
+                    const tbody = document.getElementById("rankings-tbody");
                     tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
+        }
+        
+        function updateUserRankingsFromAPI(response) {
+            const data = response.data;
+            const pagination = response.pagination;
+            const tbody = document.getElementById("rankings-tbody");
+            const paginationDiv = document.getElementById("rankings-pagination");
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="no-data">${t("no_user_rankings")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Generate table rows
+            let html = "";
+            data.forEach((user, index) => {
+                const globalRank = (Math.floor(pagination.offset / rankingsRecordsPerPage) * rankingsRecordsPerPage) + index + 1;
+                const rankClass = globalRank === 1 ? "rank-1" : globalRank === 2 ? "rank-2" : globalRank === 3 ? "rank-3" : "rank-other";
+                
+                html += `
+                    <tr>
+                        <td><span class="rank-badge ${rankClass}">${globalRank}</span></td>
+                        <td><button class="btn user-details-btn" onclick="showUserDetails(${user.user_id})">${user.user_id}</button></td>
+                        <td class="uuid-column" title="${user.uuid || "N/A"}">${user.uuid || "N/A"}</td>
+                        <td>${user.sid || "-"}</td>
+                        <td>${formatBytesConfigurable(user.period_upload || 0)}</td>
+                        <td>${formatBytesConfigurable(user.period_download || 0)}</td>
+                        <td class="traffic-column">${formatBytesConfigurable(user.period_traffic || 0)}</td>
+                        <td>${formatBytesConfigurable(user.transfer_enable || 0)}</td>
+                        <td class="remaining-column">${formatBytesConfigurable(Math.max(0, (user.transfer_enable || 0) - (user.total_upload_user || 0) - (user.total_download_user || 0)))}</td>
+                        <td>${user.speedlimitss || "-"}</td>
+                        <td>${user.speedlimitother || "-"}</td>
+                        <td>${user.nodes_used || 0}</td>
+                        <td>${user.usage_records || 0}</td>
+                        <td>${formatBytesConfigurable(user.traffic_5min || 0)}</td>
+                        <td>${formatBytesConfigurable(user.traffic_1hour || 0)}</td>
+                        <td>${formatBytesConfigurable(user.traffic_4hour || 0)}</td>
+                        <td>${user.first_usage ? formatDateTime(user.first_usage) : "-"}</td>
+                        <td>${user.last_usage ? formatDateTime(user.last_usage) : "-"}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination info
+            const startIndex = (Math.floor(pagination.offset / rankingsRecordsPerPage) * rankingsRecordsPerPage) + 1;
+            const endIndex = startIndex + pagination.count - 1;
+            
+            document.getElementById("rankings-pagination-info").textContent = t("showing_records", {
+                start: startIndex,
+                end: endIndex,
+                total: "..."
+            });
+            document.getElementById("rankings-page-info").textContent = t("page_info", {
+                current: currentRankingsPage,
+                total: pagination.has_more ? "..." : currentRankingsPage
+            });
+            
+            // Enable/disable pagination buttons
+            document.getElementById("rankings-first-page").disabled = pagination.offset === 0;
+            document.getElementById("rankings-prev-page").disabled = pagination.offset === 0;
+            document.getElementById("rankings-next-page").disabled = !pagination.has_more;
+            document.getElementById("rankings-last-page").disabled = !pagination.has_more;
+            
+            paginationDiv.style.display = "block";
         }
         
         function updateSortIndicators() {
