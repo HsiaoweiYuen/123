@@ -31,6 +31,8 @@ $_LANG = [
     'default_unit_description' => 'Default unit for displaying traffic data',
     'chart_display_unit' => 'Chart Display Unit',
     'chart_unit_description' => 'Unit used in charts and graphs',
+    'default_page_size' => 'Default Page Size',
+    'default_page_size_description' => 'Default number of records to display per page',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)

@@ -297,10 +297,11 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $paginationOptions = [])
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Include pagination in cache key
+        $cacheKey = 'traffic_data_' . md5(serialize($filters) . serialize($paginationOptions));
         
         // Try to get from cache first, but don't fail if caching is unavailable
         try {
@@ -321,7 +322,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         
         if (!$pdo) {
             logActivity("V2RaySocks Traffic Monitor: Cannot retrieve traffic data - database connection failed", 0);
-            return [];
+            return ['data' => [], 'pagination' => ['total_records' => 0]];
         }
         
         // Build query based on filters - aligned with nodes module approach
@@ -455,11 +456,26 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC';
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Apply pagination if enabled, otherwise return all data for backward compatibility
+        if (!empty($paginationOptions) && $paginationOptions !== false) {
+            // Set default order for pagination
+            if (empty($paginationOptions['order_by'])) {
+                $paginationOptions['order_by'] = 'uu.t';
+            }
+            
+            // Execute paginated query
+            $result = v2raysocks_traffic_executePaginatedQuery($pdo, $sql, $params, $paginationOptions);
+            $data = $result['data'];
+            $paginationMeta = $result['pagination'];
+        } else {
+            // Non-paginated query for backward compatibility
+            $sql .= ' ORDER BY uu.t DESC';
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $paginationMeta = null;
+        }
         
         // Validate and clean the traffic data to prevent extreme values
         v2raysocks_traffic_validateTrafficData($data);
@@ -482,6 +498,9 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             }
         }
         unset($row); // Break reference
+        
+        // Prepare result
+        $result = $paginationMeta ? ['data' => $data, 'pagination' => $paginationMeta] : $data;
         
         // Try to cache with shorter time for real-time data using unified cache function
         try {
@@ -507,7 +526,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                 'data_type' => 'traffic_data',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => !$isRealTime
@@ -517,10 +536,10 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
         }
         
-        return $data;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return ['data' => [], 'pagination' => ['total_records' => 0]];
     }
 }
 
@@ -528,10 +547,11 @@ function v2raysocks_traffic_getTrafficData($filters = [])
  * Get enhanced traffic data with improved node name resolution
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $paginationOptions = [])
 {
     try {
-        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
+        // Include pagination in cache key
+        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters) . serialize($paginationOptions));
         
         // Try to get from cache first
         try {
@@ -550,7 +570,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
             logActivity("V2RaySocks Traffic Monitor: Cannot retrieve enhanced traffic data - database connection failed", 0);
-            return [];
+            return ['data' => [], 'pagination' => ['total_records' => 0]];
         }
         
         // Two-part query approach: get day traffic records and regular traffic records
@@ -749,8 +769,35 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Apply pagination if enabled, otherwise keep existing behavior
+        if (!empty($paginationOptions) && $paginationOptions !== false) {
+            // For pagination, we need to handle this differently since we're combining multiple queries
+            // Create a temporary in-memory pagination approach
+            $totalRecords = count($allData);
+            $page = max(1, intval($paginationOptions['page'] ?? 1));
+            $pageSize = intval($paginationOptions['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+            $offset = ($page - 1) * $pageSize;
+            
+            $paginatedData = array_slice($allData, $offset, $pageSize);
+            $totalPages = ceil($totalRecords / $pageSize);
+            
+            $paginationMeta = [
+                'current_page' => $page,
+                'page_size' => $pageSize,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'has_next_page' => $page < $totalPages,
+                'has_prev_page' => $page > 1,
+                'next_cursor' => !empty($paginatedData) ? end($paginatedData)['t'] : null,
+                'prev_cursor' => !empty($paginatedData) ? $paginatedData[0]['t'] : null
+            ];
+            
+            $allData = $paginatedData;
+        } else {
+            // Limit total results for non-paginated queries (existing behavior)
+            $allData = array_slice($allData, 0, 1000);
+            $paginationMeta = null;
+        }
         
         // Validate and clean the traffic data
         v2raysocks_traffic_validateTrafficData($allData);
@@ -773,6 +820,9 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
         }
         unset($row); // Break reference
         
+        // Prepare result
+        $result = $paginationMeta ? ['data' => $allData, 'pagination' => $paginationMeta] : $allData;
+        
         // Try to cache the results using unified cache function
         try {
             $timeRangeForCache = 'historical';
@@ -791,7 +841,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                 'data_type' => 'enhanced_traffic',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => ($timeRangeForCache === 'historical')
@@ -801,10 +851,10 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for enhanced traffic data: " . $e->getMessage(), 0);
         }
         
-        return $allData;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return ['data' => [], 'pagination' => ['total_records' => 0]];
     }
 }
 
@@ -4205,5 +4255,128 @@ function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities 
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation failed for trigger '{$triggerType}': " . $e->getMessage(), 0);
         return false;
+    }
+}
+
+/**
+ * Get default pagination size from module configuration
+ */
+function v2raysocks_traffic_getDefaultPageSize()
+{
+    try {
+        $config = v2raysocks_traffic_getModuleConfig();
+        return intval($config['default_page_size'] ?? 1000);
+    } catch (\Exception $e) {
+        // Return default if config fails
+        return 1000;
+    }
+}
+
+/**
+ * Helper function to add cursor-based pagination to SQL queries
+ * This implements cursor pagination using indexed columns for better performance
+ */
+function v2raysocks_traffic_addCursorPagination($sql, $params, $paginationOptions)
+{
+    $page = max(1, intval($paginationOptions['page'] ?? 1));
+    $pageSize = intval($paginationOptions['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+    $orderBy = $paginationOptions['order_by'] ?? 'id';
+    $orderDirection = strtoupper($paginationOptions['order_direction'] ?? 'DESC');
+    $cursor = $paginationOptions['cursor'] ?? null;
+    
+    // Ensure valid order direction
+    if (!in_array($orderDirection, ['ASC', 'DESC'])) {
+        $orderDirection = 'DESC';
+    }
+    
+    // Add cursor condition if provided
+    if ($cursor !== null) {
+        $operator = ($orderDirection === 'ASC') ? '>' : '<';
+        $sql .= " AND {$orderBy} {$operator} :cursor_value";
+        $params[':cursor_value'] = $cursor;
+    }
+    
+    // Add ORDER BY clause
+    $sql .= " ORDER BY {$orderBy} {$orderDirection}";
+    
+    // Add LIMIT with offset
+    $offset = ($page - 1) * $pageSize;
+    $sql .= " LIMIT :offset, :limit";
+    $params[':offset'] = $offset;
+    $params[':limit'] = $pageSize;
+    
+    return ['sql' => $sql, 'params' => $params];
+}
+
+/**
+ * Execute paginated query and return results with pagination metadata
+ */
+function v2raysocks_traffic_executePaginatedQuery($pdo, $sql, $params, $paginationOptions)
+{
+    try {
+        // Prepare count query for total records
+        $countSql = "SELECT COUNT(*) as total FROM (" . $sql . ") as count_query";
+        $countStmt = $pdo->prepare($countSql);
+        
+        // Execute count query with original params (without pagination params)
+        $countParams = array_filter($params, function($key) {
+            return !in_array($key, [':offset', ':limit', ':cursor_value']);
+        }, ARRAY_FILTER_USE_KEY);
+        
+        foreach ($countParams as $key => $value) {
+            $countStmt->bindValue($key, $value);
+        }
+        $countStmt->execute();
+        $totalRecords = intval($countStmt->fetchColumn());
+        
+        // Add pagination to main query
+        $paginatedResult = v2raysocks_traffic_addCursorPagination($sql, $params, $paginationOptions);
+        
+        // Execute main query
+        $stmt = $pdo->prepare($paginatedResult['sql']);
+        foreach ($paginatedResult['params'] as $key => $value) {
+            if (in_array($key, [':offset', ':limit'])) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->execute();
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calculate pagination metadata
+        $page = max(1, intval($paginationOptions['page'] ?? 1));
+        $pageSize = intval($paginationOptions['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+        $totalPages = ceil($totalRecords / $pageSize);
+        
+        return [
+            'data' => $records,
+            'pagination' => [
+                'current_page' => $page,
+                'page_size' => $pageSize,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'has_next_page' => $page < $totalPages,
+                'has_prev_page' => $page > 1,
+                'next_cursor' => !empty($records) ? end($records)[$paginationOptions['order_by'] ?? 'id'] : null,
+                'prev_cursor' => !empty($records) ? $records[0][$paginationOptions['order_by'] ?? 'id'] : null
+            ]
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Paginated query execution failed: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => [
+                'current_page' => 1,
+                'page_size' => $pageSize ?? 1000,
+                'total_records' => 0,
+                'total_pages' => 0,
+                'has_next_page' => false,
+                'has_prev_page' => false,
+                'next_cursor' => null,
+                'prev_cursor' => null
+            ]
+        ];
     }
 }

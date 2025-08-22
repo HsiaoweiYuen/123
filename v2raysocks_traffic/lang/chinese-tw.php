@@ -31,6 +31,8 @@ $_LANG = [
     'default_unit_description' => '顯示流量數據的預設單位',
     'chart_display_unit' => '圖表顯示單位',
     'chart_unit_description' => '圖表和圖形中使用的單位',
+    'default_page_size' => '預設頁面大小',
+    'default_page_size_description' => '每頁顯示的預設記錄數量',
     
     // ========================================
     // COMMON COMPONENTS (通用組件)

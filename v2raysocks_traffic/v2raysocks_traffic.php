@@ -106,6 +106,19 @@ function v2raysocks_traffic_config()
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
             ],
+            'default_page_size' => [
+                'FriendlyName' => isset($lang['default_page_size']) ? $lang['default_page_size'] : 'Default Page Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '500' => '500',
+                    '1000' => '1000',
+                    '2000' => '2000',
+                    '3000' => '3000',
+                    '5000' => '5000'
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['default_page_size_description']) ? $lang['default_page_size_description'] : 'Default number of records to display per page',
+            ],
         ]
     ];
 }
@@ -152,12 +165,35 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
+                // Check if pagination is requested
+                $usePagination = ($_GET['paginate'] ?? 'true') === 'true';
+                $paginationOptions = [];
+                
+                if ($usePagination) {
+                    $paginationOptions = [
+                        'page' => max(1, intval($_GET['page'] ?? 1)),
+                        'page_size' => intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize()),
+                        'order_by' => $_GET['order_by'] ?? 'uu.t',
+                        'order_direction' => $_GET['order_direction'] ?? 'DESC',
+                        'cursor' => $_GET['cursor'] ?? null
+                    ];
+                }
+                
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
-                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters, $usePagination ? $paginationOptions : false);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getTrafficData($filters, $usePagination ? $paginationOptions : false);
+                }
+                
+                // Handle different return formats for backward compatibility
+                if ($usePagination && isset($trafficData['data'])) {
+                    $dataArray = $trafficData['data'];
+                    $paginationMeta = $trafficData['pagination'];
+                } else {
+                    $dataArray = is_array($trafficData) ? $trafficData : [];
+                    $paginationMeta = null;
                 }
                 
                 // Apply PR#37 time grouping if requested
@@ -165,16 +201,18 @@ function v2raysocks_traffic_output($vars)
                 $groupedData = null;
                 if ($grouped === 'true') {
                     $timeRange = $filters['time_range'] ?? 'today';
-                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData, $timeRange);
+                    $groupedData = v2raysocks_traffic_groupDataByTime($dataArray, $timeRange);
                 }
                 
                 $result = [
                     'status' => 'success',
-                    'data' => $trafficData,
+                    'data' => $dataArray,
                     'grouped_data' => $groupedData,
-                    'count' => count($trafficData),
+                    'count' => count($dataArray),
                     'filters_applied' => array_filter($filters),
-                    'enhanced_mode' => $useEnhanced === 'true'
+                    'enhanced_mode' => $useEnhanced === 'true',
+                    'pagination' => $paginationMeta
+                ];
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_traffic_data error: " . $e->getMessage(), 0);
