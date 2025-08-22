@@ -241,8 +241,8 @@ function v2raysocks_traffic_output($vars)
             if (!in_array($exportType, ['node_rankings', 'user_rankings'])) {
                 switch ($exportType) {
                     case 'limited':
-                        // Export specific number of records
-                        $exportLimit = intval($_GET['limit_count'] ?? 1000);
+                        // Export specific number of records - remove limit restriction
+                        $exportLimit = intval($_GET['limit_count'] ?? PHP_INT_MAX);
                         break;
                     case 'date_range':
                         // Use custom date range from export dialog
@@ -556,11 +556,11 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
-                $limitValue = $_GET['limit'] ?? '100';
+                $limitValue = $_GET['limit'] ?? 'all';
                 
-                // Handle "all" option properly
-                $limit = ($limitValue === 'all') ? 10000 : intval($limitValue);
-                if ($limit <= 0) $limit = 100; // Default fallback
+                // Handle "all" option properly - remove limit restriction
+                $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
+                if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
                 
                 $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
                 $result = [
@@ -649,7 +649,7 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? 100);
+                $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
                 
                 $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
                 $result = [
