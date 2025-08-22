@@ -66,14 +66,49 @@ function v2raysocks_traffic_config()
                 'FriendlyName' => isset($lang['realtime_refresh_interval']) ? $lang['realtime_refresh_interval'] : 'Real-time Monitor Refresh Interval (seconds)',
                 'Type' => 'dropdown',
                 'Options' => [
-                    '5' => '5 ' . (isset($lang['seconds']) ? $lang['seconds'] : 'seconds'),
-                    '10' => '10 ' . (isset($lang['seconds']) ? $lang['seconds'] : 'seconds'),
-                    '15' => '15 ' . (isset($lang['seconds']) ? $lang['seconds'] : 'seconds'),
                     '30' => '30 ' . (isset($lang['seconds']) ? $lang['seconds'] : 'seconds'),
                     '60' => '1 ' . (isset($lang['minute']) ? $lang['minute'] : 'minute'),
+                    '90' => '90 ' . (isset($lang['seconds']) ? $lang['seconds'] : 'seconds'),
+                    '120' => '2 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
                 ],
-                'Default' => '5',
+                'Default' => '30',
                 'Description' => isset($lang['realtime_refresh_interval_description']) ? $lang['realtime_refresh_interval_description'] : 'Update interval for real-time statistics page (lower values increase server load)',
+            ],
+            'pagination_size' => [
+                'FriendlyName' => isset($lang['pagination_size']) ? $lang['pagination_size'] : 'Pagination Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '1000' => '1,000',
+                    '3000' => '3,000',
+                    '5000' => '5,000',
+                    '10000' => '10,000',
+                    '30000' => '30,000',
+                    '50000' => '50,000',
+                    '100000' => '100,000',
+                    'custom' => isset($lang['custom']) ? $lang['custom'] : 'Custom',
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['pagination_size_description']) ? $lang['pagination_size_description'] : 'Default number of records to load per page for data queries',
+            ],
+            'custom_pagination_size' => [
+                'FriendlyName' => isset($lang['custom_pagination_size']) ? $lang['custom_pagination_size'] : 'Custom Pagination Size',
+                'Type' => 'text',
+                'Default' => '1000',
+                'Description' => isset($lang['custom_pagination_size_description']) ? $lang['custom_pagination_size_description'] : 'Custom pagination size (used when "Custom" is selected above). Must be between 100 and 1,000,000.',
+            ],
+            'module_refresh_interval' => [
+                'FriendlyName' => isset($lang['module_refresh_interval']) ? $lang['module_refresh_interval'] : 'Module Refresh Interval (optional)',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '' => isset($lang['disabled']) ? $lang['disabled'] : 'Disabled',
+                    '120' => '2 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
+                    '180' => '3 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
+                    '240' => '4 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
+                    '300' => '5 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
+                    '600' => '10 ' . (isset($lang['minutes']) ? $lang['minutes'] : 'minutes'),
+                ],
+                'Default' => '',
+                'Description' => isset($lang['module_refresh_interval_description']) ? $lang['module_refresh_interval_description'] : 'Optional automatic refresh interval for module pages',
             ],
             'default_unit' => [
                 'FriendlyName' => isset($lang['default_display_unit']) ? $lang['default_display_unit'] : 'Default Display Unit',
@@ -143,6 +178,8 @@ function v2raysocks_traffic_output($vars)
                     'uuid' => $_GET['uuid'] ?? null,
                     'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                    'limit' => !empty($_GET['limit']) ? intval($_GET['limit']) : null,
+                    'offset' => !empty($_GET['offset']) ? intval($_GET['offset']) : 0,
                 ];
                 
                 // Use enhanced traffic data function for better node name resolution
@@ -167,7 +204,12 @@ function v2raysocks_traffic_output($vars)
                     'grouped_data' => $groupedData,
                     'count' => count($trafficData),
                     'filters_applied' => array_filter($filters),
-                    'enhanced_mode' => $useEnhanced === 'true'
+                    'enhanced_mode' => $useEnhanced === 'true',
+                    'pagination' => [
+                        'limit' => $filters['limit'],
+                        'offset' => $filters['offset'],
+                        'has_more' => count($trafficData) >= ($filters['limit'] ?: v2raysocks_traffic_getPaginationSize())
+                    ]
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_traffic_data error: " . $e->getMessage(), 0);
@@ -556,20 +598,36 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
-                $limitValue = $_GET['limit'] ?? '100';
+                $limitValue = $_GET['limit'] ?? null;
+                $offset = intval($_GET['offset'] ?? 0);
                 
-                // Handle "all" option properly
-                $limit = ($limitValue === 'all') ? 10000 : intval($limitValue);
-                if ($limit <= 0) $limit = 100; // Default fallback
+                // Handle "all" option and use configurable default
+                if ($limitValue === 'all') {
+                    $limit = 10000; // Large number for "all"
+                } elseif ($limitValue !== null) {
+                    $limit = intval($limitValue);
+                } else {
+                    $limit = null; // Use configurable default
+                }
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+                if ($limit !== null && $limit <= 0) {
+                    $limit = null; // Use default if invalid
+                }
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $offset);
                 $result = [
                     'status' => 'success',
                     'data' => $rankings,
                     'sort_by' => $sortBy,
                     'time_range' => $timeRange,
                     'limit' => $limitValue, // Return original value for frontend
-                    'actual_limit' => $limit // Return actual numeric limit used
+                    'actual_limit' => $limit, // Return actual numeric limit used
+                    'offset' => $offset,
+                    'pagination' => [
+                        'limit' => $limit,
+                        'offset' => $offset,
+                        'has_more' => count($rankings) >= ($limit ?: v2raysocks_traffic_getPaginationSize())
+                    ]
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_user_traffic_rankings error: " . $e->getMessage(), 0);
@@ -649,9 +707,10 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? 100);
+                $limit = !empty($_GET['limit']) ? intval($_GET['limit']) : null;
+                $offset = intval($_GET['offset'] ?? 0);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $offset);
                 $result = [
                     'status' => 'success',
                     'data' => $records,
@@ -661,7 +720,13 @@ function v2raysocks_traffic_output($vars)
                     'time_range' => $timeRange,
                     'start_timestamp' => $startTimestamp,
                     'end_timestamp' => $endTimestamp,
-                    'limit' => $limit
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'pagination' => [
+                        'limit' => $limit,
+                        'offset' => $offset,
+                        'has_more' => count($records) >= ($limit ?: v2raysocks_traffic_getPaginationSize())
+                    ]
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_usage_records error: " . $e->getMessage(), 0);

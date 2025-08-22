@@ -133,7 +133,109 @@ function v2raysocks_traffic_serverInfo()
     }
 }
 
-function v2raysocks_traffic_createPDO()
+/**
+ * Get configured pagination size with validation
+ */
+function v2raysocks_traffic_getPaginationSize()
+{
+    try {
+        // Get pagination size setting
+        $paginationSize = Capsule::table('tbladdonmodules')
+            ->where('module', 'v2raysocks_traffic')
+            ->where('setting', 'pagination_size')
+            ->value('value');
+        
+        // If custom is selected, get custom value
+        if ($paginationSize === 'custom') {
+            $customSize = Capsule::table('tbladdonmodules')
+                ->where('module', 'v2raysocks_traffic')
+                ->where('setting', 'custom_pagination_size')
+                ->value('value');
+            
+            $customSize = intval($customSize);
+            // Validate custom size
+            if ($customSize >= 100 && $customSize <= 1000000) {
+                return $customSize;
+            }
+            // Fall back to default if custom size is invalid
+            return 1000;
+        }
+        
+        // Use preset size
+        $size = intval($paginationSize);
+        return ($size > 0) ? $size : 1000; // Default to 1000 if no setting found
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error getting pagination size: " . $e->getMessage(), 0);
+        return 1000; // Default fallback
+    }
+}
+
+/**
+ * Get module configuration values
+ */
+function v2raysocks_traffic_getModuleConfig()
+{
+    try {
+        $cacheKey = 'module_config';
+        
+        // Try to get from cache first
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    return $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+        }
+        
+        $settings = Capsule::table('tbladdonmodules')
+            ->where('module', 'v2raysocks_traffic')
+            ->pluck('value', 'setting');
+        
+        // Set defaults for missing values
+        $config = [
+            'language' => $settings['language'] ?? 'english',
+            'v2raysocks_server' => $settings['v2raysocks_server'] ?? '',
+            'redis_ip' => $settings['redis_ip'] ?? '127.0.0.1',
+            'redis_port' => $settings['redis_port'] ?? '6379',
+            'redis_password' => $settings['redis_password'] ?? '',
+            'refresh_interval' => intval($settings['refresh_interval'] ?? 300),
+            'realtime_refresh_interval' => intval($settings['realtime_refresh_interval'] ?? 30),
+            'pagination_size' => $settings['pagination_size'] ?? '1000',
+            'custom_pagination_size' => intval($settings['custom_pagination_size'] ?? 1000),
+            'module_refresh_interval' => intval($settings['module_refresh_interval'] ?? 0),
+            'default_unit' => $settings['default_unit'] ?? 'auto',
+            'chart_unit' => $settings['chart_unit'] ?? 'auto',
+        ];
+        
+        // Calculate effective pagination size
+        $config['effective_pagination_size'] = v2raysocks_traffic_getPaginationSize();
+        
+        // Try to cache the configuration
+        try {
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($config), [
+                'data_type' => 'configuration',
+                'time_range' => 'static'
+            ]);
+        } catch (\Exception $e) {
+            // Cache write failed, but we can still return the data
+        }
+        
+        return $config;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error getting module config: " . $e->getMessage(), 0);
+        return [
+            'language' => 'english',
+            'effective_pagination_size' => 1000,
+            'realtime_refresh_interval' => 30,
+            'module_refresh_interval' => 0,
+        ];
+    }
+}
+
 {
     $serverInfo = v2raysocks_traffic_serverInfo();
     
@@ -324,6 +426,10 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             return [];
         }
         
+        // Get pagination settings
+        $limit = isset($filters['limit']) ? intval($filters['limit']) : v2raysocks_traffic_getPaginationSize();
+        $offset = isset($filters['offset']) ? intval($filters['offset']) : 0;
+        
         // Build query based on filters - aligned with nodes module approach
         $sql = 'SELECT 
                     uu.*, 
@@ -455,10 +561,29 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC LIMIT 1000';
+        // Add ordering and pagination
+        $sql .= ' ORDER BY uu.t DESC';
+        
+        // Apply pagination - limit is now configurable
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit';
+            $params[':limit'] = $limit;
+            
+            if ($offset > 0) {
+                $sql .= ' OFFSET :offset';
+                $params[':offset'] = $offset;
+            }
+        }
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $key => $value) {
+            if (in_array($key, [':limit', ':offset'])) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Validate and clean the traffic data to prevent extreme values
@@ -631,10 +756,24 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 $dayParams[':day_timestamp_end'] = $filters['end_timestamp'];
             }
             
-            $dayTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+            $dayTrafficSql .= ' ORDER BY uu.t DESC';
+            
+            // Apply configurable limit for day traffic
+            $dayLimit = isset($filters['day_limit']) ? intval($filters['day_limit']) : v2raysocks_traffic_getPaginationSize();
+            if ($dayLimit > 0) {
+                $dayTrafficSql .= ' LIMIT :day_limit';
+                $dayParams[':day_limit'] = $dayLimit;
+            }
             
             $dayStmt = $pdo->prepare($dayTrafficSql);
-            $dayStmt->execute($dayParams);
+            foreach ($dayParams as $key => $value) {
+                if ($key === ':day_limit') {
+                    $dayStmt->bindValue($key, $value, PDO::PARAM_INT);
+                } else {
+                    $dayStmt->bindValue($key, $value);
+                }
+            }
+            $dayStmt->execute();
             $dayData = $dayStmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (!empty($dayData)) {
@@ -734,10 +873,24 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             $regularParams[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $regularTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+        $regularTrafficSql .= ' ORDER BY uu.t DESC';
+        
+        // Apply configurable limit for regular traffic
+        $regularLimit = isset($filters['regular_limit']) ? intval($filters['regular_limit']) : v2raysocks_traffic_getPaginationSize();
+        if ($regularLimit > 0) {
+            $regularTrafficSql .= ' LIMIT :regular_limit';
+            $regularParams[':regular_limit'] = $regularLimit;
+        }
         
         $regularStmt = $pdo->prepare($regularTrafficSql);
-        $regularStmt->execute($regularParams);
+        foreach ($regularParams as $key => $value) {
+            if ($key === ':regular_limit') {
+                $regularStmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $regularStmt->bindValue($key, $value);
+            }
+        }
+        $regularStmt->execute();
         $regularData = $regularStmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (!empty($regularData)) {
@@ -749,8 +902,11 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Apply overall limit if specified
+        $overallLimit = isset($filters['limit']) ? intval($filters['limit']) : (v2raysocks_traffic_getPaginationSize() * 2);
+        if ($overallLimit > 0) {
+            $allData = array_slice($allData, 0, $overallLimit);
+        }
         
         // Validate and clean the traffic data
         v2raysocks_traffic_validateTrafficData($allData);
@@ -1807,32 +1963,6 @@ function v2raysocks_traffic_getTrafficByServiceId($serviceId, $filters = [])
 }
 
 /**
- * Get module configuration settings
- */
-function v2raysocks_traffic_getModuleConfig()
-{
-    try {
-        $settings = Capsule::table('tbladdonmodules')
-            ->where('module', 'v2raysocks_traffic')
-            ->pluck('value', 'setting');
-            
-        return [
-            'default_unit' => $settings['default_unit'] ?? 'auto',
-            'refresh_interval' => $settings['refresh_interval'] ?? '300',
-            'realtime_refresh_interval' => $settings['realtime_refresh_interval'] ?? '5',
-            'chart_unit' => $settings['chart_unit'] ?? 'auto'
-        ];
-    } catch (\Exception $e) {
-        return [
-            'default_unit' => 'auto',
-            'refresh_interval' => '300',
-            'realtime_refresh_interval' => '5',
-            'chart_unit' => 'auto'
-        ];
-    }
-}
-
-/**
  * Get today's traffic data by hour
  */
 function v2raysocks_traffic_getTodayTrafficData()
@@ -2620,11 +2750,16 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 /**
  * Get user traffic rankings
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = null, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $offset = 0)
 {
     try {
+        // Use configurable limit if not provided
+        if ($limit === null) {
+            $limit = v2raysocks_traffic_getPaginationSize();
+        }
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . $offset . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2780,6 +2915,10 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         }
 
         $sql .= ' LIMIT :limit';
+        
+        if ($offset > 0) {
+            $sql .= ' OFFSET :offset';
+        }
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
@@ -2788,6 +2927,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
         $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        
+        if ($offset > 0) {
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        }
+        
         $stmt->execute();
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3245,11 +3389,11 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = 100, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = null, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $offset = 0)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . ($limit ?: 'null') . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_' . $offset);
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3266,6 +3410,11 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
             return [];
+        }
+
+        // Use configurable limit if not provided
+        if ($limit === null) {
+            $limit = v2raysocks_traffic_getPaginationSize();
         }
 
         // Calculate time range
@@ -3381,12 +3530,22 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
+        $sql .= ' ORDER BY uu.t DESC';
+        
+        // Apply pagination
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit';
+            $params[':limit'] = $limit;
+            
+            if ($offset > 0) {
+                $sql .= ' OFFSET :offset';
+                $params[':offset'] = $offset;
+            }
+        }
 
         $stmt = $pdo->prepare($sql);
         foreach ($params as $key => $value) {
-            if ($key === ':limit') {
+            if (in_array($key, [':limit', ':offset'])) {
                 $stmt->bindValue($key, $value, PDO::PARAM_INT);
             } else {
                 $stmt->bindValue($key, $value);
