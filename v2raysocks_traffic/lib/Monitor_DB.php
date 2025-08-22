@@ -1561,10 +1561,10 @@ function v2raysocks_traffic_exportTrafficData($filters, $format = 'csv', $limit 
                 break;
         }
         
-        // Get traffic data with applied filters
-        $data = v2raysocks_traffic_getTrafficData($filters);
+        // Get traffic data with applied filters - use paginated function for better performance
+        $data = v2raysocks_traffic_getTrafficDataPaginated($filters);
         
-        // Apply limit if specified
+        // Apply limit if specified (not needed for paginated function but kept for backward compatibility)
         if ($limit && is_numeric($limit) && $limit > 0) {
             $data = array_slice($data, 0, intval($limit));
         }
@@ -3855,10 +3855,17 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         $endDate = $filters['end_date'] ?? null;
         $startTimestamp = $filters['start_timestamp'] ?? null;
         $endTimestamp = $filters['end_timestamp'] ?? null;
-        $exportLimit = $limit ?? 1000; // Default to 1000 records if not specified
         
-        // Get usage records data
-        $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $exportLimit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+        // Use unlimited export by default, or apply limit if specified
+        $exportLimit = $limit;
+        if ($exportLimit === null && isset($filters['export_type']) && $filters['export_type'] === 'all') {
+            $exportLimit = null; // Unlimited
+        } elseif ($exportLimit === null) {
+            $exportLimit = 1000; // Default to 1000 for backward compatibility
+        }
+        
+        // Get usage records data using paginated function for better performance
+        $records = v2raysocks_traffic_getUsageRecordsPaginated($nodeId, $userId, $timeRange, $exportLimit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
         
         // Apply node name filtering if specified
         if (!empty($nodeSearch) && !empty($records)) {
