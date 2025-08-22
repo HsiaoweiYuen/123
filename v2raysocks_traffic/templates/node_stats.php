@@ -626,7 +626,7 @@ $nodeStatsHtml = '
                     <!-- Search Area moved inside container -->
                     <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                            <div style="flex: 0 0 180px; min-width: 150px;">
+                            <div style="flex: 1 1 auto; min-width: auto;">
                                 <label for="node-search-type" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_type_label') . ':</label>
                                 <select id="node-search-type" class="form-group-input">
                                     <option value="uuid">UUID</option>

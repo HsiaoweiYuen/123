@@ -91,7 +91,7 @@ $serviceSearchHtml = '
         .close:hover { color: #000; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; }
+        /* Form inputs use unified styling from navigation component */
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-secondary { background: #6c757d; color: white; }
         

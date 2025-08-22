@@ -753,7 +753,7 @@ $userRankingsHtml = '
                     <!-- Node-based Search Area -->
                     <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                            <div style="flex: 0 0 200px; min-width: 150px;">
+                            <div style="flex: 1 1 auto; min-width: auto;">
                                 <label for="user-node-search" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('node_search_label') . ':</label>
                                 <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" class="form-group-input">
                             </div>
