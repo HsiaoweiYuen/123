@@ -1015,32 +1015,34 @@ $realTimeMonitorHtml = '
             // Today traffic pagination event handlers
             $("#today-records-per-page").on("change", function() {
                 todayRecordsPerPage = parseInt($(this).val());
-                todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                todayCurrentPage = 1; // Reset to first page
+                loadTodayTrafficHistory(); // Reload data from server
             });
             
             $("#today-first-page").on("click", function() {
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                loadTodayTrafficHistory(); // Reload data from server
             });
             
             $("#today-prev-page").on("click", function() {
-                if (todayCurrentPage > 1) {
+                if (todayPaginationInfo && todayPaginationInfo.has_previous) {
                     todayCurrentPage--;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory(); // Reload data from server
                 }
             });
             
             $("#today-next-page").on("click", function() {
-                if (todayCurrentPage < todayTotalPages) {
+                if (todayPaginationInfo && todayPaginationInfo.has_next) {
                     todayCurrentPage++;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory(); // Reload data from server
                 }
             });
             
             $("#today-last-page").on("click", function() {
-                todayCurrentPage = todayTotalPages;
-                updateTodayPaginatedTable();
+                if (todayPaginationInfo) {
+                    todayCurrentPage = todayPaginationInfo.total_pages;
+                    loadTodayTrafficHistory(); // Reload data from server
+                }
             });
         });
         
@@ -1165,17 +1167,21 @@ $realTimeMonitorHtml = '
         }
         
         // Today Traffic History Table functionality
-        let allTodayData = [];
+        let allTodayData = []; // Store current page data only
         let todayCurrentPage = 1;
-        let todayRecordsPerPage = 50;
+        let todayRecordsPerPage = 1000; // Use server-side pagination default
         let todayTotalPages = 1;
+        let todayTotalRecords = 0;
+        let todayPaginationInfo = null; // Store server pagination info
         
         function loadTodayTrafficHistory() {
             const serviceId = $("#today-service-id").val().trim();
             const timeRange = $("#today-time-range").val();
             
             let params = {
-                time_range: timeRange
+                time_range: timeRange,
+                page: todayCurrentPage,
+                page_size: todayRecordsPerPage
             };
             
             if (serviceId) {
@@ -1213,6 +1219,13 @@ $realTimeMonitorHtml = '
                 timeout: 15000,
                 success: function(response) {
                     if (response.status === "success") {
+                        // Handle paginated response
+                        if (response.pagination) {
+                            todayPaginationInfo = response.pagination;
+                            todayTotalRecords = todayPaginationInfo.total_records;
+                            todayTotalPages = todayPaginationInfo.total_pages;
+                            todayCurrentPage = todayPaginationInfo.current_page;
+                        }
                         allTodayData = response.data || [];
                         updateTodayPaginatedTable();
                     } else {
@@ -1235,14 +1248,8 @@ $realTimeMonitorHtml = '
                 html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
                 $("#today-pagination-controls").hide();
             } else {
-                // Calculate pagination
-                todayTotalPages = Math.ceil(allTodayData.length / todayRecordsPerPage);
-                const startIndex = (todayCurrentPage - 1) * todayRecordsPerPage;
-                const endIndex = Math.min(startIndex + todayRecordsPerPage, allTodayData.length);
-                const pageData = allTodayData.slice(startIndex, endIndex);
-                
-                // Generate table rows for current page
-                pageData.forEach(function(row) {
+                // Use server-side pagination data - no client-side slicing needed
+                allTodayData.forEach(function(row) {
                     html += `<tr>
                         <td>${formatDateTime(row.t)}</td>
                         <td>${row.service_id || "-"}</td>
@@ -1258,13 +1265,20 @@ $realTimeMonitorHtml = '
                     </tr>`;
                 });
                 
-                // Update pagination controls
-                $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTodayData.length));
-                $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", todayCurrentPage).replace("{total}", todayTotalPages));
-                
-                // Enable/disable pagination buttons
-                $("#today-first-page, #today-prev-page").prop("disabled", todayCurrentPage === 1);
-                $("#today-next-page, #today-last-page").prop("disabled", todayCurrentPage === todayTotalPages);
+                // Update pagination controls using server data
+                if (todayPaginationInfo) {
+                    $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", todayPaginationInfo.start_record).replace("{end}", todayPaginationInfo.end_record).replace("{total}", todayPaginationInfo.total_records));
+                    $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", todayPaginationInfo.current_page).replace("{total}", todayPaginationInfo.total_pages));
+                    
+                    // Enable/disable pagination buttons
+                    $("#today-first-page, #today-prev-page").prop("disabled", !todayPaginationInfo.has_previous);
+                    $("#today-next-page, #today-last-page").prop("disabled", !todayPaginationInfo.has_next);
+                } else {
+                    // Fallback for non-paginated data
+                    $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", 1).replace("{end}", allTodayData.length).replace("{total}", allTodayData.length));
+                    $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", 1).replace("{total}", 1));
+                    $("#today-first-page, #today-prev-page, #today-next-page, #today-last-page").prop("disabled", true);
+                }
                 
                 $("#today-pagination-controls").show();
             }

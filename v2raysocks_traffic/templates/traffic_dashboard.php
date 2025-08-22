@@ -640,10 +640,12 @@ $trafficDashboardHtml = '
         let refreshInterval;
         let currentTrafficData = []; // Store current data for chart type changes
         let currentGroupedData = null; // Store current grouped data for chart type changes
-        let allTrafficData = []; // Store all filtered data for pagination
+        let allTrafficData = []; // Store current page data only (for backward compatibility)
         let currentPage = 1;
-        let recordsPerPage = 50;
+        let recordsPerPage = 1000; // Use server-side pagination default
         let totalPages = 1;
+        let totalRecords = 0;
+        let paginationInfo = null; // Store server pagination info
         let moduleConfig = {
             chart_unit: "auto"
         };
@@ -839,26 +841,35 @@ $trafficDashboardHtml = '
             
             $("#first-page").on("click", function() {
                 currentPage = 1;
-                updatePaginatedTable();
+                loadTrafficData(); // Reload data from server
             });
             
             $("#prev-page").on("click", function() {
-                if (currentPage > 1) {
+                if (paginationInfo && paginationInfo.has_previous) {
                     currentPage--;
-                    updatePaginatedTable();
+                    loadTrafficData(); // Reload data from server
                 }
             });
             
             $("#next-page").on("click", function() {
-                if (currentPage < totalPages) {
+                if (paginationInfo && paginationInfo.has_next) {
                     currentPage++;
-                    updatePaginatedTable();
+                    loadTrafficData(); // Reload data from server
                 }
             });
             
             $("#last-page").on("click", function() {
-                currentPage = totalPages;
-                updatePaginatedTable();
+                if (paginationInfo) {
+                    currentPage = paginationInfo.total_pages;
+                    loadTrafficData(); // Reload data from server
+                }
+            });
+            
+            // Handle page size changes
+            $("#records-per-page").on("change", function() {
+                recordsPerPage = parseInt($(this).val());
+                currentPage = 1; // Reset to first page
+                loadTrafficData(); // Reload data from server
             });
         });
         
@@ -979,6 +990,9 @@ $trafficDashboardHtml = '
         function loadTrafficData() {
             let params = $("#traffic-filter").serialize() + "&grouped=true";
             
+            // Add pagination parameters for server-side pagination
+            params += "&page=" + currentPage + "&page_size=" + recordsPerPage;
+            
             // Handle custom time range - convert times to timestamps
             const timeRange = $("#time-range").val();
             if (timeRange === "time_range") {
@@ -1016,6 +1030,13 @@ $trafficDashboardHtml = '
                     console.log("Traffic data response:", response);
                     $("#loading-indicator").remove();
                     if (response.status === "success") {
+                        // Handle paginated response
+                        if (response.pagination) {
+                            paginationInfo = response.pagination;
+                            totalRecords = paginationInfo.total_records;
+                            totalPages = paginationInfo.total_pages;
+                            currentPage = paginationInfo.current_page;
+                        }
                         updateTrafficTable(response.data);
                         updateTrafficChart(response.data, response.grouped_data);
                     } else {
@@ -1050,14 +1071,8 @@ $trafficDashboardHtml = '
                 html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
                 $("#pagination-controls").hide();
             } else {
-                // Calculate pagination
-                totalPages = Math.ceil(allTrafficData.length / recordsPerPage);
-                const startIndex = (currentPage - 1) * recordsPerPage;
-                const endIndex = Math.min(startIndex + recordsPerPage, allTrafficData.length);
-                const pageData = allTrafficData.slice(startIndex, endIndex);
-                
-                // Generate table rows for current page
-                pageData.forEach(function(row) {
+                // Use server-side pagination data - no client-side slicing needed
+                allTrafficData.forEach(function(row) {
                     html += `<tr>
                         <td>${formatDateTime(row.t)}</td>
                         <td>${row.service_id || "-"}</td>
@@ -1073,13 +1088,20 @@ $trafficDashboardHtml = '
                     </tr>`;
                 });
                 
-                // Update pagination controls
-                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTrafficData.length));
-                $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", currentPage).replace("{total}", totalPages));
-                
-                // Enable/disable pagination buttons
-                $("#first-page, #prev-page").prop("disabled", currentPage === 1);
-                $("#next-page, #last-page").prop("disabled", currentPage === totalPages);
+                // Update pagination controls using server data
+                if (paginationInfo) {
+                    $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", paginationInfo.start_record).replace("{end}", paginationInfo.end_record).replace("{total}", paginationInfo.total_records));
+                    $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", paginationInfo.current_page).replace("{total}", paginationInfo.total_pages));
+                    
+                    // Enable/disable pagination buttons
+                    $("#first-page, #prev-page").prop("disabled", !paginationInfo.has_previous);
+                    $("#next-page, #last-page").prop("disabled", !paginationInfo.has_next);
+                } else {
+                    // Fallback for non-paginated data
+                    $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", 1).replace("{end}", allTrafficData.length).replace("{total}", allTrafficData.length));
+                    $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", 1).replace("{total}", 1));
+                    $("#first-page, #prev-page, #next-page, #last-page").prop("disabled", true);
+                }
                 
                 $("#pagination-controls").show();
             }
