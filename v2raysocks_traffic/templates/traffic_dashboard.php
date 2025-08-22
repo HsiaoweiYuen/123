@@ -65,6 +65,11 @@ $trafficDashboardHtml = '
             flex: 1 1 auto;
             min-width: auto;
         }
+        /* Constrain service ID field to be consistent with time input fields */
+        .filter-group#service-id-group {
+            flex: 0 0 140px;
+            min-width: 140px;
+        }
         .filter-group label {
             display: block;
             margin-bottom: 5px;
@@ -156,7 +161,8 @@ $trafficDashboardHtml = '
             .filter-group#custom-dates,
             .filter-group#custom-dates-end,
             .filter-group#custom-times,
-            .filter-group#custom-times-end {
+            .filter-group#custom-times-end,
+            .filter-group#service-id-group {
                 flex: 1 1 calc(50% - 4px);
                 min-width: auto;
             }
@@ -200,7 +206,8 @@ $trafficDashboardHtml = '
             .filter-group#custom-dates,
             .filter-group#custom-dates-end,
             .filter-group#custom-times,
-            .filter-group#custom-times-end {
+            .filter-group#custom-times-end,
+            .filter-group#service-id-group {
                 flex: 1 1 auto;
                 min-width: auto;
             }
@@ -422,7 +429,7 @@ $trafficDashboardHtml = '
         <div class="filter-panel">
             <form id="traffic-filter">
                 <div class="filter-row">
-                    <div class="filter-group">
+                    <div class="filter-group" id="service-id-group">
                         <label for="service-id">' . v2raysocks_traffic_lang('service_id') . ':</label>
                         <input type="text" id="service-id" name="service_id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%;">
                     </div>
