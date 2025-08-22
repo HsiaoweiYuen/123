@@ -124,25 +124,60 @@ function v2raysocks_traffic_getUnifiedStyles() {
             margin-bottom: 15px;
         }
         .control-group {
-            flex: 1;
+            flex: 1 1 auto;
             min-width: auto;
         }
-        /* Constrain time input controls to prevent them from growing too wide */
-        #node-rankings-start-time-group,
-        #node-rankings-end-time-group {
-            flex: 0 0 140px;
-            min-width: 140px;
+        /* Unified form field width styling for consistent appearance across all pages */
+        .form-group,
+        .filter-group,
+        .control-group {
+            flex: 1 1 auto;
+            min-width: auto;
         }
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .control-group select, .control-group input {
-            width: 100%;
+        .form-group input,
+        .form-group select,
+        .filter-group input,
+        .filter-group select,
+        .control-group input,
+        .control-group select,
+        .form-group-input {
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 120px;
             padding: 8px;
             border: 1px solid #ced4da;
             border-radius: 4px;
+        }
+        /* Ensure custom date/time fields also follow uniform width */
+        #custom-dates,
+        #custom-dates-end,
+        #custom-times,
+        #custom-times-end,
+        #rt-custom-dates,
+        #rt-custom-dates-end,
+        #rt-custom-times,
+        #rt-custom-times-end {
+            flex: 1 1 auto;
+            min-width: auto;
+        }
+        #custom-dates input,
+        #custom-dates-end input,
+        #custom-times input,
+        #custom-times-end input,
+        #rt-custom-dates input,
+        #rt-custom-dates-end input,
+        #rt-custom-times input,
+        #rt-custom-times-end input {
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        .control-group label,
+        .form-group label,
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
         .btn {
             padding: 8px 16px;
@@ -234,16 +269,45 @@ function v2raysocks_traffic_getUnifiedStyles() {
                 flex-direction: column;
                 gap: 10px;
             }
-            .control-group {
+            .control-group,
+            .form-group,
+            .filter-group {
                 min-width: auto;
                 width: 100%;
+                flex: 1 1 auto;
             }
-            /* Override time input constraints for mobile */
-            #node-rankings-start-time-group,
-            #node-rankings-end-time-group {
+            .control-group input,
+            .control-group select,
+            .form-group input,
+            .form-group select,
+            .filter-group input,
+            .filter-group select {
+                width: 100%;
+                min-width: auto;
+            }
+            /* Override custom date/time field constraints for mobile */
+            #custom-dates,
+            #custom-dates-end,
+            #custom-times,
+            #custom-times-end,
+            #rt-custom-dates,
+            #rt-custom-dates-end,
+            #rt-custom-times,
+            #rt-custom-times-end {
                 flex: 1 1 auto;
                 min-width: auto;
                 width: 100%;
+            }
+            #custom-dates input,
+            #custom-dates-end input,
+            #custom-times input,
+            #custom-times-end input,
+            #rt-custom-dates input,
+            #rt-custom-dates-end input,
+            #rt-custom-times input,
+            #rt-custom-times-end input {
+                width: 100%;
+                min-width: auto;
             }
             .table-responsive {
                 font-size: 0.9em;

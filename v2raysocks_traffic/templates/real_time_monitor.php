@@ -26,12 +26,7 @@ $realTimeMonitorHtml = '
         .refresh-status { text-align: center; margin: 20px 0; color: #6c757d; }
         .filter-panel { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; }
         .filter-row { display: flex; gap: 20px; align-items: end; flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-weight: 500; }
-        .filter-group input, .filter-group select { padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px; }
-        /* Make custom date inputs more compact */
-        #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end { flex: 0 0 auto; max-width: 160px; }
-        #rt-custom-dates input, #rt-custom-dates-end input, #rt-custom-times input, #rt-custom-times-end input { width: 100%; max-width: 100%; }
+        /* Remove specific width overrides - use unified styling from navigation component */
         .btn { padding: 8px 15px; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
@@ -62,20 +57,9 @@ $realTimeMonitorHtml = '
                 flex-direction: column;
                 gap: 10px;
             }
-            .filter-group {
-                width: 100%;
-            }
             .refresh-status {
                 font-size: 0.9em;
                 text-align: left;
-            }
-            /* Make custom time/date inputs full width on mobile */
-            #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end {
-                max-width: 100% !important;
-            }
-            #today-custom-times, #today-custom-times-end {
-                max-width: 100% !important;
-                flex: 1 1 100% !important;
             }
         }
         
@@ -96,14 +80,7 @@ $realTimeMonitorHtml = '
             .refresh-status {
                 font-size: 0.8em;
             }
-            /* Ensure custom time/date inputs are full width on very small devices */
-            #rt-custom-dates, #rt-custom-dates-end, #rt-custom-times, #rt-custom-times-end {
-                max-width: 100% !important;
-            }
-            #today-custom-times, #today-custom-times-end {
-                max-width: 100% !important;
-                flex: 1 1 100% !important;
-            }
+            /* Ensure custom time/date inputs are full width on very small devices - removed specific overrides to use unified styles */
             /* Fix modal dialogs for mobile */
             div[id$="-modal"] > div {
                 min-width: 90% !important;
@@ -114,11 +91,13 @@ $realTimeMonitorHtml = '
             }
         }
         
-        /* Standard styles for export modal inputs */
+        /* Standard styles for export modal inputs - use uniform width */
         #export-modal input[type="date"], 
         #export-modal input[type="time"], 
         #export-modal input[type="number"] {
-            width: 200px;
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 120px;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;
@@ -307,13 +286,13 @@ $realTimeMonitorHtml = '
             <!-- Independent Search Controls -->
             <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
                 <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 1 1 auto; min-width: auto;">
                         <label for="today-service-id" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('service_id') . ':</label>
-                        <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="text" id="today-service-id" placeholder="' . v2raysocks_traffic_lang('enter_service_id') . '" class="form-group-input">
                     </div>
-                    <div style="flex: 0 0 200px; min-width: 150px;">
+                    <div style="flex: 1 1 auto; min-width: auto;">
                         <label for="today-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('time_range') . ':</label>
-                        <select id="today-time-range" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <select id="today-time-range" class="form-group-input">
                             <option value="today" selected>' . v2raysocks_traffic_lang('today') . '</option>
                             <option value="last_1_hour">' . v2raysocks_traffic_lang('last_hour') . '</option>
                             <option value="last_3_hours">' . v2raysocks_traffic_lang('last_3_hours') . '</option>
@@ -322,13 +301,13 @@ $realTimeMonitorHtml = '
                             <option value="custom_time">' . v2raysocks_traffic_lang('custom_time_range') . '</option>
                         </select>
                     </div>
-                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times" style="display: none; flex: 1 1 auto; min-width: auto;">
                         <label for="today-start-time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="today-start-time" name="start_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="today-start-time" name="start_time" step="1" class="form-group-input">
                     </div>
-                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 0 0 auto; max-width: 160px;">
+                    <div class="filter-group" id="today-custom-times-end" style="display: none; flex: 1 1 auto; min-width: auto;">
                         <label for="today-end-time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="today-end-time" name="end_time" step="1" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <input type="time" id="today-end-time" name="end_time" step="1" class="form-group-input">
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button id="search-today-traffic" class="btn btn-primary">' . v2raysocks_traffic_lang('search') . '</button>

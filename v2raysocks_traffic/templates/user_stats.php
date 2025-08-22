@@ -56,21 +56,7 @@ $userStatsHtml = '
             align-items: end;
             margin-bottom: 15px;
         }
-        .form-group { 
-            flex: 1;
-            min-width: 150px;
-        }
-        .form-group label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-        }
-        .form-group input, .form-group select { 
-            width: 100%; 
-            padding: 8px; 
-            border: 1px solid #ced4da; 
-            border-radius: 4px; 
-        }
+        /* Remove specific width overrides - use unified styling from navigation component */
         .btn { 
             padding: 8px 16px; 
             border: none; 

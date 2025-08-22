@@ -33,29 +33,7 @@ $userRankingsHtml = '
             align-items: end;
             margin-bottom: 15px;
         }
-        .form-group { 
-            flex: 1;
-            min-width: 120px;
-        }
-        /* Compact layout for time inputs and search button */
-        .form-group#custom-dates,
-        .form-group#custom-dates-end,
-        .form-group#custom-times,
-        .form-group#custom-times-end {
-            flex: 1 1 auto;
-            min-width: auto;
-        }
-        .form-group label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-        }
-        .form-group input, .form-group select { 
-            width: 100%; 
-            padding: 8px; 
-            border: 1px solid #ced4da; 
-            border-radius: 4px; 
-        }
+        /* Remove specific width overrides - use unified styling from navigation component */
         
         .rank-badge {
             display: inline-block;
@@ -393,33 +371,6 @@ $userRankingsHtml = '
                 max-width: 240px; /* 缩小手机版UUID列宽度但保持可读性 */
             }
             
-            /* Custom date range styling for mobile */
-            .form-group#custom-dates,
-            .form-group#custom-dates-end,
-            .form-group#custom-times,
-            .form-group#custom-times-end {
-                flex-direction: row !important;
-                align-items: center !important;
-                flex-wrap: wrap !important;
-            }
-            .form-group#custom-dates label,
-            .form-group#custom-dates-end label,
-            .form-group#custom-times label,
-            .form-group#custom-times-end label {
-                margin-bottom: 0;
-                margin-right: 8px;
-                white-space: nowrap;
-            }
-            .form-group#custom-dates input,
-            .form-group#custom-dates-end input,
-            .form-group#custom-times input,
-            .form-group#custom-times-end input {
-                width: auto;
-                margin-bottom: 0;
-                margin-right: 10px !important;
-                min-width: 120px;
-            }
-            
             /* Mobile responsive search controls for user records */
             .usage-records-section div[style*="background: #f8f9fa"] div[style*="display: flex"] {
                 flex-direction: column !important;
@@ -453,23 +404,6 @@ $userRankingsHtml = '
             .form-row {
                 flex-direction: column;
                 gap: 8px;
-            }
-            .form-group {
-                width: 100%;
-                flex: 1 1 auto;
-            }
-            .form-group#custom-dates,
-            .form-group#custom-dates-end,
-            .form-group#custom-times,
-            .form-group#custom-times-end {
-                flex: 1 1 auto;
-                min-width: auto;
-            }
-            .form-group#custom-dates input,
-            .form-group#custom-dates-end input,
-            .form-group#custom-times input,
-            .form-group#custom-times-end input {
-                width: 100%;
             }
             .btn {
                 padding: 6px 12px;
@@ -507,11 +441,13 @@ $userRankingsHtml = '
             font-family: monospace; /* 等宽字体便于查看 */
         }
         
-        /* Standard styles for export modal inputs */
+        /* Standard styles for export modal inputs - use uniform width */
         #user-export-modal input[type="date"], 
         #user-export-modal input[type="time"], 
         #user-export-modal input[type="number"] {
-            width: 200px;
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 120px;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;
@@ -819,7 +755,7 @@ $userRankingsHtml = '
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                             <div style="flex: 0 0 200px; min-width: 150px;">
                                 <label for="user-node-search" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('node_search_label') . ':</label>
-                                <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                <input type="text" id="user-node-search" placeholder="' . v2raysocks_traffic_lang('node_search_placeholder') . '" class="form-group-input">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button id="search-user-records" class="btn btn-primary" style="padding: 8px 16px;">' . v2raysocks_traffic_lang('search') . '</button>

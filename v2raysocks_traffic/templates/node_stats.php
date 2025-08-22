@@ -628,14 +628,14 @@ $nodeStatsHtml = '
                         <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
                             <div style="flex: 0 0 180px; min-width: 150px;">
                                 <label for="node-search-type" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_type_label') . ':</label>
-                                <select id="node-search-type" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                <select id="node-search-type" class="form-group-input">
                                     <option value="uuid">UUID</option>
                                     <option value="user_id">' . v2raysocks_traffic_lang('user_id') . '</option>
                                 </select>
                             </div>
-                            <div style="flex: 0 0 200px; min-width: 150px;">
+                            <div style="flex: 1 1 auto; min-width: auto;">
                                 <label for="node-search-value" style="display: block; margin-bottom: 5px; font-weight: 500;">' . v2raysocks_traffic_lang('search_value_label') . ':</label>
-                                <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" style="width: 100%; padding: 5px 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                <input type="text" id="node-search-value" placeholder="' . v2raysocks_traffic_lang('search_value_placeholder') . '" class="form-group-input">
                             </div>
 
                             <div style="display: flex; gap: 10px;">

@@ -30,27 +30,7 @@ $serviceSearchHtml = '
             align-items: end;
             margin-bottom: 15px;
         }
-        .form-group { 
-            flex: 1;
-            min-width: 120px;
-        }
-        /* Compact layout for time inputs and search button */
-        .form-group#custom-dates,
-        .form-group#custom-dates-end {
-            flex: 1 1 auto;
-            min-width: auto;
-        }
-        .form-group label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-        }
-        .form-group input, .form-group select { 
-            width: 100%; 
-            padding: 8px; 
-            border: 1px solid #ced4da; 
-            border-radius: 4px; 
-        }
+        /* Remove specific width overrides - use unified styling from navigation component */
         .btn { 
             padding: 8px 16px; 
             border: none; 
@@ -137,26 +117,6 @@ $serviceSearchHtml = '
                 gap: 8px;
                 justify-content: flex-start;
             }
-            .form-group {
-                min-width: auto;
-                width: auto;
-                flex: 0 0 auto;
-            }
-            /* Optimize form layout for mobile - make inputs more compact */
-            .form-group:not(#custom-dates):not(#custom-dates-end) {
-                flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
-            }
-            .form-group#custom-dates,
-            .form-group#custom-dates-end {
-                flex: 1 1 calc(50% - 4px);
-                min-width: 140px;
-            }
-            /* Search button should be full width on mobile */
-            .form-group:last-child {
-                flex: 1 1 100%;
-                margin-top: 5px;
-            }
             .table-responsive {
                 font-size: 0.9em;
             }
@@ -181,19 +141,6 @@ $serviceSearchHtml = '
             .form-row {
                 flex-direction: column;
                 gap: 8px;
-            }
-            .form-group {
-                width: 100%;
-                flex: 1 1 auto;
-            }
-            .form-group#custom-dates,
-            .form-group#custom-dates-end {
-                flex: 1 1 auto;
-                min-width: auto;
-            }
-            .form-group#custom-dates input,
-            .form-group#custom-dates-end input {
-                width: 100%;
             }
             .table th, .table td {
                 padding: 6px 2px;
@@ -355,19 +302,19 @@ $serviceSearchHtml = '
                     </div>
                     <div class="form-group" id="custom-dates" style="display: none;">
                         <label for="start_date">' . v2raysocks_traffic_lang('start_date') . ':</label>
-                        <input type="date" id="start_date" name="start_date" style="width: 100%;">
+                        <input type="date" id="start_date" name="start_date">
                     </div>
                     <div class="form-group" id="custom-dates-end" style="display: none;">
                         <label for="end_date">' . v2raysocks_traffic_lang('end_date') . ':</label>
-                        <input type="date" id="end_date" name="end_date" style="width: 100%;">
+                        <input type="date" id="end_date" name="end_date">
                     </div>
                     <div class="form-group" id="custom-times" style="display: none;">
                         <label for="start_time">' . v2raysocks_traffic_lang('start_time_label') . ':</label>
-                        <input type="time" id="start_time" name="start_time" step="1" style="width: 100%;">
+                        <input type="time" id="start_time" name="start_time" step="1">
                     </div>
                     <div class="form-group" id="custom-times-end" style="display: none;">
                         <label for="end_time">' . v2raysocks_traffic_lang('end_time_label') . ':</label>
-                        <input type="time" id="end_time" name="end_time" step="1" style="width: 100%;">
+                        <input type="time" id="end_time" name="end_time" step="1">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
