@@ -297,17 +297,18 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $page = 1, $limit = 50)
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Add pagination to cache key for proper cache segmentation
+        $cacheKey = 'traffic_data_' . md5(serialize($filters) . "_page_{$page}_limit_{$limit}");
         
         // Try to get from cache first, but don't fail if caching is unavailable
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
                 $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
+                if (!empty($decodedData) && isset($decodedData['pagination'])) {
                     return $decodedData;
                 }
             }
@@ -457,9 +458,54 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         
         $sql .= ' ORDER BY uu.t DESC';
         
+        // Add server-side pagination
+        $offset = ($page - 1) * $limit;
+        $sql .= ' LIMIT :limit OFFSET :offset';
+
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        
+        // Bind pagination parameters
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        
+        // Bind filter parameters
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get total count for pagination info (separate query for performance)
+        $countSql = str_replace('SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    n.address as node_address,
+                    uu.node as node_identifier
+                FROM user_usage AS uu
+                LEFT JOIN user AS u ON uu.user_id = u.id
+                LEFT JOIN node AS n ON uu.node = n.name', 'SELECT COUNT(*) as total FROM user_usage AS uu LEFT JOIN user AS u ON uu.user_id = u.id LEFT JOIN node AS n ON uu.node = n.name', $sql);
+        $countSql = str_replace(' LIMIT :limit OFFSET :offset', '', $countSql);
+        
+        $countStmt = $pdo->prepare($countSql);
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue($key, $value);
+        }
+        $countStmt->execute();
+        $totalCount = $countStmt->fetchColumn();
+        
+        // Calculate pagination metadata
+        $totalPages = ceil($totalCount / $limit);
+        $hasNextPage = $page < $totalPages;
+        $hasPrevPage = $page > 1;
         
         // Validate and clean the traffic data to prevent extreme values
         v2raysocks_traffic_validateTrafficData($data);
@@ -482,6 +528,21 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             }
         }
         unset($row); // Break reference
+        
+        // Prepare return data with pagination metadata
+        $result = [
+            'data' => $data,
+            'pagination' => [
+                'page' => (int)$page,
+                'limit' => (int)$limit,
+                'total_records' => (int)$totalCount,
+                'total_pages' => (int)$totalPages,
+                'has_next_page' => $hasNextPage,
+                'has_prev_page' => $hasPrevPage,
+                'start_record' => ($page - 1) * $limit + 1,
+                'end_record' => min($page * $limit, $totalCount)
+            ]
+        ];
         
         // Try to cache with shorter time for real-time data using unified cache function
         try {
@@ -507,8 +568,9 @@ function v2raysocks_traffic_getTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
-                'data_type' => 'traffic_data',
+            // Cache only the current page data, not all data
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                'data_type' => 'traffic_data_paginated',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => !$isRealTime
             ]);
@@ -517,10 +579,22 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
         }
         
-        return $data;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => [
+                'page' => 1,
+                'limit' => $limit,
+                'total_records' => 0,
+                'total_pages' => 0,
+                'has_next_page' => false,
+                'has_prev_page' => false,
+                'start_record' => 0,
+                'end_record' => 0
+            ]
+        ];
     }
 }
 
@@ -528,17 +602,17 @@ function v2raysocks_traffic_getTrafficData($filters = [])
  * Get enhanced traffic data with improved node name resolution
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $page = 1, $limit = 50)
 {
     try {
-        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
+        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters) . "_page_{$page}_limit_{$limit}");
         
         // Try to get from cache first
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
                 $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
+                if (!empty($decodedData) && isset($decodedData['pagination'])) {
                     return $decodedData;
                 }
             }
@@ -749,15 +823,24 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Calculate total count before pagination
+        $totalCount = count($allData);
+        
+        // Apply server-side pagination
+        $offset = ($page - 1) * $limit;
+        $paginatedData = array_slice($allData, $offset, $limit);
+        
+        // Calculate pagination metadata
+        $totalPages = ceil($totalCount / $limit);
+        $hasNextPage = $page < $totalPages;
+        $hasPrevPage = $page > 1;
         
         // Validate and clean the traffic data
-        v2raysocks_traffic_validateTrafficData($allData);
+        v2raysocks_traffic_validateTrafficData($paginatedData);
         
         // Add current_node_name field for "used node name" functionality
         $todayStart = strtotime('today');
-        foreach ($allData as &$row) {
+        foreach ($paginatedData as &$row) {
             // Ensure node_name is not empty; if it is, try to use the node identifier
             if (empty($row['node_name']) && !empty($row['node_identifier'])) {
                 $row['node_name'] = $row['node_identifier'];
@@ -772,6 +855,21 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             }
         }
         unset($row); // Break reference
+        
+        // Prepare return data with pagination metadata
+        $result = [
+            'data' => $paginatedData,
+            'pagination' => [
+                'page' => (int)$page,
+                'limit' => (int)$limit,
+                'total_records' => (int)$totalCount,
+                'total_pages' => (int)$totalPages,
+                'has_next_page' => $hasNextPage,
+                'has_prev_page' => $hasPrevPage,
+                'start_record' => $offset + 1,
+                'end_record' => min($offset + $limit, $totalCount)
+            ]
+        ];
         
         // Try to cache the results using unified cache function
         try {
@@ -791,8 +889,8 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 }
             }
             
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
-                'data_type' => 'enhanced_traffic',
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                'data_type' => 'enhanced_traffic_paginated',
                 'time_range' => $timeRangeForCache,
                 'is_historical' => ($timeRangeForCache === 'historical')
             ]);
@@ -801,16 +899,285 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             logActivity("V2RaySocks Traffic Monitor: Cache write failed for enhanced traffic data: " . $e->getMessage(), 0);
         }
         
-        return $allData;
+        return $result;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficData error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => [
+                'page' => 1,
+                'limit' => $limit,
+                'total_records' => 0,
+                'total_pages' => 0,
+                'has_next_page' => false,
+                'has_prev_page' => false,
+                'start_record' => 0,
+                'end_record' => 0
+            ]
+        ];
     }
 }
 
 /**
- * Helper function to get time filter timestamp
+ * Stream large dataset exports in chunks to handle millions of records efficiently
+ * This function processes data in batches to avoid memory exhaustion
  */
+function v2raysocks_traffic_streamLargeExport($exportType, $filters, $format = 'csv', $chunkSize = 1000)
+{
+    try {
+        // Set appropriate headers for streaming download
+        $filename = "v2raysocks_traffic_export_" . date('Y-m-d_H-i-s') . "." . $format;
+        
+        switch ($format) {
+            case 'csv':
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                break;
+            case 'json':
+                header('Content-Type: application/json; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                break;
+            case 'excel':
+                header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . str_replace('.excel', '.xls', $filename) . '"');
+                break;
+        }
+        
+        // Disable output buffering for streaming
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        $isFirstChunk = true;
+        $totalRecords = 0;
+        $page = 1;
+        
+        // Start JSON array for JSON format
+        if ($format === 'json') {
+            echo '{"data":[';
+        }
+        
+        // Process data in chunks
+        do {
+            $hasMoreData = false;
+            
+            switch ($exportType) {
+                case 'traffic_data':
+                    $chunkResult = v2raysocks_traffic_getTrafficData($filters, $page, $chunkSize);
+                    $chunkData = $chunkResult['data'] ?? [];
+                    $hasMoreData = $chunkResult['pagination']['has_next_page'] ?? false;
+                    break;
+                    
+                case 'user_rankings':
+                    $chunkResult = v2raysocks_traffic_getUserTrafficRankings(
+                        $filters['sort_by'] ?? 'traffic_desc',
+                        $filters['time_range'] ?? 'today',
+                        $chunkSize,
+                        $filters['start_date'] ?? null,
+                        $filters['end_date'] ?? null,
+                        $filters['start_timestamp'] ?? null,
+                        $filters['end_timestamp'] ?? null,
+                        $page
+                    );
+                    $chunkData = $chunkResult['data'] ?? [];
+                    $hasMoreData = $chunkResult['pagination']['has_next_page'] ?? false;
+                    break;
+                    
+                default:
+                    throw new Exception("Unsupported export type: " . $exportType);
+            }
+            
+            if (!empty($chunkData)) {
+                $totalRecords += count($chunkData);
+                
+                switch ($format) {
+                    case 'csv':
+                        v2raysocks_traffic_outputCSVChunk($chunkData, $isFirstChunk, $exportType);
+                        break;
+                    case 'json':
+                        v2raysocks_traffic_outputJSONChunk($chunkData, $isFirstChunk);
+                        break;
+                    case 'excel':
+                        v2raysocks_traffic_outputExcelChunk($chunkData, $isFirstChunk, $exportType);
+                        break;
+                }
+                
+                $isFirstChunk = false;
+                flush(); // Send data to client immediately
+            }
+            
+            $page++;
+            
+            // Safety check to prevent infinite loops
+            if ($page > 10000) {
+                error_log("V2RaySocks Traffic: Export safety limit reached at page $page");
+                break;
+            }
+            
+        } while ($hasMoreData && !empty($chunkData));
+        
+        // Close JSON array for JSON format
+        if ($format === 'json') {
+            echo '],"total_records":' . $totalRecords . ',"export_timestamp":' . time() . '}';
+        }
+        
+        return $totalRecords;
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor streamLargeExport error: " . $e->getMessage(), 0);
+        
+        // Output error in appropriate format
+        switch ($format) {
+            case 'json':
+                echo '{"error":"' . addslashes($e->getMessage()) . '"}';
+                break;
+            case 'csv':
+                echo "Error," . addslashes($e->getMessage()) . "\n";
+                break;
+            default:
+                echo "Error: " . $e->getMessage();
+        }
+        
+        return 0;
+    }
+}
+
+/**
+ * Output CSV chunk for streaming export
+ */
+function v2raysocks_traffic_outputCSVChunk($data, $isFirstChunk, $exportType)
+{
+    if ($isFirstChunk && !empty($data)) {
+        // Output CSV header based on export type
+        switch ($exportType) {
+            case 'traffic_data':
+                echo "Time,User ID,Service ID,UUID,Node Name,Upload,Download,Total,Speed Limit SS,Speed Limit Other,Illegal\n";
+                break;
+            case 'user_rankings':
+                echo "User ID,UUID,Service ID,Period Traffic,Upload,Download,Transfer Enable,Remaining Quota,Nodes Used,Speed Limit SS,Speed Limit Other,Last Usage\n";
+                break;
+        }
+    }
+    
+    foreach ($data as $row) {
+        $csvRow = [];
+        
+        switch ($exportType) {
+            case 'traffic_data':
+                $csvRow = [
+                    date('Y-m-d H:i:s', $row['t'] ?? 0),
+                    $row['user_id'] ?? '',
+                    $row['service_id'] ?? '',
+                    $row['uuid'] ?? '',
+                    $row['node_name'] ?? '',
+                    $row['u'] ?? 0,
+                    $row['d'] ?? 0,
+                    ($row['u'] ?? 0) + ($row['d'] ?? 0),
+                    $row['speedlimitss'] ?? '',
+                    $row['speedlimitother'] ?? '',
+                    $row['illegal'] ?? 0
+                ];
+                break;
+                
+            case 'user_rankings':
+                $csvRow = [
+                    $row['user_id'] ?? '',
+                    $row['uuid'] ?? '',
+                    $row['sid'] ?? '',
+                    $row['period_traffic'] ?? 0,
+                    $row['period_upload'] ?? 0,
+                    $row['period_download'] ?? 0,
+                    $row['transfer_enable'] ?? 0,
+                    $row['remaining_quota'] ?? 0,
+                    $row['nodes_used'] ?? 0,
+                    $row['speedlimitss'] ?? '',
+                    $row['speedlimitother'] ?? '',
+                    $row['last_usage'] ? date('Y-m-d H:i:s', $row['last_usage']) : ''
+                ];
+                break;
+        }
+        
+        // Escape and output CSV line
+        $escapedRow = array_map(function($field) {
+            return '"' . str_replace('"', '""', $field) . '"';
+        }, $csvRow);
+        
+        echo implode(',', $escapedRow) . "\n";
+    }
+}
+
+/**
+ * Output JSON chunk for streaming export
+ */
+function v2raysocks_traffic_outputJSONChunk($data, $isFirstChunk)
+{
+    foreach ($data as $index => $row) {
+        if (!$isFirstChunk || $index > 0) {
+            echo ',';
+        }
+        echo json_encode($row);
+    }
+}
+
+/**
+ * Output Excel chunk for streaming export (simplified CSV format)
+ */
+function v2raysocks_traffic_outputExcelChunk($data, $isFirstChunk, $exportType)
+{
+    // For Excel format, we'll output tab-separated values
+    if ($isFirstChunk && !empty($data)) {
+        // Output header
+        switch ($exportType) {
+            case 'traffic_data':
+                echo "Time\tUser ID\tService ID\tUUID\tNode Name\tUpload\tDownload\tTotal\tSpeed Limit SS\tSpeed Limit Other\tIllegal\n";
+                break;
+            case 'user_rankings':
+                echo "User ID\tUUID\tService ID\tPeriod Traffic\tUpload\tDownload\tTransfer Enable\tRemaining Quota\tNodes Used\tSpeed Limit SS\tSpeed Limit Other\tLast Usage\n";
+                break;
+        }
+    }
+    
+    foreach ($data as $row) {
+        $excelRow = [];
+        
+        switch ($exportType) {
+            case 'traffic_data':
+                $excelRow = [
+                    date('Y-m-d H:i:s', $row['t'] ?? 0),
+                    $row['user_id'] ?? '',
+                    $row['service_id'] ?? '',
+                    $row['uuid'] ?? '',
+                    $row['node_name'] ?? '',
+                    $row['u'] ?? 0,
+                    $row['d'] ?? 0,
+                    ($row['u'] ?? 0) + ($row['d'] ?? 0),
+                    $row['speedlimitss'] ?? '',
+                    $row['speedlimitother'] ?? '',
+                    $row['illegal'] ?? 0
+                ];
+                break;
+                
+            case 'user_rankings':
+                $excelRow = [
+                    $row['user_id'] ?? '',
+                    $row['uuid'] ?? '',
+                    $row['sid'] ?? '',
+                    $row['period_traffic'] ?? 0,
+                    $row['period_upload'] ?? 0,
+                    $row['period_download'] ?? 0,
+                    $row['transfer_enable'] ?? 0,
+                    $row['remaining_quota'] ?? 0,
+                    $row['nodes_used'] ?? 0,
+                    $row['speedlimitss'] ?? '',
+                    $row['speedlimitother'] ?? '',
+                    $row['last_usage'] ? date('Y-m-d H:i:s', $row['last_usage']) : ''
+                ];
+                break;
+        }
+        
+        echo implode("\t", $excelRow) . "\n";
+    }
+}
 function v2raysocks_traffic_getTimeFilter($timeRange)
 {
     switch ($timeRange) {
@@ -2620,17 +2987,25 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 /**
  * Get user traffic rankings
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = 50, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $page = 1)
 {
     try {
+        // For backward compatibility - if limit is PHP_INT_MAX and no page specified, use old behavior
+        $useOldBehavior = ($limit === PHP_INT_MAX && $page === 1);
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_page_' . $page);
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
                 $decodedData = json_decode($cachedData, true);
                 if (!empty($decodedData)) {
-                    return $decodedData;
+                    // Check if cached data has pagination metadata or is old format
+                    if ($useOldBehavior && is_array($decodedData) && !isset($decodedData['pagination'])) {
+                        return $decodedData; // Return old format for backward compatibility
+                    } elseif (isset($decodedData['pagination'])) {
+                        return $decodedData; // Return new paginated format
+                    }
                 }
             }
         } catch (\Exception $e) {
@@ -2779,7 +3154,14 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 $sql .= ' ORDER BY period_traffic DESC';
         }
 
-        $sql .= ' LIMIT :limit';
+        // For old behavior compatibility, don't apply pagination
+        if ($useOldBehavior) {
+            $sql .= ' LIMIT :limit';
+        } else {
+            // Add server-side pagination
+            $offset = ($page - 1) * $limit;
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
@@ -2788,9 +3170,67 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
         $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        
+        if (!$useOldBehavior) {
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        }
+        
         $stmt->execute();
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get total count for pagination info (only if not using old behavior)
+        $totalCount = 0;
+        $totalPages = 1;
+        $hasNextPage = false;
+        $hasPrevPage = false;
+        
+        if (!$useOldBehavior) {
+            // Get total count with a separate query for performance
+            $countSql = str_replace(
+                'SELECT 
+                u.id as user_id,
+                u.uuid,
+                u.sid,
+                u.u as total_upload_user,
+                u.d as total_download_user,
+                u.transfer_enable,
+                u.enable,
+                u.created_at,
+                u.remark,
+                COALESCE(u.speedlimitss, \'\') as speedlimitss,
+                COALESCE(u.speedlimitother, \'\') as speedlimitother,
+                COALESCE(SUM(uu.u), 0) as period_upload,
+                COALESCE(SUM(uu.d), 0) as period_download,
+                COALESCE(SUM(uu.u + uu.d), 0) as period_traffic,
+                COALESCE(SUM(CASE WHEN uu.t >= :time_5min THEN uu.u + uu.d ELSE 0 END), 0) as traffic_5min,
+                COALESCE(SUM(CASE WHEN uu.t >= :time_1hour THEN uu.u + uu.d ELSE 0 END), 0) as traffic_1hour,
+                COALESCE(SUM(CASE WHEN uu.t >= :time_4hour THEN uu.u + uu.d ELSE 0 END), 0) as traffic_4hour,
+                COUNT(DISTINCT uu.node) as nodes_used,
+                COUNT(uu.id) as usage_records,
+                MIN(uu.t) as first_usage,
+                MAX(uu.t) as last_usage',
+                'SELECT COUNT(DISTINCT u.id) as total',
+                $sql
+            );
+            $countSql = preg_replace('/GROUP BY.*?(?=ORDER|LIMIT|$)/s', '', $countSql);
+            $countSql = preg_replace('/ORDER BY.*?(?=LIMIT|$)/s', '', $countSql);
+            $countSql = str_replace(' LIMIT :limit OFFSET :offset', '', $countSql);
+            
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
+            $countStmt->bindValue(':end_time', $endTime, PDO::PARAM_INT);
+            $countStmt->bindValue(':time_5min', $time5min, PDO::PARAM_INT);
+            $countStmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
+            $countStmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
+            $countStmt->execute();
+            $totalCount = $countStmt->fetchColumn();
+            
+            // Calculate pagination metadata
+            $totalPages = ceil($totalCount / $limit);
+            $hasNextPage = $page < $totalPages;
+            $hasPrevPage = $page > 1;
+        }
         
         // Process results and add calculated fields
         foreach ($users as &$user) {
@@ -2824,11 +3264,33 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }
         
+        // Prepare return data
+        if ($useOldBehavior) {
+            // Return old format for backward compatibility
+            $result = $users;
+        } else {
+            // Return new paginated format
+            $result = [
+                'data' => $users,
+                'pagination' => [
+                    'page' => (int)$page,
+                    'limit' => (int)$limit,
+                    'total_records' => (int)$totalCount,
+                    'total_pages' => (int)$totalPages,
+                    'has_next_page' => $hasNextPage,
+                    'has_prev_page' => $hasPrevPage,
+                    'start_record' => ($page - 1) * $limit + 1,
+                    'end_record' => min($page * $limit, $totalCount)
+                ]
+            ];
+        }
+        
         // Try to cache with optimized TTL using unified cache function
         if (!empty($users)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
-                    'data_type' => 'rankings',
+                $cacheDataType = $useOldBehavior ? 'rankings' : 'rankings_paginated';
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                    'data_type' => $cacheDataType,
                     'time_range' => $timeRange
                 ]);
             } catch (\Exception $e) {
@@ -2837,11 +3299,29 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             }
         }
         
-        return $users;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficRankings error: " . $e->getMessage(), 0);
-        return [];
+        
+        // Return appropriate error format based on usage
+        if ($limit === PHP_INT_MAX && $page === 1) {
+            return []; // Old format for backward compatibility
+        } else {
+            return [
+                'data' => [],
+                'pagination' => [
+                    'page' => 1,
+                    'limit' => $limit,
+                    'total_records' => 0,
+                    'total_pages' => 0,
+                    'has_next_page' => false,
+                    'has_prev_page' => false,
+                    'start_record' => 0,
+                    'end_record' => 0
+                ]
+            ];
+        }
     }
 }
 

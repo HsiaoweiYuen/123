@@ -152,12 +152,16 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
+                // Add pagination parameters
+                $page = max(1, intval($_GET['page'] ?? 1));
+                $limit = min(200, max(10, intval($_GET['limit'] ?? 50))); // Cap at 200 records per page
+                
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
-                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters, $page, $limit);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getTrafficData($filters, $page, $limit);
                 }
                 
                 // Apply PR#37 time grouping if requested
@@ -165,14 +169,16 @@ function v2raysocks_traffic_output($vars)
                 $groupedData = null;
                 if ($grouped === 'true') {
                     $timeRange = $filters['time_range'] ?? 'today';
-                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData, $timeRange);
+                    // Apply grouping only to the current page data
+                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData['data'] ?? [], $timeRange);
                 }
                 
                 $result = [
                     'status' => 'success',
-                    'data' => $trafficData,
+                    'data' => $trafficData['data'] ?? [],
+                    'pagination' => $trafficData['pagination'] ?? null,
                     'grouped_data' => $groupedData,
-                    'count' => count($trafficData),
+                    'count' => count($trafficData['data'] ?? []),
                     'filters_applied' => array_filter($filters),
                     'enhanced_mode' => $useEnhanced === 'true'
                 ];
@@ -181,7 +187,8 @@ function v2raysocks_traffic_output($vars)
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to retrieve traffic data: ' . $e->getMessage(),
-                    'data' => []
+                    'data' => [],
+                    'pagination' => null
                 ];
             }
             
@@ -219,6 +226,42 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+        case 'export_data_stream':
+            try {
+                // Handle large dataset exports with streaming
+                $exportType = $_GET['export_type'] ?? 'traffic_data';
+                $format = $_GET['format'] ?? 'csv';
+                $chunkSize = min(2000, max(100, intval($_GET['chunk_size'] ?? 1000))); // Default 1000, max 2000
+                
+                $filters = [
+                    'user_id' => $_GET['user_id'] ?? null,
+                    'service_id' => $_GET['service_id'] ?? null,
+                    'node_id' => $_GET['node_id'] ?? null,
+                    'start_date' => $_GET['start_date'] ?? null,
+                    'end_date' => $_GET['end_date'] ?? null,
+                    'time_range' => $_GET['time_range'] ?? 'today',
+                    'uuid' => $_GET['uuid'] ?? null,
+                    'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
+                    'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                    'sort_by' => $_GET['sort_by'] ?? 'traffic_desc'
+                ];
+                
+                // Stream the export
+                $totalRecords = v2raysocks_traffic_streamLargeExport($exportType, $filters, $format, $chunkSize);
+                
+                // Log the export
+                logActivity("V2RaySocks Traffic Analysis: Streamed export of $totalRecords records", 0);
+                
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis export_data_stream error: " . $e->getMessage(), 0);
+                
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Failed to export data: ' . $e->getMessage()
+                ]);
+            }
+            die(); // End execution after streaming
         case 'export_data':
             // Enhanced export functionality with options
             $exportFormat = $_GET['format'] ?? 'csv';
@@ -563,27 +606,51 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
-                $limitValue = $_GET['limit'] ?? 'all';
+                $limitValue = $_GET['limit'] ?? '50';
                 
-                // Handle "all" option properly - remove limit restriction
-                $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
-                if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
+                // Add pagination parameters
+                $page = max(1, intval($_GET['page'] ?? 1));
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
-                $result = [
-                    'status' => 'success',
-                    'data' => $rankings,
-                    'sort_by' => $sortBy,
-                    'time_range' => $timeRange,
-                    'limit' => $limitValue, // Return original value for frontend
-                    'actual_limit' => $limit // Return actual numeric limit used
-                ];
+                // Handle "all" option properly - for backward compatibility
+                if ($limitValue === 'all') {
+                    $limit = PHP_INT_MAX;
+                    $page = 1; // Force page 1 for "all" mode
+                } else {
+                    $limit = min(200, max(10, intval($limitValue))); // Cap at 200 records per page
+                }
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $page);
+                
+                // Handle backward compatibility for old API format
+                if (is_array($rankings) && !isset($rankings['pagination'])) {
+                    // Old format response
+                    $result = [
+                        'status' => 'success',
+                        'data' => $rankings,
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'limit' => $limitValue,
+                        'actual_limit' => $limit
+                    ];
+                } else {
+                    // New paginated format response
+                    $result = [
+                        'status' => 'success',
+                        'data' => $rankings['data'] ?? [],
+                        'pagination' => $rankings['pagination'] ?? null,
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'limit' => $limitValue,
+                        'actual_limit' => $limit
+                    ];
+                }
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_user_traffic_rankings error: " . $e->getMessage(), 0);
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to get user rankings: ' . $e->getMessage(),
-                    'data' => []
+                    'data' => [],
+                    'pagination' => null
                 ];
             }
             
