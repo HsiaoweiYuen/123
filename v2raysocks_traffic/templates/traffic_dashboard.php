@@ -1051,7 +1051,7 @@ $trafficDashboardHtml = '
                 let html = "";
                 
                 if (data.length === 0) {
-                    html = "<tr><td colspan='11' class='loading'>No traffic data found</td></tr>";
+                    html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
                     $("#pagination-controls").hide();
                 } else {
                     // Generate table rows for received data (already paginated)

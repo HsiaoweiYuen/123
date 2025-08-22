@@ -1161,7 +1161,7 @@ $userRankingsHtml = '
                         <td>${user.speedlimitss || "-"}</td>
                         <td>${user.speedlimitother || "-"}</td>
                         <td>${user.last_usage ? formatDateTime(user.last_usage) : t("no_activity")}</td>
-                        <td>${user.enable ? '<span class="status-enabled">✓</span>' : '<span class="status-disabled">✗</span>'}</td>
+                        <td>${user.enable ? "<span class=\\"status-enabled\\">✓</span>" : "<span class=\\"status-disabled\\">✗</span>"}</td>
                     </tr>
                 `;
             });
