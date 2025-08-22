@@ -755,11 +755,10 @@ $userRankingsHtml = '
                     <div>
                         <label for="rankings-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                         <select id="rankings-records-per-page" style="margin-right: 15px; padding: 5px;">
-                            <option value="500">500</option>
-                            <option value="1000" selected>1000</option>
-                            <option value="3000">3000</option>
-                            <option value="5000">5000</option>
-                            <option value="10000">10000</option>
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
                         </select>
                         
                         <button id="rankings-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
@@ -863,11 +862,10 @@ $userRankingsHtml = '
                                 <div>
                                     <label for="user-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                                     <select id="user-records-per-page" style="margin-right: 15px; padding: 5px;">
-                                        <option value="500">500</option>
-                                        <option value="1000" selected>1000</option>
-                                        <option value="3000">3000</option>
-                                        <option value="5000">5000</option>
-                                        <option value="10000">10000</option>
+                                        <option value="25">25</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                        <option value="200">200</option>
                                     </select>
                                     
                                     <button id="user-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
