@@ -710,10 +710,12 @@ $nodeStatsHtml = '
         let currentNodeChart = null;
         let currentNodeId = null;
         let currentNodeName = null;
-        let allNodeUsageRecords = [];
+        let allNodeUsageRecords = []; // For legacy client-side pagination
         let currentNodeUsagePage = 1;
-        let nodeUsageRecordsPerPage = 50;
+        let nodeUsageRecordsPerPage = 500;
         let totalNodeUsagePages = 1;
+        let currentNodeUsageOffset = 0; // For server-side offset pagination
+        let currentNodeUsageCursor = null; // For server-side cursor pagination
         let currentSort = { field: "rank", direction: "asc" };
         let allNodeRankings = [];
         
@@ -1318,7 +1320,13 @@ $nodeStatsHtml = '
                 });
         }
         
-        function loadNodeUsageRecords() {
+        function loadNodeUsageRecords(resetPage = true) {
+            if (resetPage) {
+                currentNodeUsagePage = 1;
+                currentNodeUsageOffset = 0;
+                currentNodeUsageCursor = null;
+            }
+            
             // Get search parameters from search controls only
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
@@ -1330,6 +1338,15 @@ $nodeStatsHtml = '
             
             // Build query parameters
             let queryParams = `node_id=${currentNodeId}`;
+            
+            // Add pagination parameters for server-side pagination
+            queryParams += `&limit=${nodeUsageRecordsPerPage}`;
+            if (currentNodeUsageOffset > 0) {
+                queryParams += `&offset=${currentNodeUsageOffset}`;
+            }
+            if (currentNodeUsageCursor) {
+                queryParams += `&cursor=${currentNodeUsageCursor}`;
+            }
             
             // Add search value based on selected type
             if (searchValue) {
@@ -1362,8 +1379,14 @@ $nodeStatsHtml = '
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        allNodeUsageRecords = data.data || [];
-                        updateNodeUsagePagination();
+                        // Check if this is a paginated response
+                        if (data.data && data.pagination) {
+                            updateNodeUsagePaginationFromAPI(data);
+                        } else {
+                            // Legacy non-paginated response
+                            allNodeUsageRecords = data.data || [];
+                            updateNodeUsagePagination();
+                        }
                     } else {
                         const recordsTbody = document.getElementById("node-records-tbody");
                         recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
@@ -1374,6 +1397,59 @@ $nodeStatsHtml = '
                     const recordsTbody = document.getElementById("node-records-tbody");
                     recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });
+        }
+        
+        function updateNodeUsagePaginationFromAPI(response) {
+            const tbody = document.getElementById("node-records-tbody");
+            const paginationDiv = document.getElementById("node-usage-pagination");
+            const data = response.data;
+            const pagination = response.pagination;
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("no_usage_records")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Generate table rows
+            let html = "";
+            data.forEach(record => {
+                html += `
+                    <tr>
+                        <td>${record.formatted_time}</td>
+                        <td>${record.user_id}</td>
+                        <td class="uuid-column" title="${record.uuid || "N/A"}">${record.uuid || "N/A"}</td>
+                        <td>${record.formatted_upload}</td>
+                        <td>${record.formatted_download}</td>
+                        <td>${record.formatted_total}</td>
+                        <td>${record.count_rate}x</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination info
+            const startIndex = (Math.floor(pagination.offset / nodeUsageRecordsPerPage) * nodeUsageRecordsPerPage) + 1;
+            const endIndex = startIndex + pagination.count - 1;
+            
+            document.getElementById("node-pagination-info").textContent = t("showing_records", {
+                start: startIndex,
+                end: endIndex,
+                total: "..."
+            });
+            document.getElementById("node-page-info").textContent = t("page_info", {
+                current: currentNodeUsagePage,
+                total: pagination.has_more ? "..." : currentNodeUsagePage
+            });
+            
+            // Enable/disable pagination buttons
+            document.getElementById("node-first-page").disabled = pagination.offset === 0;
+            document.getElementById("node-prev-page").disabled = pagination.offset === 0;
+            document.getElementById("node-next-page").disabled = !pagination.has_more;
+            document.getElementById("node-last-page").disabled = !pagination.has_more;
+            
+            paginationDiv.style.display = "block";
         }
         
         function updateNodeChart() {
@@ -1999,37 +2075,44 @@ $nodeStatsHtml = '
             // Search handlers for new structure
             $("#search-node-records").on("click", function() {
                 currentNodeUsagePage = 1;
-                loadNodeUsageRecords();
+                currentNodeUsageOffset = 0;
+                currentNodeUsageCursor = null;
+                loadNodeUsageRecords(true);
             });
             
-            // Pagination event listeners for node usage records
+            // Pagination event listeners for node usage records - updated for server-side pagination
             $("#node-records-per-page").on("change", function() {
+                nodeUsageRecordsPerPage = parseInt($(this).val());
                 currentNodeUsagePage = 1;
-                updateNodeUsagePagination();
+                currentNodeUsageOffset = 0;
+                currentNodeUsageCursor = null;
+                loadNodeUsageRecords(false);
             });
             
             $("#node-first-page").on("click", function() {
                 currentNodeUsagePage = 1;
-                updateNodeUsagePagination();
+                currentNodeUsageOffset = 0;
+                currentNodeUsageCursor = null;
+                loadNodeUsageRecords(false);
             });
             
             $("#node-prev-page").on("click", function() {
                 if (currentNodeUsagePage > 1) {
                     currentNodeUsagePage--;
-                    updateNodeUsagePagination();
+                    currentNodeUsageOffset = Math.max(0, currentNodeUsageOffset - nodeUsageRecordsPerPage);
+                    loadNodeUsageRecords(false);
                 }
             });
             
             $("#node-next-page").on("click", function() {
-                if (currentNodeUsagePage < totalNodeUsagePages) {
-                    currentNodeUsagePage++;
-                    updateNodeUsagePagination();
-                }
+                currentNodeUsagePage++;
+                currentNodeUsageOffset += nodeUsageRecordsPerPage;
+                loadNodeUsageRecords(false);
             });
             
             $("#node-last-page").on("click", function() {
-                currentNodeUsagePage = totalNodeUsagePages;
-                updateNodeUsagePagination();
+                // For server-side pagination, continue to next pages
+                $("#node-next-page").click();
             });
             
             // Export form submission for nodes
