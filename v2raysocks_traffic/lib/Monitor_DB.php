@@ -2510,6 +2510,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
                 n.last_online,
                 n.country,
                 COALESCE(n.type, '') as type,
+                COALESCE(n.count_rate, 1.0) as count_rate,
                 $additionalColumns
                 COALESCE(SUM(uu.u), 0) as total_upload,
                 COALESCE(SUM(uu.d), 0) as total_download,
@@ -2522,7 +2523,7 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
             FROM node n
             LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
                 AND uu.t >= :start_time AND uu.t <= :end_time AND uu.node != 'DAY'
-            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type$groupByAddition
+            GROUP BY n.id, n.name, n.address, n.enable, n.statistics, n.max_traffic, n.last_online, n.country, n.type, n.count_rate$groupByAddition
         ";
 
         // Add sorting
