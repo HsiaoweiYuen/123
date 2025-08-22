@@ -242,7 +242,7 @@ function v2raysocks_traffic_output($vars)
                 switch ($exportType) {
                     case 'limited':
                         // Export specific number of records
-                        $exportLimit = intval($_GET['limit_count'] ?? 1000);
+                        $exportLimit = intval($_GET['limit_count'] ?? 50000);
                         break;
                     case 'date_range':
                         // Use custom date range from export dialog
@@ -559,7 +559,7 @@ function v2raysocks_traffic_output($vars)
                 $limitValue = $_GET['limit'] ?? '100';
                 
                 // Handle "all" option properly
-                $limit = ($limitValue === 'all') ? 10000 : intval($limitValue);
+                $limit = ($limitValue === 'all') ? 100000 : intval($limitValue);
                 if ($limit <= 0) $limit = 100; // Default fallback
                 
                 $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
@@ -649,7 +649,7 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? 100);
+                $limit = intval($_GET['limit'] ?? 50000);
                 
                 $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
                 $result = [

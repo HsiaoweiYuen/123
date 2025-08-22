@@ -1379,7 +1379,7 @@ $userRankingsHtml = '
         function loadUserModalData() {
             const timeRange = document.getElementById("time-range").value;
             let chartUrlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_chart&user_id=" + currentUserId + "&time_range=" + timeRange;
-            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=1000`;
+            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=50000`;
             
             // Add custom date range parameters if applicable
             if (timeRange === "custom") {
@@ -1565,7 +1565,7 @@ $userRankingsHtml = '
         
         function fetchUserRecentTrafficData() {
             // Fetch user ranking data to get recent traffic information
-            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=10000`;
+            const rankingsUrl = `addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_rankings&time_range=today&limit=100000`;
             
             fetch(rankingsUrl)
                 .then(response => {
@@ -1686,7 +1686,7 @@ $userRankingsHtml = '
         
         function loadUserUsageRecords() {
             const timeRange = document.getElementById("time-range").value;
-            let urlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=1000`;
+            let urlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&limit=50000`;
             
             // Add custom date range parameters if applicable
             if (timeRange === "custom") {
@@ -2641,7 +2641,7 @@ $userRankingsHtml = '
                 
                 <div id="user-limit-options" style="margin-bottom: 15px; display: none;">
                     <label for="user_limit_count">' . v2raysocks_traffic_lang('number_of_records') . '</label>
-                    <input type="number" id="user_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                    <input type="number" id="user_limit_count" name="limit_count" value="50000" min="1" max="100000">
                 </div>
                 
                 <div id="user-date-range-options" style="margin-bottom: 15px; display: none;">

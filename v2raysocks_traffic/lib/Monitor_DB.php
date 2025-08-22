@@ -455,7 +455,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC LIMIT 1000';
+        $sql .= ' ORDER BY uu.t DESC';
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -631,7 +631,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 $dayParams[':day_timestamp_end'] = $filters['end_timestamp'];
             }
             
-            $dayTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+            $dayTrafficSql .= ' ORDER BY uu.t DESC';
             
             $dayStmt = $pdo->prepare($dayTrafficSql);
             $dayStmt->execute($dayParams);
@@ -734,7 +734,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             $regularParams[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $regularTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+        $regularTrafficSql .= ' ORDER BY uu.t DESC';
         
         $regularStmt = $pdo->prepare($regularTrafficSql);
         $regularStmt->execute($regularParams);
@@ -3794,7 +3794,7 @@ function v2raysocks_traffic_exportUsageRecords($filters, $format = 'csv', $limit
         $endDate = $filters['end_date'] ?? null;
         $startTimestamp = $filters['start_timestamp'] ?? null;
         $endTimestamp = $filters['end_timestamp'] ?? null;
-        $exportLimit = $limit ?? 1000; // Default to 1000 records if not specified
+        $exportLimit = $limit ?? 50000; // Default to 50000 records if not specified
         
         // Get usage records data
         $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $exportLimit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);

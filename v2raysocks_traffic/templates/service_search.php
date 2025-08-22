@@ -474,7 +474,7 @@ $serviceSearchHtml = '
                     
                     <div id="service-limit-options" style="margin-bottom: 15px; display: none;">
                         <label for="service_limit_count">' . v2raysocks_traffic_lang('number_of_records') . '</label>
-                        <input type="number" id="service_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                        <input type="number" id="service_limit_count" name="limit_count" value="50000" min="1" max="100000">
                     </div>
                     
                     <div id="service-date-range-options" style="margin-bottom: 15px; display: none;">

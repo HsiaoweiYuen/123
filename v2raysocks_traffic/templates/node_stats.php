@@ -1028,7 +1028,7 @@ $nodeStatsHtml = '
             const timeRange = document.getElementById("node-rankings-time-range").value;
             let timeRangeParam = timeRange;
             let chartUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_node_traffic_chart&node_id=${currentNodeId}`;
-            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&limit=1000`;
+            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&node_id=${currentNodeId}&limit=50000`;
             
             if (timeRange === "custom_range") {
                 const startTime = document.getElementById("node-rankings-start-time").value;
@@ -1323,7 +1323,7 @@ $nodeStatsHtml = '
             const endTime = document.getElementById("node-rankings-end-time").value;
             
             // Build query parameters
-            let queryParams = `node_id=${currentNodeId}&limit=1000`;
+            let queryParams = `node_id=${currentNodeId}&limit=50000`;
             
             // Add search value based on selected type
             if (searchValue) {
@@ -2189,7 +2189,7 @@ $nodeStatsHtml = '
                     
                     <div id="node-limit-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
-                        <input type="number" id="node_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                        <input type="number" id="node_limit_count" name="limit_count" value="50000" min="1" max="100000">
                     </div>
                     
                     <div id="node-date-range-options" style="margin-bottom: 15px; display: none;">
@@ -2231,7 +2231,7 @@ $nodeStatsHtml = '
                     
                     <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
-                        <input type="number" id="node_usage_limit_count" name="limit_count" value="1000" min="1" max="10000">
+                        <input type="number" id="node_usage_limit_count" name="limit_count" value="50000" min="1" max="100000">
                     </div>
                     
                     <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">
