@@ -571,6 +571,11 @@ $trafficDashboardHtml = '
                             <option value="50" selected>50</option>
                             <option value="100">100</option>
                             <option value="200">200</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                            <option value="2000">2000</option>
+                            <option value="3000">3000</option>
+                            <option value="5000">5000</option>
                         </select>
                         
                         <button id="first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
@@ -833,31 +838,31 @@ $trafficDashboardHtml = '
             $("#records-per-page").on("change", function() {
                 recordsPerPage = parseInt($(this).val());
                 currentPage = 1;
-                updatePaginatedTable();
+                loadTrafficData(currentPage);
             });
             
             $("#first-page").on("click", function() {
                 currentPage = 1;
-                updatePaginatedTable();
+                loadTrafficData(currentPage);
             });
             
             $("#prev-page").on("click", function() {
                 if (currentPage > 1) {
                     currentPage--;
-                    updatePaginatedTable();
+                    loadTrafficData(currentPage);
                 }
             });
             
             $("#next-page").on("click", function() {
                 if (currentPage < totalPages) {
                     currentPage++;
-                    updatePaginatedTable();
+                    loadTrafficData(currentPage);
                 }
             });
             
             $("#last-page").on("click", function() {
                 currentPage = totalPages;
-                updatePaginatedTable();
+                loadTrafficData(currentPage);
             });
         });
         
@@ -975,8 +980,13 @@ $trafficDashboardHtml = '
             });
         }
         
-        function loadTrafficData() {
+        function loadTrafficData(page = 1) {
             let params = $("#traffic-filter").serialize() + "&grouped=true";
+            
+            // Add pagination parameters
+            params += "&paginate=true";
+            params += "&page=" + page;
+            params += "&page_size=" + (parseInt($("#records-per-page").val()) || 50);
             
             // Handle custom time range - convert times to timestamps
             const timeRange = $("#time-range").val();
@@ -1015,7 +1025,7 @@ $trafficDashboardHtml = '
                     console.log("Traffic data response:", response);
                     $("#loading-indicator").remove();
                     if (response.status === "success") {
-                        updateTrafficTable(response.data);
+                        updateTrafficTable(response.data, response.pagination);
                         updateTrafficChart(response.data, response.grouped_data);
                     } else {
                         console.error("Traffic data error:", response);
@@ -1036,27 +1046,16 @@ $trafficDashboardHtml = '
             });
         }
         
-        function updateTrafficTable(data) {
-            // Store all data for pagination
-            allTrafficData = data;
-            updatePaginatedTable();
-        }
-        
-        function updatePaginatedTable() {
+        function updateTrafficTable(data, pagination) {
+            // With backend pagination, data is already the right page
             let html = "";
             
-            if (allTrafficData.length === 0) {
+            if (data.length === 0) {
                 html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
                 $("#pagination-controls").hide();
             } else {
-                // Calculate pagination
-                totalPages = Math.ceil(allTrafficData.length / recordsPerPage);
-                const startIndex = (currentPage - 1) * recordsPerPage;
-                const endIndex = Math.min(startIndex + recordsPerPage, allTrafficData.length);
-                const pageData = allTrafficData.slice(startIndex, endIndex);
-                
                 // Generate table rows for current page
-                pageData.forEach(function(row) {
+                data.forEach(function(row) {
                     html += `<tr>
                         <td>${formatDateTime(row.t)}</td>
                         <td>${row.service_id || "-"}</td>
@@ -1072,18 +1071,31 @@ $trafficDashboardHtml = '
                     </tr>`;
                 });
                 
-                // Update pagination controls
-                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTrafficData.length));
-                $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", currentPage).replace("{total}", totalPages));
-                
-                // Enable/disable pagination buttons
-                $("#first-page, #prev-page").prop("disabled", currentPage === 1);
-                $("#next-page, #last-page").prop("disabled", currentPage === totalPages);
-                
-                $("#pagination-controls").show();
+                // Update pagination controls with backend pagination metadata
+                if (pagination) {
+                    $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", ((pagination.current_page - 1) * pagination.page_size) + 1).replace("{end}", Math.min(pagination.current_page * pagination.page_size, pagination.total_records)).replace("{total}", pagination.total_records));
+                    $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", pagination.current_page).replace("{total}", pagination.total_pages));
+                    
+                    // Enable/disable pagination buttons
+                    $("#first-page, #prev-page").prop("disabled", !pagination.has_prev_page);
+                    $("#next-page, #last-page").prop("disabled", !pagination.has_next_page);
+                    
+                    // Store pagination info globally
+                    currentPage = pagination.current_page;
+                    totalPages = pagination.total_pages;
+                    
+                    $("#pagination-controls").show();
+                } else {
+                    $("#pagination-controls").hide();
+                }
             }
             
             $("#traffic-data").html(html);
+        }
+        
+        function updatePaginatedTable() {
+            // This function is no longer needed for backend pagination
+            // Keep for compatibility but do nothing
         }
         
         // Generate default time labels for empty charts - using server local time (not UTC)

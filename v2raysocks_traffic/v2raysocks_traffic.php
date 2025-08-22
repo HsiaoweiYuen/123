@@ -213,7 +213,6 @@ function v2raysocks_traffic_output($vars)
                     'enhanced_mode' => $useEnhanced === 'true',
                     'pagination' => $paginationMeta
                 ];
-                ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_traffic_data error: " . $e->getMessage(), 0);
                 $result = [
@@ -632,14 +631,39 @@ function v2raysocks_traffic_output($vars)
                 $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
                 if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+                // Check if pagination is requested
+                $usePagination = ($_GET['paginate'] ?? 'true') === 'true';
+                $paginationOptions = [];
+                
+                if ($usePagination) {
+                    $paginationOptions = [
+                        'page' => max(1, intval($_GET['page'] ?? 1)),
+                        'page_size' => intval($_GET['page_size'] ?? v2raysocks_traffic_getDefaultPageSize()),
+                        'order_by' => $_GET['order_by'] ?? 'user_id',
+                        'order_direction' => $_GET['order_direction'] ?? 'ASC',
+                        'cursor' => $_GET['cursor'] ?? null
+                    ];
+                }
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $usePagination ? $paginationOptions : false);
+                
+                // Handle different return formats for backward compatibility
+                if ($usePagination && isset($rankings['data'])) {
+                    $dataArray = $rankings['data'];
+                    $paginationMeta = $rankings['pagination'];
+                } else {
+                    $dataArray = is_array($rankings) ? $rankings : [];
+                    $paginationMeta = null;
+                }
+                
                 $result = [
                     'status' => 'success',
-                    'data' => $rankings,
+                    'data' => $dataArray,
                     'sort_by' => $sortBy,
                     'time_range' => $timeRange,
                     'limit' => $limitValue, // Return original value for frontend
-                    'actual_limit' => $limit // Return actual numeric limit used
+                    'actual_limit' => $limit, // Return actual numeric limit used
+                    'pagination' => $paginationMeta
                 ];
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_user_traffic_rankings error: " . $e->getMessage(), 0);

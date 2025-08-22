@@ -2698,11 +2698,11 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 /**
  * Get user traffic rankings
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_' . serialize($paginationOptions));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2718,7 +2718,7 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return ['data' => [], 'pagination' => ['total_records' => 0]];
         }
 
         // Check if new columns exist in the user table  
@@ -2902,10 +2902,38 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
         }
         
+        // Apply pagination if enabled
+        $paginationMeta = null;
+        if (!empty($paginationOptions) && $paginationOptions !== false) {
+            $totalRecords = count($users);
+            $page = max(1, intval($paginationOptions['page'] ?? 1));
+            $pageSize = intval($paginationOptions['page_size'] ?? v2raysocks_traffic_getDefaultPageSize());
+            $offset = ($page - 1) * $pageSize;
+            
+            $paginatedUsers = array_slice($users, $offset, $pageSize);
+            $totalPages = ceil($totalRecords / $pageSize);
+            
+            $paginationMeta = [
+                'current_page' => $page,
+                'page_size' => $pageSize,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'has_next_page' => $page < $totalPages,
+                'has_prev_page' => $page > 1,
+                'next_cursor' => !empty($paginatedUsers) ? end($paginatedUsers)['user_id'] : null,
+                'prev_cursor' => !empty($paginatedUsers) ? $paginatedUsers[0]['user_id'] : null
+            ];
+            
+            $users = $paginatedUsers;
+        }
+        
+        // Prepare result
+        $result = $paginationMeta ? ['data' => $users, 'pagination' => $paginationMeta] : $users;
+        
         // Try to cache with optimized TTL using unified cache function
         if (!empty($users)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                     'data_type' => 'rankings',
                     'time_range' => $timeRange
                 ]);
@@ -2915,11 +2943,11 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             }
         }
         
-        return $users;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficRankings error: " . $e->getMessage(), 0);
-        return [];
+        return ['data' => [], 'pagination' => ['total_records' => 0]];
     }
 }
 
