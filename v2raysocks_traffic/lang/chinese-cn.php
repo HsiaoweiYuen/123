@@ -31,6 +31,11 @@ $_LANG = [
     'default_unit_description' => '显示流量数据的默认单位',
     'chart_display_unit' => '图表显示单位',
     'chart_unit_description' => '图表和图形中使用的单位',
+    'default_page_size' => '默认分页大小',
+    'default_page_size_description' => '数据库操作时每页加载的默认记录数。较高的值可能增加内存使用量，但减少查询频率。',
+    'max_retry_attempts' => '最大重试次数',
+    'max_retry_attempts_description' => '数据库操作失败时的最大重试次数。',
+    'records' => '条记录',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)

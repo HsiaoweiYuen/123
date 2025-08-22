@@ -684,6 +684,13 @@ $nodeStatsHtml = '
                                         <option value="50" selected>50</option>
                                         <option value="100">100</option>
                                         <option value="200">200</option>
+                                        <option value="500">500</option>
+                                        <option value="1000">1000</option>
+                                        <option value="3000">3000</option>
+                                        <option value="5000">5000</option>
+                                        <option value="10000">10000</option>
+                                        <option value="30000">30000</option>
+                                        <option value="50000">50000</option>
                                     </select>
                                     
                                     <button id="node-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>

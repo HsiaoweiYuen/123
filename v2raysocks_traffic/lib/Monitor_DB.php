@@ -297,10 +297,13 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $pageSize = null, $offset = 0)
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Use pagination configuration
+        $pagination = v2raysocks_traffic_validatePagination($pageSize, $offset);
+        
+        $cacheKey = 'traffic_data_' . md5(serialize($filters) . '_' . $pagination['page_size'] . '_' . $pagination['offset']);
         
         // Try to get from cache first, but don't fail if caching is unavailable
         try {
@@ -314,14 +317,6 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         } catch (\Exception $e) {
             // Cache read failed, continue without cache
             logActivity("V2RaySocks Traffic Monitor: Cache read failed for traffic data: " . $e->getMessage(), 0);
-        }
-        
-        // Use monitor module's PDO creation for independence
-        $pdo = v2raysocks_traffic_createPDO();
-        
-        if (!$pdo) {
-            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve traffic data - database connection failed", 0);
-            return [];
         }
         
         // Build query based on filters - aligned with nodes module approach
@@ -455,11 +450,12 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC';
+        $sql .= ' ORDER BY uu.t DESC LIMIT :limit OFFSET :offset';
+        $params[':limit'] = $pagination['page_size'];
+        $params[':offset'] = $pagination['offset'];
         
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Use the new database operation wrapper with retry mechanism
+        $data = v2raysocks_traffic_executeDbWithRetry($sql, $params);
         
         // Validate and clean the traffic data to prevent extreme values
         v2raysocks_traffic_validateTrafficData($data);
@@ -1820,14 +1816,18 @@ function v2raysocks_traffic_getModuleConfig()
             'default_unit' => $settings['default_unit'] ?? 'auto',
             'refresh_interval' => $settings['refresh_interval'] ?? '300',
             'realtime_refresh_interval' => $settings['realtime_refresh_interval'] ?? '5',
-            'chart_unit' => $settings['chart_unit'] ?? 'auto'
+            'chart_unit' => $settings['chart_unit'] ?? 'auto',
+            'default_page_size' => $settings['default_page_size'] ?? '1000',
+            'max_retry_attempts' => $settings['max_retry_attempts'] ?? '3'
         ];
     } catch (\Exception $e) {
         return [
             'default_unit' => 'auto',
             'refresh_interval' => '300',
             'realtime_refresh_interval' => '5',
-            'chart_unit' => 'auto'
+            'chart_unit' => 'auto',
+            'default_page_size' => '1000',
+            'max_retry_attempts' => '3'
         ];
     }
 }
@@ -2618,13 +2618,26 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 }
 
 /**
- * Get user traffic rankings
+ * Get user traffic rankings with pagination support
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = null, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $offset = 0)
 {
     try {
+        // Use pagination configuration if limit is not specified
+        if ($limit === null) {
+            $paginationConfig = v2raysocks_traffic_getPaginationConfig();
+            $limit = $paginationConfig['default_page_size'];
+        } else if ($limit === PHP_INT_MAX) {
+            // For backward compatibility, convert PHP_INT_MAX to reasonable default
+            $paginationConfig = v2raysocks_traffic_getPaginationConfig();
+            $limit = $paginationConfig['default_page_size'];
+        }
+        
+        // Validate pagination parameters
+        $pagination = v2raysocks_traffic_validatePagination($limit, $offset);
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $pagination['page_size'] . '_' . $pagination['offset'] . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2779,18 +2792,20 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
                 $sql .= ' ORDER BY period_traffic DESC';
         }
 
-        $sql .= ' LIMIT :limit';
+        $sql .= ' LIMIT :limit OFFSET :offset';
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
-        $stmt->bindValue(':end_time', $endTime, PDO::PARAM_INT);
-        $stmt->bindValue(':time_5min', $time5min, PDO::PARAM_INT);
-        $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
-        $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
+        // Use the new database operation wrapper with retry mechanism
+        $params = [
+            ':start_time' => $startTime,
+            ':end_time' => $endTime,
+            ':time_5min' => $time5min,
+            ':time_1hour' => $time1hour,
+            ':time_4hour' => $time4hour,
+            ':limit' => $pagination['page_size'],
+            ':offset' => $pagination['offset']
+        ];
         
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $users = v2raysocks_traffic_executeDbWithRetry($sql, $params);
         
         // Process results and add calculated fields
         foreach ($users as &$user) {
@@ -3245,11 +3260,24 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = null, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $offset = 0)
 {
     try {
+        // Use pagination configuration if limit is not specified
+        if ($limit === null) {
+            $paginationConfig = v2raysocks_traffic_getPaginationConfig();
+            $limit = $paginationConfig['default_page_size'];
+        } else if ($limit === PHP_INT_MAX) {
+            // For backward compatibility, convert PHP_INT_MAX to reasonable default
+            $paginationConfig = v2raysocks_traffic_getPaginationConfig();
+            $limit = $paginationConfig['default_page_size'];
+        }
+        
+        // Validate pagination parameters
+        $pagination = v2raysocks_traffic_validatePagination($limit, $offset);
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $pagination['page_size'] . '_' . $pagination['offset'] . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3263,11 +3291,6 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             logActivity("V2RaySocks Traffic Monitor: Cache read failed for usage records: " . $e->getMessage(), 0);
         }
         
-        $pdo = v2raysocks_traffic_createPDO();
-        if (!$pdo) {
-            return [];
-        }
-
         // Calculate time range
         switch ($timeRange) {
             case 'today':
@@ -3381,20 +3404,12 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
+        $sql .= ' ORDER BY uu.t DESC LIMIT :limit OFFSET :offset';
+        $params[':limit'] = $pagination['page_size'];
+        $params[':offset'] = $pagination['offset'];
 
-        $stmt = $pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            if ($key === ':limit') {
-                $stmt->bindValue($key, $value, PDO::PARAM_INT);
-            } else {
-                $stmt->bindValue($key, $value);
-            }
-        }
-        $stmt->execute();
-        
-        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Use the new database operation wrapper with retry mechanism
+        $records = v2raysocks_traffic_executeDbWithRetry($sql, $params);
         
         // Process results
         foreach ($records as &$record) {
@@ -4205,5 +4220,129 @@ function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities 
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation failed for trigger '{$triggerType}': " . $e->getMessage(), 0);
         return false;
+    }
+}
+
+/**
+ * Get default pagination settings from module configuration
+ */
+function v2raysocks_traffic_getPaginationConfig()
+{
+    static $config = null;
+    
+    if ($config === null) {
+        $moduleConfig = v2raysocks_traffic_getModuleConfig();
+        $config = [
+            'default_page_size' => intval($moduleConfig['default_page_size']),
+            'max_retry_attempts' => intval($moduleConfig['max_retry_attempts']),
+            'allowed_page_sizes' => [500, 1000, 3000, 5000, 10000, 30000, 50000]
+        ];
+    }
+    
+    return $config;
+}
+
+/**
+ * Validate and sanitize pagination parameters
+ */
+function v2raysocks_traffic_validatePagination($pageSize = null, $offset = 0)
+{
+    $config = v2raysocks_traffic_getPaginationConfig();
+    
+    // Validate page size
+    if ($pageSize === null) {
+        $pageSize = $config['default_page_size'];
+    } else {
+        $pageSize = intval($pageSize);
+        if (!in_array($pageSize, $config['allowed_page_sizes'])) {
+            $pageSize = $config['default_page_size'];
+        }
+    }
+    
+    // Validate offset
+    $offset = max(0, intval($offset));
+    
+    return [
+        'page_size' => $pageSize,
+        'offset' => $offset
+    ];
+}
+
+/**
+ * Database operation wrapper with retry mechanism and pagination support
+ */
+function v2raysocks_traffic_executeDbWithRetry($operation, $params = [], $pagination = null)
+{
+    $config = v2raysocks_traffic_getPaginationConfig();
+    $maxRetries = $config['max_retry_attempts'];
+    $lastException = null;
+    
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        try {
+            $pdo = v2raysocks_traffic_createPDO();
+            if (!$pdo) {
+                throw new \Exception("Database connection failed");
+            }
+            
+            // If pagination is provided, validate and apply it
+            if ($pagination) {
+                $validated = v2raysocks_traffic_validatePagination($pagination['page_size'] ?? null, $pagination['offset'] ?? 0);
+                $params[':limit'] = $validated['page_size'];
+                $params[':offset'] = $validated['offset'];
+            }
+            
+            $stmt = $pdo->prepare($operation);
+            
+            // Bind parameters with proper types
+            foreach ($params as $key => $value) {
+                if (in_array($key, [':limit', ':offset'])) {
+                    $stmt->bindValue($key, $value, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($key, $value);
+                }
+            }
+            
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (\Exception $e) {
+            $lastException = $e;
+            
+            if ($attempt < $maxRetries) {
+                // Log the retry attempt
+                logActivity("V2RaySocks Traffic Monitor: Database operation failed (attempt {$attempt}/{$maxRetries}), retrying: " . $e->getMessage(), 0);
+                
+                // Exponential backoff: wait 2^attempt seconds
+                sleep(pow(2, $attempt));
+            }
+        }
+    }
+    
+    // All retries failed
+    logActivity("V2RaySocks Traffic Monitor: Database operation failed after {$maxRetries} attempts: " . $lastException->getMessage(), 0);
+    throw $lastException;
+}
+
+/**
+ * Async database operation handler (for future implementation)
+ */
+function v2raysocks_traffic_asyncDbOperation($operation, $params = [], $callback = null)
+{
+    // For now, we'll use synchronous operation with retry
+    // Future implementation could use queue systems or background processing
+    try {
+        $result = v2raysocks_traffic_executeDbWithRetry($operation, $params);
+        
+        if ($callback && is_callable($callback)) {
+            $callback(null, $result);
+        }
+        
+        return $result;
+    } catch (\Exception $e) {
+        if ($callback && is_callable($callback)) {
+            $callback($e, null);
+        }
+        
+        throw $e;
     }
 }

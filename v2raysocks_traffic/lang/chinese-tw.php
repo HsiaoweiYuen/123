@@ -31,6 +31,11 @@ $_LANG = [
     'default_unit_description' => '顯示流量數據的預設單位',
     'chart_display_unit' => '圖表顯示單位',
     'chart_unit_description' => '圖表和圖形中使用的單位',
+    'default_page_size' => '預設分頁大小',
+    'default_page_size_description' => '資料庫操作時每頁載入的預設記錄數。較高的值可能增加記憶體使用量，但減少查詢頻率。',
+    'max_retry_attempts' => '最大重試次數',
+    'max_retry_attempts_description' => '資料庫操作失敗時的最大重試次數。',
+    'records' => '條記錄',
     
     // ========================================
     // COMMON COMPONENTS (通用組件)

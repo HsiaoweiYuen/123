@@ -106,6 +106,33 @@ function v2raysocks_traffic_config()
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
             ],
+            'default_page_size' => [
+                'FriendlyName' => isset($lang['default_page_size']) ? $lang['default_page_size'] : 'Default Page Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '500' => '500 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '1000' => '1000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '3000' => '3000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '5000' => '5000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '10000' => '10000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '30000' => '30000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '50000' => '50000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['default_page_size_description']) ? $lang['default_page_size_description'] : 'Default number of records to load per page for database operations. Higher values may increase memory usage but reduce query frequency.',
+            ],
+            'max_retry_attempts' => [
+                'FriendlyName' => isset($lang['max_retry_attempts']) ? $lang['max_retry_attempts'] : 'Max Retry Attempts',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '1' => '1',
+                    '2' => '2',
+                    '3' => '3',
+                    '5' => '5',
+                ],
+                'Default' => '3',
+                'Description' => isset($lang['max_retry_attempts_description']) ? $lang['max_retry_attempts_description'] : 'Maximum number of retry attempts for failed database operations.',
+            ],
         ]
     ];
 }

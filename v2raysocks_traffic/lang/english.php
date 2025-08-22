@@ -31,6 +31,11 @@ $_LANG = [
     'default_unit_description' => 'Default unit for displaying traffic data',
     'chart_display_unit' => 'Chart Display Unit',
     'chart_unit_description' => 'Unit used in charts and graphs',
+    'default_page_size' => 'Default Page Size',
+    'default_page_size_description' => 'Default number of records to load per page for database operations. Higher values may increase memory usage but reduce query frequency.',
+    'max_retry_attempts' => 'Max Retry Attempts',
+    'max_retry_attempts_description' => 'Maximum number of retry attempts for failed database operations.',
+    'records' => 'records',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)
