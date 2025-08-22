@@ -755,8 +755,8 @@ $userRankingsHtml = '
                     <div>
                         <label for="rankings-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                         <select id="rankings-records-per-page" style="margin-right: 15px; padding: 5px;">
-                            <option value="25">25</option>
-                            <option value="50" selected>50</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
                             <option value="100">100</option>
                             <option value="200">200</option>
                         </select>
@@ -862,8 +862,8 @@ $userRankingsHtml = '
                                 <div>
                                     <label for="user-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                                     <select id="user-records-per-page" style="margin-right: 15px; padding: 5px;">
-                                        <option value="25">25</option>
-                                        <option value="50" selected>50</option>
+                                        <option value="25" selected>25</option>
+                                        <option value="50">50</option>
                                         <option value="100">100</option>
                                         <option value="200">200</option>
                                     </select>
@@ -887,14 +887,14 @@ $userRankingsHtml = '
         let currentUserId = null;
         let allUserUsageRecords = [];
         let currentUserUsagePage = 1;
-        let userUsageRecordsPerPage = 50;
+        let userUsageRecordsPerPage = 25;
         let totalUserUsagePages = 1;
         let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
         // Main rankings pagination variables
         let currentRankingsPage = 1;
-        let rankingsRecordsPerPage = 50;
+        let rankingsRecordsPerPage = 25;
         let totalRankingsPages = 1;
         let filteredRankings = [];
         

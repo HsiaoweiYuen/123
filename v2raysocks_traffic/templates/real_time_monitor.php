@@ -371,8 +371,8 @@ $realTimeMonitorHtml = '
                     <div>
                         <label for="today-records-per-page" style="margin-right: 10px;">' . v2raysocks_traffic_lang('records_per_page_label') . ':</label>
                         <select id="today-records-per-page" style="margin-right: 15px; padding: 5px;">
-                            <option value="25">25</option>
-                            <option value="50" selected>50</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
                             <option value="100">100</option>
                             <option value="200">200</option>
                         </select>
@@ -1166,7 +1166,7 @@ $realTimeMonitorHtml = '
         // Today Traffic History Table functionality
         let allTodayData = [];
         let todayCurrentPage = 1;
-        let todayRecordsPerPage = 50;
+        let todayRecordsPerPage = 25;
         let todayTotalPages = 1;
         
         function loadTodayTrafficHistory() {
