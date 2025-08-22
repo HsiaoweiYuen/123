@@ -2189,7 +2189,7 @@ $nodeStatsHtml = '
                     
                     <div id="node-limit-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
-                        <input type="number" id="node_limit_count" name="limit_count" value="999999999" min="1">
+                        <input type="number" id="node_limit_count" name="limit_count" min="1">
                     </div>
                     
                     <div id="node-date-range-options" style="margin-bottom: 15px; display: none;">
@@ -2231,7 +2231,7 @@ $nodeStatsHtml = '
                     
                     <div id="node-usage-limit-options" style="margin-bottom: 15px; display: none;">
                         <label for="node_usage_limit_count">' . v2raysocks_traffic_lang('number_of_records_label') . ':</label>
-                        <input type="number" id="node_usage_limit_count" name="limit_count" value="999999999" min="1">
+                        <input type="number" id="node_usage_limit_count" name="limit_count" min="1">
                     </div>
                     
                     <div id="node-usage-time-range-options" style="margin-bottom: 15px; display: none;">

@@ -2641,7 +2641,7 @@ $userRankingsHtml = '
                 
                 <div id="user-limit-options" style="margin-bottom: 15px; display: none;">
                     <label for="user_limit_count">' . v2raysocks_traffic_lang('number_of_records') . '</label>
-                    <input type="number" id="user_limit_count" name="limit_count" value="999999999" min="1">
+                    <input type="number" id="user_limit_count" name="limit_count" min="1">
                 </div>
                 
                 <div id="user-date-range-options" style="margin-bottom: 15px; display: none;">
