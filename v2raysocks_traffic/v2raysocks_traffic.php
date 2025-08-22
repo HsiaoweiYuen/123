@@ -563,16 +563,26 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
-                $limitValue = $_GET['limit'] ?? 'all';
+                $limitValue = $_GET['limit'] ?? '1000';
                 
-                // Handle "all" option properly - remove limit restriction
-                $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
-                if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
+                // Handle "all" option properly with reasonable limit
+                $limit = ($limitValue === 'all') ? 5000 : intval($limitValue);
+                if ($limit <= 0) $limit = 1000; // Default fallback
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+                // Pagination parameters
+                $paginationOptions = [
+                    'cursor' => $_GET['cursor'] ?? null,
+                    'limit' => $limit,
+                    'order_by' => 'period_traffic',
+                    'order_dir' => 'DESC',
+                    'cursor_field' => 'user_id'
+                ];
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $paginationOptions);
                 $result = [
                     'status' => 'success',
-                    'data' => $rankings,
+                    'data' => is_array($rankings) && isset($rankings['data']) ? $rankings['data'] : $rankings,
+                    'pagination' => is_array($rankings) && isset($rankings['pagination']) ? $rankings['pagination'] : null,
                     'sort_by' => $sortBy,
                     'time_range' => $timeRange,
                     'limit' => $limitValue, // Return original value for frontend
@@ -583,7 +593,8 @@ function v2raysocks_traffic_output($vars)
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to get user rankings: ' . $e->getMessage(),
-                    'data' => []
+                    'data' => [],
+                    'pagination' => null
                 ];
             }
             
@@ -656,12 +667,22 @@ function v2raysocks_traffic_output($vars)
                 $endDate = $_GET['end_date'] ?? null;
                 $startTimestamp = $_GET['start_timestamp'] ?? $_GET['export_start_timestamp'] ?? null;
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
-                $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
+                $limit = intval($_GET['limit'] ?? 1000);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                // Pagination parameters
+                $paginationOptions = [
+                    'cursor' => $_GET['cursor'] ?? null,
+                    'limit' => $limit,
+                    'order_by' => $_GET['order_by'] ?? 't',
+                    'order_dir' => $_GET['order_dir'] ?? 'DESC',
+                    'cursor_field' => $_GET['cursor_field'] ?? 't'
+                ];
+                
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $paginationOptions);
                 $result = [
                     'status' => 'success',
-                    'data' => $records,
+                    'data' => is_array($records) && isset($records['data']) ? $records['data'] : $records,
+                    'pagination' => is_array($records) && isset($records['pagination']) ? $records['pagination'] : null,
                     'node_id' => $nodeId,
                     'user_id' => $userId,
                     'uuid' => $uuid,
@@ -675,7 +696,8 @@ function v2raysocks_traffic_output($vars)
                 $result = [
                     'status' => 'error',
                     'message' => 'Failed to get usage records: ' . $e->getMessage(),
-                    'data' => []
+                    'data' => [],
+                    'pagination' => null
                 ];
             }
             

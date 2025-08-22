@@ -154,6 +154,14 @@ $_LANG = [
     'next_page' => 'Next',
     'last_page' => 'Last',
     'records_per_page_label' => 'Records per page',
+    'pagination_limit_500' => '500 records',
+    'pagination_limit_1000' => '1000 records',
+    'pagination_limit_2000' => '2000 records',
+    'pagination_limit_3000' => '3000 records',
+    'pagination_limit_5000' => '5000 records',
+    'load_more' => 'Load More',
+    'loading_more_records' => 'Loading more records...',
+    'no_more_records' => 'No more records available',
     
     // Export Functionality
     'export_service_traffic_data' => 'Export Service Traffic Data',

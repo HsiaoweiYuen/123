@@ -9,6 +9,141 @@ require_once __DIR__ . '/Monitor_Redis.php';
 use WHMCS\Database\Capsule;
 
 /**
+ * Cursor-based pagination helper functions for database queries
+ */
+
+/**
+ * Create cursor-based pagination parameters
+ * @param array $options Pagination options including limit, cursor, order_by, order_dir
+ * @return array Processed pagination parameters
+ */
+function v2raysocks_traffic_createPaginationParams($options = [])
+{
+    $params = [
+        'limit' => isset($options['limit']) ? intval($options['limit']) : 1000,
+        'cursor' => $options['cursor'] ?? null,
+        'order_by' => $options['order_by'] ?? 'id',
+        'order_dir' => strtoupper($options['order_dir'] ?? 'DESC'),
+        'cursor_field' => $options['cursor_field'] ?? 'id'
+    ];
+    
+    // Validate limit ranges
+    $allowedLimits = [500, 1000, 2000, 3000, 5000];
+    if (!in_array($params['limit'], $allowedLimits)) {
+        $params['limit'] = 1000; // Default to 1000
+    }
+    
+    // Validate order direction
+    if (!in_array($params['order_dir'], ['ASC', 'DESC'])) {
+        $params['order_dir'] = 'DESC';
+    }
+    
+    return $params;
+}
+
+/**
+ * Build cursor-based WHERE clause for pagination
+ * @param array $paginationParams Pagination parameters from createPaginationParams
+ * @param string $tableAlias Optional table alias for the cursor field
+ * @return array ['where_clause' => string, 'params' => array]
+ */
+function v2raysocks_traffic_buildCursorWhere($paginationParams, $tableAlias = '')
+{
+    $whereClause = '';
+    $params = [];
+    
+    if ($paginationParams['cursor'] !== null) {
+        $cursorField = $tableAlias ? "{$tableAlias}.{$paginationParams['cursor_field']}" : $paginationParams['cursor_field'];
+        
+        if ($paginationParams['order_dir'] === 'DESC') {
+            $whereClause = " AND {$cursorField} < :cursor_value";
+        } else {
+            $whereClause = " AND {$cursorField} > :cursor_value";
+        }
+        $params[':cursor_value'] = $paginationParams['cursor'];
+    }
+    
+    return [
+        'where_clause' => $whereClause,
+        'params' => $params
+    ];
+}
+
+/**
+ * Build ORDER BY and LIMIT clause for cursor-based pagination
+ * @param array $paginationParams Pagination parameters
+ * @param string $tableAlias Optional table alias
+ * @return string SQL ORDER BY and LIMIT clause
+ */
+function v2raysocks_traffic_buildPaginationClause($paginationParams, $tableAlias = '')
+{
+    $orderField = $tableAlias ? "{$tableAlias}.{$paginationParams['order_by']}" : $paginationParams['order_by'];
+    
+    return " ORDER BY {$orderField} {$paginationParams['order_dir']} LIMIT {$paginationParams['limit']}";
+}
+
+/**
+ * Extract pagination metadata from query results
+ * @param array $results Query results
+ * @param array $paginationParams Pagination parameters  
+ * @return array Pagination metadata
+ */
+function v2raysocks_traffic_extractPaginationMeta($results, $paginationParams)
+{
+    $meta = [
+        'has_more' => count($results) >= $paginationParams['limit'],
+        'limit' => $paginationParams['limit'],
+        'count' => count($results),
+        'next_cursor' => null,
+        'cursor_field' => $paginationParams['cursor_field']
+    ];
+    
+    if (!empty($results) && $meta['has_more']) {
+        $lastRecord = end($results);
+        $meta['next_cursor'] = $lastRecord[$paginationParams['cursor_field']] ?? null;
+    }
+    
+    return $meta;
+}
+
+/**
+ * Async database query execution helper
+ * @param PDO $pdo Database connection
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @param callable $callback Optional callback for processing results
+ * @return array Query results or processed results from callback
+ */
+function v2raysocks_traffic_executeAsyncQuery($pdo, $sql, $params = [], $callback = null)
+{
+    try {
+        $stmt = $pdo->prepare($sql);
+        
+        // Bind parameters with proper types
+        foreach ($params as $key => $value) {
+            if (strpos($key, 'limit') !== false || strpos($key, 'cursor') !== false) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Apply callback processing if provided
+        if ($callback && is_callable($callback)) {
+            $results = $callback($results);
+        }
+        
+        return $results;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Async query execution failed: " . $e->getMessage(), 0);
+        return [];
+    }
+}
+
+/**
  * Load language file based on module configuration
  */
 function v2raysocks_traffic_loadLanguage()
@@ -2618,13 +2753,43 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 }
 
 /**
- * Get user traffic rankings
+ * Get user traffic rankings with cursor-based pagination
  */
-function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = 1000, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
 {
     try {
+        // Create pagination parameters
+        $paginationParams = v2raysocks_traffic_createPaginationParams(array_merge([
+            'limit' => $limit,
+            'order_by' => 'period_traffic',
+            'order_dir' => 'DESC',
+            'cursor_field' => 'user_id'
+        ], $paginationOptions));
+        
+        // Adjust order_by based on sortBy parameter
+        switch ($sortBy) {
+            case 'traffic_desc':
+            case 'traffic_asc':
+                $paginationParams['order_by'] = 'period_traffic';
+                $paginationParams['order_dir'] = ($sortBy === 'traffic_asc') ? 'ASC' : 'DESC';
+                break;
+            case 'remaining_desc':
+            case 'remaining_asc':
+                $paginationParams['order_by'] = 'remaining_quota';
+                $paginationParams['order_dir'] = ($sortBy === 'remaining_asc') ? 'ASC' : 'DESC';
+                break;
+            case 'nodes_desc':
+                $paginationParams['order_by'] = 'nodes_used';
+                $paginationParams['order_dir'] = 'DESC';
+                break;
+            case 'recent_activity':
+                $paginationParams['order_by'] = 'last_usage';
+                $paginationParams['order_dir'] = 'DESC';
+                break;
+        }
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $paginationParams['limit'] . '_' . ($paginationParams['cursor'] ?: '') . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -2640,7 +2805,10 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return [
+                'data' => [],
+                'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams)
+            ];
         }
 
         // Check if new columns exist in the user table  
@@ -2755,79 +2923,67 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             GROUP BY u.id, u.uuid, u.sid, u.u, u.d, u.transfer_enable, u.enable, u.created_at, u.remark, u.speedlimitss, u.speedlimitother
         ";
 
-        // Add sorting
-        switch ($sortBy) {
-            case 'traffic_desc':
-                $sql .= ' ORDER BY period_traffic DESC';
-                break;
-            case 'traffic_asc':
-                $sql .= ' ORDER BY period_traffic ASC';
-                break;
-            case 'remaining_desc':
-                $sql .= ' ORDER BY (u.transfer_enable - (u.u + u.d)) DESC';
-                break;
-            case 'remaining_asc':
-                $sql .= ' ORDER BY (u.transfer_enable - (u.u + u.d)) ASC';
-                break;
-            case 'nodes_desc':
-                $sql .= ' ORDER BY nodes_used DESC';
-                break;
-            case 'recent_activity':
-                $sql .= ' ORDER BY last_usage DESC';
-                break;
-            default:
-                $sql .= ' ORDER BY period_traffic DESC';
-        }
+        // Build cursor-based pagination WHERE clause
+        $cursorWhere = v2raysocks_traffic_buildCursorWhere($paginationParams, 'u');
+        $sql .= $cursorWhere['where_clause'];
 
-        $sql .= ' LIMIT :limit';
+        // Replace hardcoded sorting with dynamic pagination clause
+        $sql .= v2raysocks_traffic_buildPaginationClause($paginationParams, '');
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':start_time', $startTime, PDO::PARAM_INT);
-        $stmt->bindValue(':end_time', $endTime, PDO::PARAM_INT);
-        $stmt->bindValue(':time_5min', $time5min, PDO::PARAM_INT);
-        $stmt->bindValue(':time_1hour', $time1hour, PDO::PARAM_INT);
-        $stmt->bindValue(':time_4hour', $time4hour, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
+        // Execute query with async support
+        $users = v2raysocks_traffic_executeAsyncQuery($pdo, $sql, array_merge([
+            ':start_time' => $startTime,
+            ':end_time' => $endTime,
+            ':time_5min' => $time5min,
+            ':time_1hour' => $time1hour,
+            ':time_4hour' => $time4hour
+        ], $cursorWhere['params']), function($results) {
+            // Process results and add calculated fields
+            foreach ($results as &$user) {
+                $user['user_id'] = intval($user['user_id']);
+                $user['period_upload'] = floatval($user['period_upload']);
+                $user['period_download'] = floatval($user['period_download']);
+                $user['period_traffic'] = floatval($user['period_traffic']);
+                $user['traffic_5min'] = floatval($user['traffic_5min']);
+                $user['traffic_1hour'] = floatval($user['traffic_1hour']);
+                $user['traffic_4hour'] = floatval($user['traffic_4hour']);
+                $user['total_upload_user'] = floatval($user['total_upload_user']);
+                $user['total_download_user'] = floatval($user['total_download_user']);
+                $user['transfer_enable'] = floatval($user['transfer_enable']);
+                $user['nodes_used'] = intval($user['nodes_used']);
+                $user['usage_records'] = intval($user['usage_records']);
+                $user['first_usage'] = intval($user['first_usage']);
+                $user['last_usage'] = intval($user['last_usage']);
+                
+                // Speed limit fields from user table
+                $user['speedlimitss'] = $user['speedlimitss'] ?? '';
+                $user['speedlimitother'] = $user['speedlimitother'] ?? '';
+                
+                // Calculate remaining quota and used traffic
+                $totalUsed = $user['total_upload_user'] + $user['total_download_user'];
+                $user['used_traffic'] = $totalUsed; // Total used traffic from user table
+                $user['remaining_quota'] = max(0, $user['transfer_enable'] - $totalUsed);
+                $user['quota_utilization'] = $user['transfer_enable'] > 0 ? ($totalUsed / $user['transfer_enable']) * 100 : 0;
+                
+                // Activity metrics
+                $user['has_activity'] = $user['period_traffic'] > 0;
+                $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
+            }
+            return $results;
+        });
         
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Extract pagination metadata
+        $paginationMeta = v2raysocks_traffic_extractPaginationMeta($users, $paginationParams);
         
-        // Process results and add calculated fields
-        foreach ($users as &$user) {
-            $user['user_id'] = intval($user['user_id']);
-            $user['period_upload'] = floatval($user['period_upload']);
-            $user['period_download'] = floatval($user['period_download']);
-            $user['period_traffic'] = floatval($user['period_traffic']);
-            $user['traffic_5min'] = floatval($user['traffic_5min']);
-            $user['traffic_1hour'] = floatval($user['traffic_1hour']);
-            $user['traffic_4hour'] = floatval($user['traffic_4hour']);
-            $user['total_upload_user'] = floatval($user['total_upload_user']);
-            $user['total_download_user'] = floatval($user['total_download_user']);
-            $user['transfer_enable'] = floatval($user['transfer_enable']);
-            $user['nodes_used'] = intval($user['nodes_used']);
-            $user['usage_records'] = intval($user['usage_records']);
-            $user['first_usage'] = intval($user['first_usage']);
-            $user['last_usage'] = intval($user['last_usage']);
-            
-            // Speed limit fields from user table
-            $user['speedlimitss'] = $user['speedlimitss'] ?? '';
-            $user['speedlimitother'] = $user['speedlimitother'] ?? '';
-            
-            // Calculate remaining quota and used traffic
-            $totalUsed = $user['total_upload_user'] + $user['total_download_user'];
-            $user['used_traffic'] = $totalUsed; // Total used traffic from user table
-            $user['remaining_quota'] = max(0, $user['transfer_enable'] - $totalUsed);
-            $user['quota_utilization'] = $user['transfer_enable'] > 0 ? ($totalUsed / $user['transfer_enable']) * 100 : 0;
-            
-            // Activity metrics
-            $user['has_activity'] = $user['period_traffic'] > 0;
-            $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
-        }
+        $result = [
+            'data' => $users,
+            'pagination' => $paginationMeta
+        ];
         
         // Try to cache with optimized TTL using unified cache function
         if (!empty($users)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($users), [
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                     'data_type' => 'rankings',
                     'time_range' => $timeRange
                 ]);
@@ -2837,11 +2993,14 @@ function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $ti
             }
         }
         
-        return $users;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUserTrafficRankings error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams ?? v2raysocks_traffic_createPaginationParams())
+        ];
     }
 }
 
@@ -3243,13 +3402,21 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 }
 
 /**
- * Get usage records for a specific node or user
+ * Get usage records for a specific node or user with cursor-based pagination
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = 1000, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $paginationOptions = [])
 {
     try {
+        // Create pagination parameters
+        $paginationParams = v2raysocks_traffic_createPaginationParams(array_merge([
+            'limit' => $limit,
+            'order_by' => 't',
+            'order_dir' => 'DESC',
+            'cursor_field' => 't'
+        ], $paginationOptions));
+        
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $paginationParams['limit'] . '_' . ($paginationParams['cursor'] ?: '') . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3265,7 +3432,10 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         
         $pdo = v2raysocks_traffic_createPDO();
         if (!$pdo) {
-            return [];
+            return [
+                'data' => [],
+                'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams)
+            ];
         }
 
         // Calculate time range
@@ -3381,46 +3551,51 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
+        // Build cursor-based pagination WHERE clause
+        $cursorWhere = v2raysocks_traffic_buildCursorWhere($paginationParams, 'uu');
+        $sql .= $cursorWhere['where_clause'];
+        $params = array_merge($params, $cursorWhere['params']);
 
-        $stmt = $pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            if ($key === ':limit') {
-                $stmt->bindValue($key, $value, PDO::PARAM_INT);
-            } else {
-                $stmt->bindValue($key, $value);
+        // Add ORDER BY and LIMIT for pagination
+        $sql .= v2raysocks_traffic_buildPaginationClause($paginationParams, 'uu');
+
+        // Execute query with async support
+        $records = v2raysocks_traffic_executeAsyncQuery($pdo, $sql, $params, function($results) {
+            // Process results
+            foreach ($results as &$record) {
+                $record['id'] = intval($record['id']);
+                $record['user_id'] = intval($record['user_id']);
+                $record['t'] = intval($record['t']);
+                $record['u'] = floatval($record['u']);
+                $record['d'] = floatval($record['d']);
+                $record['node'] = intval($record['node']);
+                $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
+                $record['total_traffic'] = $record['u'] + $record['d'];
+                $record['formatted_time'] = (function($timestamp) {
+                    // use actual data timestamp with server local time
+                    $date = new DateTime();
+                    $date->setTimestamp($timestamp);
+                    return $date->format('Y-m-d H:i:s');
+                })($record['t']);
+                $record['formatted_upload'] = v2raysocks_traffic_formatBytesConfigurable($record['u']);
+                $record['formatted_download'] = v2raysocks_traffic_formatBytesConfigurable($record['d']);
+                $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
             }
-        }
-        $stmt->execute();
+            return $results;
+        });
         
-        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Extract pagination metadata
+        $paginationMeta = v2raysocks_traffic_extractPaginationMeta($records, $paginationParams);
         
-        // Process results
-        foreach ($records as &$record) {
-            $record['id'] = intval($record['id']);
-            $record['user_id'] = intval($record['user_id']);
-            $record['t'] = intval($record['t']);
-            $record['u'] = floatval($record['u']);
-            $record['d'] = floatval($record['d']);
-            $record['node'] = intval($record['node']);
-            $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
-            $record['total_traffic'] = $record['u'] + $record['d'];
-            $record['formatted_time'] = (function($timestamp) {
-                // use actual data timestamp with server local time
-                $date = new DateTime();
-                $date->setTimestamp($timestamp);
-                return $date->format('Y-m-d H:i:s');
-            })($record['t']);
-            $record['formatted_upload'] = v2raysocks_traffic_formatBytesConfigurable($record['u']);
-            $record['formatted_download'] = v2raysocks_traffic_formatBytesConfigurable($record['d']);
-            $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
-        }
+        $result = [
+            'data' => $records,
+            'pagination' => $paginationMeta
+        ];
         
         // Try to cache using unified cache function
         if (!empty($records)) {
             try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
                     'data_type' => 'usage_records',
                     'time_range' => $timeRange === 'today' ? 'today' : 'historical'
                 ]);
@@ -3430,11 +3605,14 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             }
         }
         
-        return $records;
+        return $result;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
-        return [];
+        return [
+            'data' => [],
+            'pagination' => v2raysocks_traffic_extractPaginationMeta([], $paginationParams ?? v2raysocks_traffic_createPaginationParams())
+        ];
     }
 }
 
