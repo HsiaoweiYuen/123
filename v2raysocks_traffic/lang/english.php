@@ -32,6 +32,21 @@ $_LANG = [
     'chart_display_unit' => 'Chart Display Unit',
     'chart_unit_description' => 'Unit used in charts and graphs',
     
+    // Pagination Settings
+    'pagination_size' => 'Pagination Size',
+    'pagination_size_description' => 'Default number of records to load per request (affects performance)',
+    'max_concurrent_queries' => 'Max Concurrent Queries',
+    'max_concurrent_queries_description' => 'Maximum number of concurrent database queries for high-performance mode',
+    'cache_ttl' => 'Cache TTL (seconds)',
+    'cache_ttl_description' => 'Cache time-to-live in seconds for pagination data',
+    'async_timeout' => 'Async Query Timeout (seconds)',
+    'async_timeout_description' => 'Timeout for asynchronous database queries',
+    'high_performance_mode' => 'High Performance Mode',
+    'high_performance_mode_description' => 'Enable cursor-based pagination and connection pooling for large datasets',
+    'pagination_settings' => 'Pagination Settings',
+    'cursor_pagination' => 'Cursor Pagination',
+    'unlimited' => 'Unlimited',
+    
     // ========================================
     // COMMON COMPONENTS (通用组件)
     // ========================================

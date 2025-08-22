@@ -99,6 +99,44 @@ function v2raysocks_traffic_config()
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
             ],
+            'pagination_size' => [
+                'FriendlyName' => isset($lang['pagination_size']) ? $lang['pagination_size'] : 'Default Pagination Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '500' => '500',
+                    '1000' => '1000',
+                    '3000' => '3000',
+                    '5000' => '5000',
+                    '10000' => '10000',
+                    'unlimited' => isset($lang['unlimited']) ? $lang['unlimited'] : 'Unlimited'
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['pagination_size_description']) ? $lang['pagination_size_description'] : 'Default number of records to load per request (affects performance)',
+            ],
+            'max_concurrent_queries' => [
+                'FriendlyName' => isset($lang['max_concurrent_queries']) ? $lang['max_concurrent_queries'] : 'Max Concurrent Queries',
+                'Type' => 'text',
+                'Default' => '10',
+                'Description' => isset($lang['max_concurrent_queries_description']) ? $lang['max_concurrent_queries_description'] : 'Maximum number of concurrent database queries for high-performance mode',
+            ],
+            'cache_ttl' => [
+                'FriendlyName' => isset($lang['cache_ttl']) ? $lang['cache_ttl'] : 'Cache TTL (seconds)',
+                'Type' => 'text',
+                'Default' => '300',
+                'Description' => isset($lang['cache_ttl_description']) ? $lang['cache_ttl_description'] : 'Cache time-to-live in seconds for pagination data',
+            ],
+            'async_timeout' => [
+                'FriendlyName' => isset($lang['async_timeout']) ? $lang['async_timeout'] : 'Async Query Timeout (seconds)',
+                'Type' => 'text',
+                'Default' => '30',
+                'Description' => isset($lang['async_timeout_description']) ? $lang['async_timeout_description'] : 'Timeout for asynchronous database queries',
+            ],
+            'high_performance_mode' => [
+                'FriendlyName' => isset($lang['high_performance_mode']) ? $lang['high_performance_mode'] : 'High Performance Mode',
+                'Type' => 'yesno',
+                'Default' => 'no',
+                'Description' => isset($lang['high_performance_mode_description']) ? $lang['high_performance_mode_description'] : 'Enable cursor-based pagination and connection pooling for large datasets',
+            ],
         ]
     ];
 }
@@ -143,14 +181,18 @@ function v2raysocks_traffic_output($vars)
                     'uuid' => $_GET['uuid'] ?? null,
                     'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                    'limit' => !empty($_GET['limit']) ? intval($_GET['limit']) : null,
                 ];
+                
+                // Extract limit parameter
+                $limit = $filters['limit'];
                 
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
-                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters, $limit);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $trafficData = v2raysocks_traffic_getTrafficData($filters, $limit);
                 }
                 
                 // Apply PR#37 time grouping if requested

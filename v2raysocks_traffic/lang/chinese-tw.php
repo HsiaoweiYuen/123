@@ -32,6 +32,21 @@ $_LANG = [
     'chart_display_unit' => '圖表顯示單位',
     'chart_unit_description' => '圖表和圖形中使用的單位',
     
+    // 分頁設定
+    'pagination_size' => '分頁大小',
+    'pagination_size_description' => '每次請求載入的預設記錄數量（影響效能）',
+    'max_concurrent_queries' => '最大並發查詢數',
+    'max_concurrent_queries_description' => '高效能模式下資料庫並發查詢的最大數量',
+    'cache_ttl' => '快取時間(秒)',
+    'cache_ttl_description' => '分頁資料的快取生存時間（秒）',
+    'async_timeout' => '非同步查詢逾時(秒)',
+    'async_timeout_description' => '非同步資料庫查詢的逾時時間',
+    'high_performance_mode' => '高效能模式',
+    'high_performance_mode_description' => '啟用游標分頁和連接池以處理大資料集',
+    'pagination_settings' => '分頁設定',
+    'cursor_pagination' => '游標分頁',
+    'unlimited' => '無限制',
+    
     // ========================================
     // COMMON COMPONENTS (通用組件)
     // ========================================

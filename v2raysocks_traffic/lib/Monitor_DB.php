@@ -297,7 +297,7 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $limit = null)
 {
     try {
         $cacheKey = 'traffic_data_' . md5(serialize($filters));
@@ -455,10 +455,29 @@ function v2raysocks_traffic_getTrafficData($filters = [])
             $params[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $sql .= ' ORDER BY uu.t DESC LIMIT 1000';
+        // Apply limit parameter with fallback to filter or default
+        $queryLimit = $limit ?? $filters['limit'] ?? 1000;
+        
+        $sql .= ' ORDER BY uu.t DESC';
+        
+        // Only apply limit if it's not null or unlimited
+        if ($queryLimit !== null && $queryLimit > 0) {
+            $sql .= ' LIMIT :limit';
+            $params[':limit'] = $queryLimit;
+        }
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        
+        // Bind parameters with proper types
+        foreach ($params as $key => $value) {
+            if ($key === ':limit') {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Validate and clean the traffic data to prevent extreme values
@@ -528,7 +547,7 @@ function v2raysocks_traffic_getTrafficData($filters = [])
  * Get enhanced traffic data with improved node name resolution
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $limit = null)
 {
     try {
         $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
@@ -631,10 +650,29 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
                 $dayParams[':day_timestamp_end'] = $filters['end_timestamp'];
             }
             
-            $dayTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+            // Apply limit parameter with fallback to filter or default for day traffic
+            $dayQueryLimit = $limit ?? $filters['limit'] ?? 500;
+            
+            $dayTrafficSql .= ' ORDER BY uu.t DESC';
+            
+            // Only apply limit if it's not null or unlimited
+            if ($dayQueryLimit !== null && $dayQueryLimit > 0) {
+                $dayTrafficSql .= ' LIMIT :day_limit';
+                $dayParams[':day_limit'] = $dayQueryLimit;
+            }
             
             $dayStmt = $pdo->prepare($dayTrafficSql);
-            $dayStmt->execute($dayParams);
+            
+            // Bind parameters with proper types for day traffic
+            foreach ($dayParams as $key => $value) {
+                if ($key === ':day_limit') {
+                    $dayStmt->bindValue($key, $value, PDO::PARAM_INT);
+                } else {
+                    $dayStmt->bindValue($key, $value);
+                }
+            }
+            
+            $dayStmt->execute();
             $dayData = $dayStmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (!empty($dayData)) {
@@ -734,10 +772,29 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             $regularParams[':timestamp_end'] = $filters['end_timestamp'];
         }
         
-        $regularTrafficSql .= ' ORDER BY uu.t DESC LIMIT 500';
+        // Apply limit parameter with fallback to filter or default for regular traffic
+        $regularQueryLimit = $limit ?? $filters['limit'] ?? 500;
+        
+        $regularTrafficSql .= ' ORDER BY uu.t DESC';
+        
+        // Only apply limit if it's not null or unlimited
+        if ($regularQueryLimit !== null && $regularQueryLimit > 0) {
+            $regularTrafficSql .= ' LIMIT :regular_limit';
+            $regularParams[':regular_limit'] = $regularQueryLimit;
+        }
         
         $regularStmt = $pdo->prepare($regularTrafficSql);
-        $regularStmt->execute($regularParams);
+        
+        // Bind parameters with proper types for regular traffic
+        foreach ($regularParams as $key => $value) {
+            if ($key === ':regular_limit') {
+                $regularStmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $regularStmt->bindValue($key, $value);
+            }
+        }
+        
+        $regularStmt->execute();
         $regularData = $regularStmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (!empty($regularData)) {
@@ -749,8 +806,11 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Apply final limit only if specified and data exceeds it
+        $finalLimit = $limit ?? $filters['limit'] ?? null;
+        if ($finalLimit !== null && $finalLimit > 0 && count($allData) > $finalLimit) {
+            $allData = array_slice($allData, 0, $finalLimit);
+        }
         
         // Validate and clean the traffic data
         v2raysocks_traffic_validateTrafficData($allData);
