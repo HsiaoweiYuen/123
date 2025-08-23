@@ -749,8 +749,7 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Note: Removed 1000 record limit to allow full historical data for traffic analysis charts
         
         // Validate and clean the traffic data
         v2raysocks_traffic_validateTrafficData($allData);
