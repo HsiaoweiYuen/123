@@ -1,0 +1,81 @@
+-- 生成50万条user_usage测试数据
+-- 注意：执行前请确保有足够的磁盘空间和时间
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS GenerateUserUsageData$$
+
+CREATE PROCEDURE GenerateUserUsageData()
+BEGIN
+    DECLARE i INT DEFAULT 1;
+    DECLARE max_records INT DEFAULT 500000;
+    DECLARE random_user_id INT;
+    DECLARE random_timestamp INT;
+    DECLARE random_upload BIGINT;
+    DECLARE random_download BIGINT;
+    DECLARE random_node VARCHAR(50);
+    DECLARE random_count_rate FLOAT;
+    
+    -- 节点名称数组（模拟真实节点）
+    DECLARE node_names TEXT DEFAULT 'HK-01,HK-02,SG-01,SG-02,JP-01,JP-02,US-01,US-02,UK-01,UK-02,DE-01,DE-02,KR-01,KR-02,TW-01';
+    DECLARE node_count INT DEFAULT 15;
+    
+    -- 禁用自动提交以提高性能
+    SET autocommit = 0;
+    
+    -- 开始事务
+    START TRANSACTION;
+    
+    WHILE i <= max_records DO
+        -- 生成随机数据
+        SET random_user_id = FLOOR(1 + RAND() * 100); -- 假设有100个用户
+        SET random_timestamp = UNIX_TIMESTAMP() - FLOOR(RAND() * 86400 * 30); -- 最近30天的随机时间
+        SET random_upload = FLOOR(RAND() * 1073741824); -- 0-1GB 随机上传流量
+        SET random_download = FLOOR(RAND() * 5368709120); -- 0-5GB 随机下载流量
+        SET random_count_rate = 1.0 + (RAND() * 2.0); -- 1.0-3.0 的随机计费比率
+        
+        -- 随机选择节点名称
+        SET random_node = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(node_names, ',', FLOOR(1 + RAND() * node_count)), ',', -1));
+        
+        -- 插入数据
+        INSERT INTO user_usage (user_id, t, u, d, node, count_rate) 
+        VALUES (random_user_id, random_timestamp, random_upload, random_download, random_node, random_count_rate);
+        
+        -- 每10000条记录提交一次事务
+        IF i % 10000 = 0 THEN
+            COMMIT;
+            START TRANSACTION;
+            SELECT CONCAT('已生成 ', i, ' 条记录...') AS progress;
+        END IF;
+        
+        SET i = i + 1;
+    END WHILE;
+    
+    -- 提交最后的事务
+    COMMIT;
+    
+    -- 恢复自动提交
+    SET autocommit = 1;
+    
+    SELECT CONCAT('成功生成 ', max_records, ' 条user_usage测试数据！') AS result;
+    
+END$$
+
+DELIMITER ;
+
+-- 执行存储过程生成数据
+CALL GenerateUserUsageData();
+
+-- 清理存储过程
+DROP PROCEDURE IF EXISTS GenerateUserUsageData;
+
+-- 验证生成的数据
+SELECT 
+    COUNT(*) as total_records,
+    MIN(t) as earliest_time,
+    MAX(t) as latest_time,
+    COUNT(DISTINCT user_id) as unique_users,
+    COUNT(DISTINCT node) as unique_nodes,
+    SUM(u) as total_upload,
+    SUM(d) as total_download
+FROM user_usage;
