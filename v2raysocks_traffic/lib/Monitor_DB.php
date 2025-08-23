@@ -1003,8 +1003,10 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
             return $b['t'] - $a['t'];
         });
         
-        // Limit total results
-        $allData = array_slice($allData, 0, 1000);
+        // Limit total results using configured pagination size
+        $config = v2raysocks_traffic_getModuleConfig();
+        $configuredLimit = intval($config['pagination_size'] ?? 1000);
+        $allData = array_slice($allData, 0, $configuredLimit);
         
         // Validate and clean the traffic data
         v2raysocks_traffic_validateTrafficData($allData);
@@ -2074,14 +2076,16 @@ function v2raysocks_traffic_getModuleConfig()
             'default_unit' => $settings['default_unit'] ?? 'auto',
             'refresh_interval' => $settings['refresh_interval'] ?? '300',
             'realtime_refresh_interval' => $settings['realtime_refresh_interval'] ?? '5',
-            'chart_unit' => $settings['chart_unit'] ?? 'auto'
+            'chart_unit' => $settings['chart_unit'] ?? 'auto',
+            'pagination_size' => $settings['pagination_size'] ?? '1000'
         ];
     } catch (\Exception $e) {
         return [
             'default_unit' => 'auto',
             'refresh_interval' => '300',
             'realtime_refresh_interval' => '5',
-            'chart_unit' => 'auto'
+            'chart_unit' => 'auto',
+            'pagination_size' => '1000'
         ];
     }
 }

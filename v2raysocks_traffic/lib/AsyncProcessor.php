@@ -214,7 +214,8 @@ class AsyncProcessor
     {
         $filters = $taskData['data']['filters'] ?? [];
         $cursor = $taskData['data']['cursor'] ?? null;
-        $pageSize = $taskData['data']['page_size'] ?? 1000;
+        $config = v2raysocks_traffic_getModuleConfig();
+        $pageSize = $taskData['data']['page_size'] ?? intval($config['pagination_size'] ?? 1000);
         
         // Use cursor pagination for traffic data
         require_once __DIR__ . '/CursorPaginator.php';

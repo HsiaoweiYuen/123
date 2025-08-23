@@ -31,6 +31,9 @@ $_LANG = [
     'default_unit_description' => 'Default unit for displaying traffic data',
     'chart_display_unit' => 'Chart Display Unit',
     'chart_unit_description' => 'Unit used in charts and graphs',
+    'pagination_size' => 'Pagination Size',
+    'pagination_size_description' => 'Number of records per page for data display (affects performance based on system capabilities)',
+    'records' => 'records',
     
     // ========================================
     // COMMON COMPONENTS (通用组件)

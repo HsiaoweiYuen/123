@@ -19,6 +19,15 @@ class CursorPaginator
     public function __construct($pdo = null)
     {
         $this->pdo = $pdo ?: v2raysocks_traffic_createPDO();
+        
+        // Load pagination size from module configuration
+        $config = v2raysocks_traffic_getModuleConfig();
+        $configuredPageSize = intval($config['pagination_size'] ?? 1000);
+        
+        // Validate configured page size
+        if ($configuredPageSize > 0 && $configuredPageSize <= 10000) {
+            $this->defaultPageSize = $configuredPageSize;
+        }
     }
     
     /**
