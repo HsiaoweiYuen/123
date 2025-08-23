@@ -3771,11 +3771,219 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null, $cursor = null)
+{
+    try {
+        // Extract pagination parameters
+        $useCursorPagination = isset($cursor) || $limit < PHP_INT_MAX;
+        
+        // For backward compatibility, if no pagination params provided, use original logic
+        if (!$useCursorPagination) {
+            return v2raysocks_traffic_getUsageRecordsLegacy($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+        }
+        
+        // Use cursor pagination for large datasets
+        $cacheKey = 'usage_records_cursor_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: '') . '_' . ($cursor ?: ''));
+        
+        // Try cache first, but don't fail if cache is unavailable
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    return $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for usage records: " . $e->getMessage(), 0);
+        }
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            return [];
+        }
+
+        // Calculate time range
+        switch ($timeRange) {
+            case 'today':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'last_1_hour':
+                $startTime = strtotime('-1 hour');
+                $endTime = time();
+                break;
+            case 'last_3_hours':
+                $startTime = strtotime('-3 hours');
+                $endTime = time();
+                break;
+            case 'last_6_hours':
+                $startTime = strtotime('-6 hours');
+                $endTime = time();
+                break;
+            case 'last_12_hours':
+                $startTime = strtotime('-12 hours');
+                $endTime = time();
+                break;
+            case 'week':
+            case '7days':
+                // Fix: Use exactly 7 complete days from 7 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-6 days', strtotime('today')); // Start of 7 days ago (today - 6 = 7 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case '15days':
+                // Fix: Use exactly 15 complete days from 15 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-14 days', strtotime('today')); // Start of 15 days ago (today - 14 = 15 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case 'month':
+            case '30days':
+                // Fix: Use exactly 30 complete days from 30 days ago at 00:00:00 to end of today
+                $startTime = strtotime('-29 days', strtotime('today')); // Start of 30 days ago (today - 29 = 30 days total)
+                $endTime = strtotime('tomorrow') - 1; // End of today
+                break;
+            case 'custom':
+                if ($startDate && $endDate) {
+                    $startTime = strtotime($startDate . ' 00:00:00'); // Ensure start of day
+                    $endTime = strtotime($endDate . ' 23:59:59'); // End of the end date
+                } else {
+                    // Fallback to today if custom dates are invalid
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
+            case 'time_range':
+                // Handle custom time range - will be overridden by timestamps if provided
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'all':
+            default:
+                $startTime = 0;
+                $endTime = time();
+                break;
+        }
+
+        // Override time range if timestamp parameters are provided
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
+        }
+
+        // Build base SQL for cursor pagination
+        $baseQuery = '
+            SELECT 
+                uu.id,
+                uu.user_id,
+                uu.t,
+                uu.u,
+                uu.d,
+                uu.node,
+                uu.count_rate,
+                u.uuid,
+                u.sid,
+                n.name as node_name,
+                n.country as node_country
+            FROM user_usage uu
+            LEFT JOIN user u ON uu.user_id = u.id
+            LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
+            WHERE uu.t >= :start_time AND uu.t <= :end_time
+        ';
+
+        $params = [
+            ':start_time' => $startTime,
+            ':end_time' => $endTime
+        ];
+
+        if ($nodeId !== null) {
+            // Get the node name as well to handle both cases
+            $nodeStmt = $pdo->prepare('SELECT name FROM node WHERE id = :node_id');
+            $nodeStmt->execute([':node_id' => $nodeId]);
+            $nodeInfo = $nodeStmt->fetch(PDO::FETCH_ASSOC);
+            $nodeName = $nodeInfo ? $nodeInfo['name'] : '';
+            
+            $baseQuery .= ' AND (uu.node = :node_id OR uu.node = :node_name)';
+            $params[':node_id'] = $nodeId;
+            $params[':node_name'] = $nodeName;
+        }
+
+        if ($userId !== null) {
+            $baseQuery .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $userId;
+        }
+
+        if ($uuid !== null) {
+            $baseQuery .= ' AND u.uuid = :uuid';
+            $params[':uuid'] = $uuid;
+        }
+
+        // Use cursor paginator
+        $paginator = new CursorPaginator($pdo);
+        $orderBy = 't'; // Order by timestamp for consistent pagination
+        $direction = 'DESC';
+        $result = $paginator->paginateWithConditions($baseQuery, $params, $limit, $cursor, $orderBy, $direction);
+        
+        $records = $result['data'];
+        
+        // Process results
+        foreach ($records as &$record) {
+            $record['id'] = intval($record['id']);
+            $record['user_id'] = intval($record['user_id']);
+            $record['t'] = intval($record['t']);
+            $record['u'] = floatval($record['u']);
+            $record['d'] = floatval($record['d']);
+            $record['node'] = intval($record['node']);
+            $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
+            $record['total_traffic'] = $record['u'] + $record['d'];
+            $record['formatted_time'] = (function($timestamp) {
+                // use actual data timestamp with server local time
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                return $date->format('Y-m-d H:i:s');
+            })($record['t']);
+            $record['formatted_upload'] = v2raysocks_traffic_formatBytesConfigurable($record['u']);
+            $record['formatted_download'] = v2raysocks_traffic_formatBytesConfigurable($record['d']);
+            $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
+        }
+        
+        // Build final result with pagination metadata
+        $finalResult = [
+            'data' => $records,
+            'pagination' => $result['pagination']
+        ];
+        
+        // Try to cache using unified cache function
+        if (!empty($records)) {
+            try {
+                // Cache with shorter TTL for paginated results
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($finalResult), [
+                    'data_type' => 'usage_records',
+                    'time_range' => $timeRange === 'today' ? 'today' : 'historical',
+                    'is_paginated' => true
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
+            }
+        }
+        
+        return $finalResult;
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
+        return [];
+    }
+}
+
+/**
+ * Legacy usage records function for backward compatibility
+ */
+function v2raysocks_traffic_getUsageRecordsLegacy($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
         // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        $cacheKey = 'usage_records_legacy_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
             $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
             if ($cachedData) {
@@ -3959,7 +4167,7 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
         return $records;
         
     } catch (\Exception $e) {
-        logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
+        logActivity("V2RaySocks Traffic Monitor getUsageRecordsLegacy error: " . $e->getMessage(), 0);
         return [];
     }
 }

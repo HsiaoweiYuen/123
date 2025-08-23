@@ -716,18 +716,48 @@ function v2raysocks_traffic_output($vars)
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
                 $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
                 
-                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
+                // New cursor pagination parameters
+                $cursor = $_GET['cursor'] ?? null;
+                $useCursorPagination = $_GET['use_cursor_pagination'] ?? 'false';
+                $returnPaginationInfo = $_GET['return_pagination_info'] ?? 'false';
+                
+                // For cursor pagination, use smaller default page size
+                if ($useCursorPagination === 'true' && $limit === PHP_INT_MAX) {
+                    $limit = 1000; // Default page size for cursor pagination
+                }
+                
+                $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $cursor);
+                
+                // Handle different response formats for cursor pagination
+                $data = $records;
+                $pagination = null;
+                
+                if ($useCursorPagination === 'true' || $returnPaginationInfo === 'true') {
+                    // Extract data and pagination info
+                    if (is_array($records) && isset($records['data'])) {
+                        $data = $records['data'];
+                        $pagination = $records['pagination'] ?? null;
+                    }
+                }
+                
                 $result = [
                     'status' => 'success',
-                    'data' => $records,
+                    'data' => $data,
                     'node_id' => $nodeId,
                     'user_id' => $userId,
                     'uuid' => $uuid,
                     'time_range' => $timeRange,
                     'start_timestamp' => $startTimestamp,
                     'end_timestamp' => $endTimestamp,
-                    'limit' => $limit
+                    'limit' => $limit,
+                    'count' => count($data)
                 ];
+                
+                // Add pagination info if available
+                if ($pagination) {
+                    $result['pagination'] = $pagination;
+                }
+                
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_usage_records error: " . $e->getMessage(), 0);
                 $result = [
