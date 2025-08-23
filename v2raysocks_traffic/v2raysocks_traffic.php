@@ -106,6 +106,20 @@ function v2raysocks_traffic_config()
                 'Default' => 'auto',
                 'Description' => isset($lang['chart_unit_description']) ? $lang['chart_unit_description'] : 'Unit used in charts and graphs',
             ],
+            'pagination_size' => [
+                'FriendlyName' => isset($lang['pagination_size']) ? $lang['pagination_size'] : 'Pagination Size',
+                'Type' => 'dropdown',
+                'Options' => [
+                    '1000' => '1000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '1500' => '1500 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '2000' => '2000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '3000' => '3000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '5000' => '5000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                    '10000' => '10000 ' . (isset($lang['records']) ? $lang['records'] : 'records'),
+                ],
+                'Default' => '1000',
+                'Description' => isset($lang['pagination_size_description']) ? $lang['pagination_size_description'] : 'Number of records per page for data display (affects performance based on system capabilities)',
+            ],
         ]
     ];
 }
@@ -602,9 +616,10 @@ function v2raysocks_traffic_output($vars)
                 $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
                 if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
                 
-                // For cursor pagination, use smaller default page size
+                // For cursor pagination, use configured default page size
                 if ($useCursorPagination === 'true' && $limit === PHP_INT_MAX) {
-                    $limit = 1000; // Default page size for cursor pagination
+                    $config = v2raysocks_traffic_getModuleConfig();
+                    $limit = intval($config['pagination_size'] ?? 1000); // Configured page size for cursor pagination
                 }
                 
                 $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $cursor);
@@ -721,9 +736,10 @@ function v2raysocks_traffic_output($vars)
                 $useCursorPagination = $_GET['use_cursor_pagination'] ?? 'false';
                 $returnPaginationInfo = $_GET['return_pagination_info'] ?? 'false';
                 
-                // For cursor pagination, use smaller default page size
+                // For cursor pagination, use configured default page size
                 if ($useCursorPagination === 'true' && $limit === PHP_INT_MAX) {
-                    $limit = 1000; // Default page size for cursor pagination
+                    $config = v2raysocks_traffic_getModuleConfig();
+                    $limit = intval($config['pagination_size'] ?? 1000); // Configured page size for cursor pagination
                 }
                 
                 $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp, $cursor);
