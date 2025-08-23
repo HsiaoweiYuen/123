@@ -187,6 +187,24 @@ $trafficDashboardHtml = '
                 padding: 8px 4px;
                 font-size: 0.9em;
             }
+            
+            /* Mobile pagination controls */
+            #pagination-controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            #pagination-controls > div {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .btn-sm {
+                padding: 8px 12px;
+                margin: 2px;
+            }
         }
         
         /* Responsive styles for very small devices */
@@ -233,6 +251,19 @@ $trafficDashboardHtml = '
                 left: 2.5% !important;
                 transform: translateY(-50%) !important;
                 padding: 15px !important;
+            }
+            
+            /* Very small device pagination */
+            #pagination-controls > div:first-child {
+                font-size: 0.8em;
+                margin-bottom: 10px;
+            }
+            #pagination-controls select {
+                max-width: 80px;
+            }
+            .btn-sm {
+                padding: 6px 8px;
+                font-size: 0.8em;
             }
         }
         
