@@ -4100,6 +4100,241 @@ function v2raysocks_traffic_getHistoricalPeakTraffic()
 }
 
 /**
+ * Get traffic data with cursor-based pagination
+ * Implements cursor pagination using timestamp for better performance with large datasets
+ * 
+ * @param array $filters Filtering parameters (user_id, service_id, etc.)
+ * @param string|null $cursor Timestamp cursor for pagination (null for first page)
+ * @param string $direction Pagination direction: 'next' (older records) or 'prev' (newer records)
+ * @param int $limit Number of records to fetch (default 50)
+ * @return array Paginated traffic data with metadata
+ */
+function v2raysocks_traffic_getTrafficDataPaginated($filters = [], $cursor = null, $direction = 'next', $limit = 50)
+{
+    try {
+        // Validate and sanitize inputs
+        $limit = max(1, min(1000, intval($limit))); // Limit between 1-1000 for safety
+        $direction = in_array($direction, ['next', 'prev']) ? $direction : 'next';
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve paginated traffic data - database connection failed", 0);
+            return [
+                'data' => [],
+                'pagination' => [
+                    'cursor' => null,
+                    'next_cursor' => null,
+                    'prev_cursor' => null,
+                    'has_more' => false,
+                    'has_prev' => false,
+                    'limit' => $limit,
+                    'direction' => $direction
+                ]
+            ];
+        }
+
+        // Build base query similar to existing getTrafficData function
+        $sql = 'SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    n.address as node_address,
+                    uu.node as node_identifier
+                FROM user_usage AS uu
+                LEFT JOIN user AS u ON uu.user_id = u.id
+                LEFT JOIN node AS n ON uu.node = n.name
+                WHERE 1=1';
+
+        $params = [];
+
+        // Apply all existing filters
+        if (!empty($filters['user_id'])) {
+            $sql .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $filters['user_id'];
+        }
+
+        if (!empty($filters['service_id'])) {
+            $sql .= ' AND u.sid = :service_id';
+            $params[':service_id'] = $filters['service_id'];
+        }
+
+        if (!empty($filters['node_id'])) {
+            $sql .= ' AND uu.node = :node_id';
+            $params[':node_id'] = $filters['node_id'];
+        }
+
+        if (!empty($filters['uuid'])) {
+            $sql .= ' AND u.uuid = :uuid';
+            $params[':uuid'] = $filters['uuid'];
+        }
+
+        // Apply time range filters (keep existing logic)
+        if (!empty($filters['time_range']) && $filters['time_range'] !== 'all') {
+            $timeFilter = v2raysocks_traffic_getTimeFilter($filters['time_range']);
+            if ($timeFilter) {
+                $sql .= ' AND uu.t >= :time_filter';
+                $params[':time_filter'] = $timeFilter;
+            }
+        }
+
+        // Apply custom date range
+        if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+            $startTime = strtotime($filters['start_date'] . ' 00:00:00');
+            $endTime = strtotime($filters['end_date'] . ' 23:59:59');
+            
+            if ($startTime && $endTime) {
+                $sql .= ' AND uu.t >= :start_time AND uu.t <= :end_time';
+                $params[':start_time'] = $startTime;
+                $params[':end_time'] = $endTime;
+            }
+        }
+
+        // Apply timestamp range (for time_range=time_range)
+        if (!empty($filters['start_timestamp'])) {
+            $sql .= ' AND uu.t >= :timestamp_start';
+            $params[':timestamp_start'] = $filters['start_timestamp'];
+        }
+
+        if (!empty($filters['end_timestamp'])) {
+            $sql .= ' AND uu.t <= :timestamp_end';
+            $params[':timestamp_end'] = $filters['end_timestamp'];
+        }
+
+        // Apply cursor-based filtering
+        if ($cursor !== null) {
+            $cursorTimestamp = intval($cursor);
+            if ($direction === 'next') {
+                // Next page: get older records (smaller timestamps)
+                $sql .= ' AND uu.t < :cursor';
+            } else {
+                // Previous page: get newer records (larger timestamps)
+                $sql .= ' AND uu.t > :cursor';
+            }
+            $params[':cursor'] = $cursorTimestamp;
+        }
+
+        // Add ordering and limit
+        if ($direction === 'prev') {
+            // For previous page, we want newer records first, then reverse the result
+            $sql .= ' ORDER BY uu.t ASC LIMIT :limit';
+        } else {
+            // For next page, we want older records first (normal DESC order)
+            $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
+        }
+
+        // Prepare and execute query
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            if ($key === ':limit') {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT); // Fetch one extra to check has_more
+
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Check if we have more data
+        $hasMore = count($data) > $limit;
+        if ($hasMore) {
+            array_pop($data); // Remove the extra record
+        }
+
+        // For previous page, reverse the results to maintain DESC order
+        if ($direction === 'prev') {
+            $data = array_reverse($data);
+        }
+
+        // Validate and clean the traffic data
+        v2raysocks_traffic_validateTrafficData($data);
+
+        // Process node names similar to existing function
+        $todayStart = strtotime('today');
+        foreach ($data as &$row) {
+            if (empty($row['node_name']) && !empty($row['node_identifier'])) {
+                $row['node_name'] = $row['node_identifier'];
+            }
+            
+            if ($row['t'] >= $todayStart) {
+                $row['current_node_name'] = $row['node_name'];
+            } else {
+                $row['current_node_name'] = null;
+            }
+        }
+
+        // Determine cursors for pagination
+        $nextCursor = null;
+        $prevCursor = null;
+        $hasPrev = false;
+        
+        if (!empty($data)) {
+            // For determining cursors, we need to identify newest and oldest records
+            $newestTimestamp = $data[0]['t'];
+            $oldestTimestamp = end($data)['t'];
+            
+            // Set cursors based on direction and has_more
+            if ($direction === 'next') {
+                $nextCursor = $hasMore ? $oldestTimestamp : null;
+                $prevCursor = ($cursor !== null) ? $newestTimestamp : null;
+            } else {
+                $nextCursor = $oldestTimestamp;
+                $prevCursor = $hasMore ? $newestTimestamp : null;
+            }
+            
+            // Determine has_prev: check if this is not the first page
+            if ($cursor === null) {
+                // First page, no previous records
+                $hasPrev = false;
+                $prevCursor = null;
+            } else {
+                // Not first page, we came from somewhere, so there are previous records
+                $hasPrev = true;
+            }
+        }
+
+        return [
+            'data' => $data,
+            'pagination' => [
+                'cursor' => $cursor,
+                'next_cursor' => $nextCursor,
+                'prev_cursor' => $prevCursor,
+                'has_more' => $hasMore,
+                'has_prev' => $hasPrev,
+                'limit' => $limit,
+                'direction' => $direction,
+                'count' => count($data)
+            ]
+        ];
+
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getTrafficDataPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => [
+                'cursor' => $cursor,
+                'next_cursor' => null,
+                'prev_cursor' => null,
+                'has_more' => false,
+                'has_prev' => false,
+                'limit' => $limit,
+                'direction' => $direction,
+                'count' => 0,
+                'error' => $e->getMessage()
+            ]
+        ];
+    }
+}
+
+/**
  * Unified cache clearing function with improved strategies and cache version control
  */
 function v2raysocks_traffic_unifiedCacheClear($dataType = null, $context = [])
