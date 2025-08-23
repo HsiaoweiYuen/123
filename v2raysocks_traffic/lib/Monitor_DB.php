@@ -808,6 +808,231 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
 }
 
 /**
+ * Get paginated enhanced traffic data with improved performance
+ * Returns only the requested page of data instead of all data
+ */
+function v2raysocks_traffic_getEnhancedTrafficDataPaginated($filters = [], $page = 1, $perPage = 50)
+{
+    try {
+        $page = max(1, intval($page));
+        $perPage = max(1, min(1000, intval($perPage))); // Limit per page to prevent abuse
+        $offset = ($page - 1) * $perPage;
+        
+        // Create cache key including pagination params
+        $cacheParams = array_merge($filters, ['page' => $page, 'per_page' => $perPage]);
+        $cacheKey = 'enhanced_traffic_paginated_' . md5(serialize($cacheParams));
+        
+        // Try to get from cache first
+        try {
+            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+            if ($cachedData) {
+                $decodedData = json_decode($cachedData, true);
+                if (!empty($decodedData)) {
+                    return $decodedData;
+                }
+            }
+        } catch (\Exception $e) {
+            // Cache read failed, continue without cache
+            logActivity("V2RaySocks Traffic Monitor: Cache read failed for paginated traffic data: " . $e->getMessage(), 0);
+        }
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve paginated traffic data - database connection failed", 0);
+            return [
+                'data' => [],
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total_pages' => 0,
+                    'total_records' => 0
+                ]
+            ];
+        }
+        
+        // Build WHERE conditions - reuse logic from getEnhancedTrafficData
+        $whereConditions = [];
+        $params = [];
+        
+        // Apply filters
+        if (!empty($filters['user_id'])) {
+            $whereConditions[] = 'uu.user_id = :user_id';
+            $params[':user_id'] = $filters['user_id'];
+        }
+        
+        if (!empty($filters['service_id']) || !empty($filters['sid'])) {
+            $sid = $filters['service_id'] ?: $filters['sid'];
+            $whereConditions[] = 'u.sid = :service_id';
+            $params[':service_id'] = $sid;
+        }
+        
+        if (!empty($filters['node_id'])) {
+            $whereConditions[] = 'uu.node = :node_id';
+            $params[':node_id'] = $filters['node_id'];
+        }
+        
+        if (!empty($filters['uuid'])) {
+            $whereConditions[] = 'u.uuid LIKE :uuid';
+            $params[':uuid'] = '%' . $filters['uuid'] . '%';
+        }
+        
+        // Time range filtering
+        if (!empty($filters['time_range']) && $filters['time_range'] !== 'custom') {
+            $timeFilter = v2raysocks_traffic_getTimeFilter($filters['time_range']);
+            if ($timeFilter) {
+                $whereConditions[] = 'uu.t >= :start_time';
+                $params[':start_time'] = $timeFilter;
+            }
+        }
+        
+        // Custom date range
+        if (!empty($filters['start_date']) || !empty($filters['start'])) {
+            $startDate = $filters['start_date'] ?: $filters['start'];
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+                $startTime = strtotime($startDate . ' 00:00:00');
+                if ($startTime !== false) {
+                    $whereConditions[] = 'uu.t >= :custom_start';
+                    $params[':custom_start'] = $startTime;
+                }
+            }
+        }
+        
+        if (!empty($filters['end_date']) || !empty($filters['end'])) {
+            $endDate = $filters['end_date'] ?: $filters['end'];
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                $endTime = strtotime($endDate . ' 23:59:59');
+                if ($endTime !== false) {
+                    $whereConditions[] = 'uu.t <= :custom_end';
+                    $params[':custom_end'] = $endTime;
+                }
+            }
+        }
+        
+        // Timestamp-based filtering
+        if (!empty($filters['start_timestamp'])) {
+            $whereConditions[] = 'uu.t >= :timestamp_start';
+            $params[':timestamp_start'] = $filters['start_timestamp'];
+        }
+        
+        if (!empty($filters['end_timestamp'])) {
+            $whereConditions[] = 'uu.t <= :timestamp_end';
+            $params[':timestamp_end'] = $filters['end_timestamp'];
+        }
+        
+        // Exclude day traffic by default (as done in original function)
+        $whereConditions[] = 'uu.node != "DAY"';
+        
+        $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+        
+        // Get total count first
+        $countSql = "SELECT COUNT(*) as total 
+                     FROM user_usage AS uu
+                     LEFT JOIN user AS u ON uu.user_id = u.id
+                     LEFT JOIN node AS n ON (
+                         CASE 
+                             WHEN uu.node REGEXP \"^[0-9]+$\" THEN uu.node = n.id
+                             ELSE uu.node = n.name
+                         END
+                     )
+                     $whereClause";
+        
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $totalRecords = intval($countStmt->fetchColumn());
+        $totalPages = ceil($totalRecords / $perPage);
+        
+        // Get paginated data
+        $dataSql = "SELECT 
+                        uu.*, 
+                        u.uuid, 
+                        u.sid as service_id, 
+                        u.transfer_enable, 
+                        u.u as total_upload,
+                        u.d as total_download,
+                        u.speedlimitss,
+                        u.speedlimitother,
+                        u.illegal,
+                        COALESCE(n.name, uu.node, CONCAT(\"Node \", uu.node)) as node_name,
+                        uu.node as node_identifier
+                    FROM user_usage AS uu
+                    LEFT JOIN user AS u ON uu.user_id = u.id
+                    LEFT JOIN node AS n ON (
+                        CASE 
+                            WHEN uu.node REGEXP \"^[0-9]+$\" THEN uu.node = n.id
+                            ELSE uu.node = n.name
+                        END
+                    )
+                    $whereClause
+                    ORDER BY uu.t DESC
+                    LIMIT :limit OFFSET :offset";
+        
+        $dataStmt = $pdo->prepare($dataSql);
+        
+        // Bind pagination parameters separately to avoid PDO issues
+        foreach ($params as $key => $value) {
+            $dataStmt->bindValue($key, $value);
+        }
+        $dataStmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $dataStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $dataStmt->execute();
+        $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $result = [
+            'data' => $data,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => $totalPages,
+                'total_records' => $totalRecords
+            ]
+        ];
+        
+        // Cache the result with shorter TTL for pagination
+        try {
+            $timeRangeForCache = 'historical';
+            if (isset($filters['time_range'])) {
+                switch ($filters['time_range']) {
+                    case 'today':
+                    case 'last_1_hour':
+                    case 'last_3_hours':
+                    case 'last_6_hours':
+                    case 'last_12_hours':
+                        $timeRangeForCache = 'today';
+                        break;
+                    default:
+                        $timeRangeForCache = 'historical';
+                        break;
+                }
+            }
+            
+            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($result), [
+                'data_type' => 'enhanced_traffic_paginated',
+                'time_range' => $timeRangeForCache,
+                'is_historical' => ($timeRangeForCache === 'historical'),
+                'page' => $page
+            ]);
+        } catch (\Exception $e) {
+            // Cache write failed, but we can still return the data
+            logActivity("V2RaySocks Traffic Monitor: Cache write failed for paginated traffic data: " . $e->getMessage(), 0);
+        }
+        
+        return $result;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficDataPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => 0,
+                'total_records' => 0
+            ]
+        ];
+    }
+}
+
+/**
  * Helper function to get time filter timestamp
  */
 function v2raysocks_traffic_getTimeFilter($timeRange)

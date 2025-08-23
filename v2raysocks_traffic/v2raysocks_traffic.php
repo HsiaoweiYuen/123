@@ -188,6 +188,44 @@ function v2raysocks_traffic_output($vars)
             header('Content-Type: application/json');
             echo json_encode($result, JSON_PRETTY_PRINT);
             die();
+        case 'get_traffic_data_paginated':
+            try {
+                $filters = [
+                    'user_id' => $_GET['user_id'] ?? null,
+                    'service_id' => $_GET['service_id'] ?? null,
+                    'node_id' => $_GET['node_id'] ?? null,
+                    'start_date' => $_GET['start_date'] ?? null,
+                    'end_date' => $_GET['end_date'] ?? null,
+                    'time_range' => $_GET['time_range'] ?? 'month_including_today',
+                    'uuid' => $_GET['uuid'] ?? null,
+                    'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
+                    'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                ];
+                
+                $page = intval($_GET['page'] ?? 1);
+                $perPage = intval($_GET['per_page'] ?? 50);
+                
+                $result = v2raysocks_traffic_getEnhancedTrafficDataPaginated($filters, $page, $perPage);
+                $result['status'] = 'success';
+                $result['filters_applied'] = array_filter($filters);
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis get_traffic_data_paginated error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to retrieve paginated traffic data: ' . $e->getMessage(),
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => 1,
+                        'per_page' => 50,
+                        'total_pages' => 0,
+                        'total_records' => 0
+                    ]
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
         case 'get_live_stats':
             $liveStats = v2raysocks_traffic_getLiveStats();
             $result = [

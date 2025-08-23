@@ -95,6 +95,18 @@ $trafficDashboardHtml = '
         .btn:hover {
             opacity: 0.9;
         }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.875rem;
+        }
+        .pagination-loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
         .table-responsive {
             overflow-x: auto;
             min-width: 100%;
@@ -639,10 +651,12 @@ $trafficDashboardHtml = '
         let refreshInterval;
         let currentTrafficData = []; // Store current data for chart type changes
         let currentGroupedData = null; // Store current grouped data for chart type changes
-        let allTrafficData = []; // Store all filtered data for pagination
+        // Pagination variables - changed to use server-side pagination
         let currentPage = 1;
         let recordsPerPage = 50;
         let totalPages = 1;
+        let totalRecords = 0;
+        let isLoadingPage = false; // Prevent multiple simultaneous requests
         let moduleConfig = {
             chart_unit: "auto"
         };
@@ -680,7 +694,69 @@ $trafficDashboardHtml = '
             });
         }
         
+        
+        // URL parameter synchronization functions
+        function updateURLParams() {
+            const url = new URL(window.location);
+            url.searchParams.set(\"page\", currentPage);
+            url.searchParams.set(\"per_page\", recordsPerPage);
+            
+            // Also preserve filter parameters
+            const timeRange = $(\"#time-range\").val();
+            if (timeRange) url.searchParams.set(\"time_range\", timeRange);
+            
+            const userId = $(\"#user-id\").val();
+            if (userId) url.searchParams.set(\"user_id\", userId);
+            
+            const serviceId = $(\"#service-id\").val();
+            if (serviceId) url.searchParams.set(\"service_id\", serviceId);
+            
+            const nodeId = $(\"#node-id\").val();
+            if (nodeId) url.searchParams.set(\"node_id\", nodeId);
+            
+            window.history.replaceState({}, \"\", url);
+        }
+        
+        function loadParamsFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Load pagination parameters
+            const page = urlParams.get(\"page\");
+            if (page) {
+                currentPage = Math.max(1, parseInt(page));
+            }
+            
+            const perPage = urlParams.get(\"per_page\");
+            if (perPage) {
+                recordsPerPage = parseInt(perPage);
+                $(\"#records-per-page\").val(recordsPerPage);
+            }
+            
+            // Load filter parameters
+            const timeRange = urlParams.get(\"time_range\");
+            if (timeRange) {
+                $(\"#time-range\").val(timeRange);
+            }
+            
+            const userId = urlParams.get(\"user_id\");
+            if (userId) {
+                $(\"#user-id\").val(userId);
+            }
+            
+            const serviceId = urlParams.get(\"service_id\");
+            if (serviceId) {
+                $(\"#service-id\").val(serviceId);
+            }
+            
+            const nodeId = urlParams.get(\"node_id\");
+            if (nodeId) {
+                $(\"#node-id\").val(nodeId);
+            }
+        }
+
         $(document).ready(function() {
+            // Load parameters from URL on page load
+            loadParamsFromURL();
             // Load module configuration first
             loadModuleConfig();
             
@@ -829,35 +905,57 @@ $trafficDashboardHtml = '
                 $("#export-modal").hide();
             });
             
-            // Pagination event handlers
+            // Pagination event handlers - updated for server-side pagination
             $("#records-per-page").on("change", function() {
                 recordsPerPage = parseInt($(this).val());
                 currentPage = 1;
-                updatePaginatedTable();
+                loadTrafficData(); // Reload with new page size
             });
             
             $("#first-page").on("click", function() {
-                currentPage = 1;
-                updatePaginatedTable();
+                if (currentPage > 1) {
+                    currentPage = 1;
+                    loadTrafficData();
+                }
             });
             
             $("#prev-page").on("click", function() {
                 if (currentPage > 1) {
                     currentPage--;
-                    updatePaginatedTable();
+                    loadTrafficData();
                 }
             });
             
             $("#next-page").on("click", function() {
                 if (currentPage < totalPages) {
                     currentPage++;
-                    updatePaginatedTable();
+                    loadTrafficData();
                 }
             });
             
             $("#last-page").on("click", function() {
-                currentPage = totalPages;
-                updatePaginatedTable();
+                if (currentPage < totalPages) {
+                    currentPage = totalPages;
+                    loadTrafficData();
+                }
+            });
+            
+            // Also update URL when filters change
+            $("#traffic-filter").on("submit", function(e) {
+                e.preventDefault();
+                currentPage = 1; // Reset to first page when filtering
+                loadTrafficData();
+            });
+            
+            // Handle filter changes for chart updates
+            $(\"#time-range, #user-id, #service-id, #node-id\").on(\"change\", function() {
+                if (currentPage === 1) {
+                    // If on first page, chart will be updated by loadTrafficData
+                    // Otherwise, update chart separately
+                    setTimeout(function() {
+                        loadChartData();
+                    }, 100);
+                }
             });
         });
         
@@ -1001,62 +1099,80 @@ $trafficDashboardHtml = '
                 }
             }
             
+            // Prevent multiple simultaneous requests
+            if (isLoadingPage) {
+                return;
+            }
+            isLoadingPage = true;
+            
+            // Add loading class to pagination controls
+            $(\"#pagination-controls\").addClass(\"pagination-loading\");
+            
+            // Add pagination parameters
+            params += "&page=" + currentPage + "&per_page=" + recordsPerPage;
+            
             // Add loading indicator without clearing existing data
-            const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";
-            $("#traffic-data").prepend(loadingRow);
+            const loadingRow = \"<tr id=\\\"loading-indicator\\\"><td colspan=\\\"11\\\" class=\\\"loading\\\" style=\\\"background-color: #f8f9fa; color: #007bff;\\\">🔄 Loading traffic data...</td></tr>\";
+            $(\"#traffic-data\").prepend(loadingRow);
             
             $.ajax({
-                url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
-                type: "GET",
+                url: \"addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data_paginated\",
+                type: \"GET\",
                 data: params,
-                dataType: "json",
+                dataType: \"json\",
                 timeout: 30000, // 30 second timeout
                 success: function(response) {
-                    console.log("Traffic data response:", response);
-                    $("#loading-indicator").remove();
-                    if (response.status === "success") {
-                        updateTrafficTable(response.data);
-                        updateTrafficChart(response.data, response.grouped_data);
+                    console.log(\"Paginated traffic data response:\", response);
+                    $(\"#loading-indicator\").remove();
+                    $(\"#pagination-controls\").removeClass(\"pagination-loading\");
+                    isLoadingPage = false;
+                    
+                    if (response.status === \"success\") {
+                        updateTrafficTable(response.data, response.pagination);
+                        updateURLParams(); // Update URL after successful load
+                        
+                        // For charts, load grouped data separately on first page load only
+                        if (currentPage === 1) {
+                            loadChartData();
+                        }
                     } else {
-                        console.error("Traffic data error:", response);
-                        $("#traffic-data").html("<tr><td colspan=\'11\' class=\'loading\'>Error: " + (response.message || "Unknown error") + "</td></tr>");
+                        console.error(\"Paginated traffic data error:\", response);
+                        $(\"#traffic-data\").html(\"<tr><td colspan=\\\"11\\\" class=\\\"loading\\\">Error: \" + (response.message || \"Unknown error\") + \"</td></tr>\");
+                        $(\"#pagination-controls\").hide();
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error("AJAX error loading traffic data:", status, error);
-                    $("#loading-indicator").remove();
-                    let errorMsg = "Error loading traffic data";
-                    if (status === "timeout") {
-                        errorMsg = "Request timed out - please try again";
+                    console.error(\"AJAX error loading paginated traffic data:\", status, error);
+                    $(\"#loading-indicator\").remove();
+                    $(\"#pagination-controls\").removeClass(\"pagination-loading\");
+                    isLoadingPage = false;
+                    let errorMsg = \"Error loading traffic data\";
+                    if (status === \"timeout\") {
+                        errorMsg = \"Request timed out - please try again\";
                     } else if (xhr.responseText) {
-                        errorMsg = "Server error: " + xhr.status;
+                        errorMsg = \"Server error: \" + xhr.status;
                     }
-                    $("#traffic-data").html("<tr><td colspan=\'11\' class=\'loading\'>" + errorMsg + "</td></tr>");
+                    $(\"#traffic-data\").html(\"<tr><td colspan=\\\"11\\\" class=\\\"loading\\\">\" + errorMsg + \"</td></tr>\");
+                    $(\"#pagination-controls\").hide();
                 }
             });
         }
         
-        function updateTrafficTable(data) {
-            // Store all data for pagination
-            allTrafficData = data;
-            updatePaginatedTable();
-        }
-        
-        function updatePaginatedTable() {
+        function updateTrafficTable(data, pagination) {
             let html = "";
             
-            if (allTrafficData.length === 0) {
+            if (!data || data.length === 0) {
                 html = "<tr><td colspan=\\"11\\" class=\\"loading\\">No traffic data found</td></tr>";
                 $("#pagination-controls").hide();
             } else {
-                // Calculate pagination
-                totalPages = Math.ceil(allTrafficData.length / recordsPerPage);
-                const startIndex = (currentPage - 1) * recordsPerPage;
-                const endIndex = Math.min(startIndex + recordsPerPage, allTrafficData.length);
-                const pageData = allTrafficData.slice(startIndex, endIndex);
+                // Update pagination info from server response
+                totalPages = pagination.total_pages;
+                totalRecords = pagination.total_records;
+                currentPage = pagination.current_page;
+                recordsPerPage = pagination.per_page;
                 
                 // Generate table rows for current page
-                pageData.forEach(function(row) {
+                data.forEach(function(row) {
                     html += `<tr>
                         <td>${formatDateTime(row.t)}</td>
                         <td>${row.service_id || "-"}</td>
@@ -1072,18 +1188,67 @@ $trafficDashboardHtml = '
                     </tr>`;
                 });
                 
-                // Update pagination controls
-                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTrafficData.length));
+                // Update pagination controls with server data
+                const startIndex = (currentPage - 1) * recordsPerPage + 1;
+                const endIndex = Math.min(currentPage * recordsPerPage, totalRecords);
+                
+                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex).replace("{end}", endIndex).replace("{total}", totalRecords));
                 $("#page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", currentPage).replace("{total}", totalPages));
                 
-                // Enable/disable pagination buttons
-                $("#first-page, #prev-page").prop("disabled", currentPage === 1);
-                $("#next-page, #last-page").prop("disabled", currentPage === totalPages);
+                // Enable/disable pagination buttons with loading state
+                $("#first-page, #prev-page").prop("disabled", currentPage === 1 || isLoadingPage);
+                $("#next-page, #last-page").prop("disabled", currentPage === totalPages || isLoadingPage);
+                
+                // Update records per page dropdown to reflect current value
+                $("#records-per-page").val(recordsPerPage);
                 
                 $("#pagination-controls").show();
             }
             
             $("#traffic-data").html(html);
+        }
+        
+        // Separate function to load chart data (uses original API for grouped data)
+        function loadChartData() {
+            let params = $(\"#traffic-filter\").serialize() + \"&grouped=true\";
+            
+            // Handle custom time range for charts
+            const timeRange = $(\"#time-range\").val();
+            if (timeRange === \"time_range\") {
+                const startTime = $(\"#start-time\").val();
+                const endTime = $(\"#end-time\").val();
+                
+                if (startTime && endTime) {
+                    const today = new Date();
+                    const todayStr = today.getFullYear() + \"-\" + 
+                                    (today.getMonth() + 1).toString().padStart(2, \"0\") + \"-\" + 
+                                    today.getDate().toString().padStart(2, \"0\");
+                    const startDateTime = todayStr + \" \" + startTime;
+                    const endDateTime = todayStr + \" \" + endTime;
+                    const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+                    
+                    params = params.replace(/time_range=time_range/g, \"time_range=custom\");
+                    params += \"&start_timestamp=\" + startTimestamp + \"&end_timestamp=\" + endTimestamp;
+                }
+            }
+            
+            $.ajax({
+                url: \"addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data\",
+                type: \"GET\",
+                data: params,
+                dataType: \"json\",
+                timeout: 30000,
+                success: function(response) {
+                    console.log(\"Chart data response:\", response);
+                    if (response.status === \"success\") {
+                        updateTrafficChart(response.data, response.grouped_data);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(\"AJAX error loading chart data:\", status, error);
+                }
+            });
         }
         
         // Generate default time labels for empty charts - using server local time (not UTC)
