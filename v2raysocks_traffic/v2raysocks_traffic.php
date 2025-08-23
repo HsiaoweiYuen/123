@@ -150,6 +150,13 @@ function v2raysocks_traffic_output($vars)
                     'uuid' => $_GET['uuid'] ?? null,
                     'start_timestamp' => !empty($_GET['start_timestamp']) ? intval($_GET['start_timestamp']) : null,
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
+                    // New cursor pagination parameters
+                    'cursor' => $_GET['cursor'] ?? null,
+                    'page_size' => !empty($_GET['page_size']) ? intval($_GET['page_size']) : null,
+                    'use_cursor_pagination' => $_GET['use_cursor_pagination'] ?? 'false',
+                    'order_by' => $_GET['order_by'] ?? 't',
+                    'direction' => $_GET['direction'] ?? 'DESC',
+                    'return_pagination_info' => $_GET['return_pagination_info'] ?? 'false'
                 ];
                 
                 // Use enhanced traffic data function for better node name resolution
@@ -160,22 +167,43 @@ function v2raysocks_traffic_output($vars)
                     $trafficData = v2raysocks_traffic_getTrafficData($filters);
                 }
                 
+                // Handle different response formats for cursor pagination
+                $useCursorPagination = $filters['use_cursor_pagination'] === 'true';
+                $returnPaginationInfo = $filters['return_pagination_info'] === 'true';
+                
+                $data = $trafficData;
+                $pagination = null;
+                
+                if ($useCursorPagination || $returnPaginationInfo) {
+                    // Extract data and pagination info
+                    if (is_array($trafficData) && isset($trafficData['data'])) {
+                        $data = $trafficData['data'];
+                        $pagination = $trafficData['pagination'] ?? null;
+                    }
+                }
+                
                 // Apply PR#37 time grouping if requested
                 $grouped = $_GET['grouped'] ?? 'false';
                 $groupedData = null;
                 if ($grouped === 'true') {
                     $timeRange = $filters['time_range'] ?? 'today';
-                    $groupedData = v2raysocks_traffic_groupDataByTime($trafficData, $timeRange);
+                    $groupedData = v2raysocks_traffic_groupDataByTime($data, $timeRange);
                 }
                 
                 $result = [
                     'status' => 'success',
-                    'data' => $trafficData,
+                    'data' => $data,
                     'grouped_data' => $groupedData,
-                    'count' => count($trafficData),
+                    'count' => count($data),
                     'filters_applied' => array_filter($filters),
                     'enhanced_mode' => $useEnhanced === 'true'
                 ];
+                
+                // Add pagination info if available
+                if ($pagination) {
+                    $result['pagination'] = $pagination;
+                }
+                
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_traffic_data error: " . $e->getMessage(), 0);
                 $result = [
@@ -565,19 +593,49 @@ function v2raysocks_traffic_output($vars)
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
                 $limitValue = $_GET['limit'] ?? 'all';
                 
+                // New cursor pagination parameters
+                $cursor = $_GET['cursor'] ?? null;
+                $useCursorPagination = $_GET['use_cursor_pagination'] ?? 'false';
+                $returnPaginationInfo = $_GET['return_pagination_info'] ?? 'false';
+                
                 // Handle "all" option properly - remove limit restriction
                 $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
                 if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
                 
-                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+                // For cursor pagination, use smaller default page size
+                if ($useCursorPagination === 'true' && $limit === PHP_INT_MAX) {
+                    $limit = 1000; // Default page size for cursor pagination
+                }
+                
+                $rankings = v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp, $cursor);
+                
+                // Handle different response formats for cursor pagination
+                $data = $rankings;
+                $pagination = null;
+                
+                if ($useCursorPagination === 'true' || $returnPaginationInfo === 'true') {
+                    // Extract data and pagination info
+                    if (is_array($rankings) && isset($rankings['data'])) {
+                        $data = $rankings['data'];
+                        $pagination = $rankings['pagination'] ?? null;
+                    }
+                }
+                
                 $result = [
                     'status' => 'success',
-                    'data' => $rankings,
+                    'data' => $data,
                     'sort_by' => $sortBy,
                     'time_range' => $timeRange,
                     'limit' => $limitValue, // Return original value for frontend
-                    'actual_limit' => $limit // Return actual numeric limit used
+                    'actual_limit' => $limit, // Return actual numeric limit used
+                    'count' => count($data)
                 ];
+                
+                // Add pagination info if available
+                if ($pagination) {
+                    $result['pagination'] = $pagination;
+                }
+                
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_user_traffic_rankings error: " . $e->getMessage(), 0);
                 $result = [
@@ -676,6 +734,162 @@ function v2raysocks_traffic_output($vars)
                     'status' => 'error',
                     'message' => 'Failed to get usage records: ' . $e->getMessage(),
                     'data' => []
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'async_enqueue':
+            // Enqueue a task for asynchronous processing
+            try {
+                $taskType = $_POST['task_type'] ?? $_GET['task_type'] ?? null;
+                $taskData = $_POST['task_data'] ?? $_GET['task_data'] ?? [];
+                $priority = intval($_POST['priority'] ?? $_GET['priority'] ?? 0);
+                $delay = intval($_POST['delay'] ?? $_GET['delay'] ?? 0);
+                
+                if (!$taskType) {
+                    throw new Exception('Task type is required');
+                }
+                
+                // Decode JSON task data if it's a string
+                if (is_string($taskData)) {
+                    $taskData = json_decode($taskData, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new Exception('Invalid JSON in task_data');
+                    }
+                }
+                
+                $processor = new AsyncProcessor();
+                $taskId = $processor->enqueue($taskType, $taskData, $priority, $delay);
+                
+                $result = [
+                    'status' => 'success',
+                    'task_id' => $taskId,
+                    'task_type' => $taskType,
+                    'priority' => $priority,
+                    'delay' => $delay
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis async_enqueue error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to enqueue task: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'async_status':
+            // Get task status
+            try {
+                $taskId = $_GET['task_id'] ?? null;
+                if (!$taskId) {
+                    throw new Exception('Task ID is required');
+                }
+                
+                $processor = new AsyncProcessor();
+                $status = $processor->getTaskStatus($taskId);
+                
+                $result = [
+                    'status' => 'success',
+                    'task_id' => $taskId,
+                    'task_status' => $status
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis async_status error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get task status: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'async_result':
+            // Get task result
+            try {
+                $taskId = $_GET['task_id'] ?? null;
+                if (!$taskId) {
+                    throw new Exception('Task ID is required');
+                }
+                
+                $processor = new AsyncProcessor();
+                $taskResult = $processor->getResult($taskId);
+                
+                if ($taskResult === null) {
+                    $result = [
+                        'status' => 'not_ready',
+                        'message' => 'Task result not available yet'
+                    ];
+                } else {
+                    $result = [
+                        'status' => 'success',
+                        'task_id' => $taskId,
+                        'result' => $taskResult
+                    ];
+                }
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis async_result error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get task result: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'async_process':
+            // Process tasks in batch (for use by background workers)
+            try {
+                $taskType = $_GET['task_type'] ?? 'traffic_data';
+                $batchSize = intval($_GET['batch_size'] ?? 10);
+                $timeout = intval($_GET['timeout'] ?? 300);
+                
+                $processor = new AsyncProcessor();
+                $results = $processor->processInBatches($taskType, $batchSize, $timeout);
+                
+                $result = [
+                    'status' => 'success',
+                    'task_type' => $taskType,
+                    'batch_size' => $batchSize,
+                    'processing_results' => $results
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis async_process error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to process tasks: ' . $e->getMessage()
+                ];
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode($result, JSON_PRETTY_PRINT);
+            die();
+        case 'async_aggregate':
+            // Get aggregated results
+            try {
+                $aggregateId = $_GET['aggregate_id'] ?? null;
+                if (!$aggregateId) {
+                    throw new Exception('Aggregate ID is required');
+                }
+                
+                $processor = new AsyncProcessor();
+                $aggregatedResults = $processor->aggregateResults($aggregateId);
+                
+                $result = [
+                    'status' => 'success',
+                    'aggregate_id' => $aggregateId,
+                    'results' => $aggregatedResults
+                ];
+            } catch (\Exception $e) {
+                logActivity("V2RaySocks Traffic Analysis async_aggregate error: " . $e->getMessage(), 0);
+                $result = [
+                    'status' => 'error',
+                    'message' => 'Failed to get aggregated results: ' . $e->getMessage()
                 ];
             }
             
