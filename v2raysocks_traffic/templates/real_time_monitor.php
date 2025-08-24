@@ -437,45 +437,53 @@ $realTimeMonitorHtml = '
             });
         }
         
-        function loadRealTimeStats() {
-            $.ajax({
-                url: "addonmodules.php?module=v2raysocks_traffic&action=get_live_stats",
-                type: "GET",
-                dataType: "json",
-                success: function(response) {
-                    if (response.status === "success") {
-                        const data = response.data;
-                        $("#rt-total-users").text(data.total_users || 0);
-                        
-                        // Handle multiple active user timeframes
-                        if (data.active_users) {
-                            $("#rt-active-users-5min").text(data.active_users["5min"] || 0);
-                            $("#rt-active-users-1hour").text(data.active_users["1hour"] || 0);
-                            $("#rt-active-users-4hour").text(data.active_users["4hour"] || 0);
-                            $("#rt-active-users-24h").text(data.active_users["24hours"] || 0);
-                        }
-                        
-                        $("#rt-online-nodes").text((data.online_nodes || 0) + "/" + (data.total_nodes || 0));
-                        
-                        const totalTraffic = (data.today_upload || 0) + (data.today_download || 0);
-                        $("#rt-current-traffic").text(formatBytes(totalTraffic));
-                        
-                        // Handle traffic periods
-                        if (data.traffic_periods) {
-                            $("#rt-5min-traffic").text(formatBytes(data.traffic_periods["5min"]?.total || 0));
-                            $("#rt-hourly-traffic").text(formatBytes(data.traffic_periods["1hour"]?.total || 0));
-                            $("#rt-4hour-traffic").text(formatBytes(data.traffic_periods["4hour"]?.total || 0));
-                        }
-                        
-                        $("#last-update").text(new Date().toLocaleTimeString());
-                        $(".status-indicator").removeClass("status-offline").addClass("status-online");
-                    }
-                },
-                error: function() {
-                    $(".status-indicator").removeClass("status-online").addClass("status-offline");
-                    $("#last-update").text("Error");
+        async function loadRealTimeStats() {
+            try {
+                const response = await fetch("addonmodules.php?module=v2raysocks_traffic&action=get_live_stats", {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-            });
+                
+                const data = await response.json();
+                
+                if (data.status === "success") {
+                    const stats = data.data;
+                    $("#rt-total-users").text(stats.total_users || 0);
+                    
+                    // Handle multiple active user timeframes
+                    if (stats.active_users) {
+                        $("#rt-active-users-5min").text(stats.active_users["5min"] || 0);
+                        $("#rt-active-users-1hour").text(stats.active_users["1hour"] || 0);
+                        $("#rt-active-users-4hour").text(stats.active_users["4hour"] || 0);
+                        $("#rt-active-users-24h").text(stats.active_users["24hours"] || 0);
+                    }
+                    
+                    $("#rt-online-nodes").text((stats.online_nodes || 0) + "/" + (stats.total_nodes || 0));
+                    
+                    const totalTraffic = (stats.today_upload || 0) + (stats.today_download || 0);
+                    $("#rt-current-traffic").text(formatBytes(totalTraffic));
+                    
+                    // Handle traffic periods
+                    if (stats.traffic_periods) {
+                        $("#rt-5min-traffic").text(formatBytes(stats.traffic_periods["5min"]?.total || 0));
+                        $("#rt-hourly-traffic").text(formatBytes(stats.traffic_periods["1hour"]?.total || 0));
+                        $("#rt-4hour-traffic").text(formatBytes(stats.traffic_periods["4hour"]?.total || 0));
+                    }
+                    
+                    $("#last-update").text(new Date().toLocaleTimeString());
+                    $(".status-indicator").removeClass("status-offline").addClass("status-online");
+                }
+            } catch (error) {
+                console.error("Error loading real-time stats:", error);
+                $(".status-indicator").removeClass("status-online").addClass("status-offline");
+                $("#last-update").text("Error");
+            }
         }
         
         function loadCustomTimeRangeData() {
@@ -1011,35 +1019,40 @@ $realTimeMonitorHtml = '
                 $("#export-modal").hide();
             });
             
-            // Today traffic pagination event handlers
+            // Today traffic pagination event handlers - updated for cursor pagination
             $("#today-records-per-page").on("change", function() {
                 todayRecordsPerPage = parseInt($(this).val());
-                todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                todayCurrentCursor = null;
+                previousTodayCursors = [];
+                loadTodayTrafficHistory();
             });
             
             $("#today-first-page").on("click", function() {
-                todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                todayCurrentCursor = null;
+                previousTodayCursors = [];
+                loadTodayTrafficHistory();
             });
             
             $("#today-prev-page").on("click", function() {
-                if (todayCurrentPage > 1) {
-                    todayCurrentPage--;
-                    updateTodayPaginatedTable();
+                if (previousTodayCursors.length > 0) {
+                    const prevCursor = previousTodayCursors[previousTodayCursors.length - 1];
+                    loadTodayTrafficHistory('prev', prevCursor);
                 }
             });
             
             $("#today-next-page").on("click", function() {
-                if (todayCurrentPage < todayTotalPages) {
-                    todayCurrentPage++;
-                    updateTodayPaginatedTable();
+                if (todayHasMore && todayCurrentCursor) {
+                    loadTodayTrafficHistory('next', todayCurrentCursor);
                 }
             });
             
             $("#today-last-page").on("click", function() {
-                todayCurrentPage = todayTotalPages;
-                updateTodayPaginatedTable();
+                // For cursor pagination, "last page" is not easily achievable
+                // So we'll disable this or implement a different approach
+                // For now, just go to next page if available
+                if (todayHasMore && todayCurrentCursor) {
+                    loadTodayTrafficHistory('next', todayCurrentCursor);
+                }
             });
         });
         
@@ -1163,22 +1176,30 @@ $realTimeMonitorHtml = '
             else return "EB";
         }
         
-        // Today Traffic History Table functionality
-        let allTodayData = [];
-        let todayCurrentPage = 1;
+        // Today Traffic History Table functionality with cursor pagination
+        let todayCurrentCursor = null;
+        let previousTodayCursors = [];
+        let todayHasMore = false;
         let todayRecordsPerPage = 50;
-        let todayTotalPages = 1;
         
-        function loadTodayTrafficHistory() {
+        async function loadTodayTrafficHistory(direction = 'next', cursor = null) {
             const serviceId = $("#today-service-id").val().trim();
             const timeRange = $("#today-time-range").val();
             
             let params = {
-                time_range: timeRange
+                time_range: timeRange,
+                use_pagination: true,
+                limit: todayRecordsPerPage
             };
             
             if (serviceId) {
                 params.service_id = serviceId;
+            }
+            
+            // Add cursor pagination parameters
+            if (cursor) {
+                params.cursor = cursor;
+                params.direction = direction;
             }
             
             // Handle custom time option by adding timestamp parameters
@@ -1204,41 +1225,118 @@ $realTimeMonitorHtml = '
                 }
             }
             
-            $.ajax({
-                url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
-                type: "GET",
-                data: params,
-                dataType: "json",
-                timeout: 15000,
-                success: function(response) {
-                    if (response.status === "success") {
-                        allTodayData = response.data || [];
-                        updateTodayPaginatedTable();
+            try {
+                const url = new URL("addonmodules.php", window.location.origin);
+                url.searchParams.set('module', 'v2raysocks_traffic');
+                url.searchParams.set('action', 'get_traffic_data');
+                
+                // Add all params to URL
+                for (const [key, value] of Object.entries(params)) {
+                    url.searchParams.set(key, value);
+                }
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === "success") {
+                    // Handle cursor pagination response
+                    if (data.pagination) {
+                        todayCurrentCursor = data.next_cursor;
+                        todayHasMore = data.has_more;
+                        
+                        // Update cursor history for prev navigation
+                        if (direction === 'next' && cursor === null) {
+                            // Reset on new search
+                            previousTodayCursors = [];
+                        } else if (direction === 'next' && cursor) {
+                            previousTodayCursors.push(cursor);
+                        } else if (direction === 'prev' && previousTodayCursors.length > 0) {
+                            previousTodayCursors.pop();
+                        }
+                        
+                        updateTodayPaginatedTableCursor(data.data || []);
                     } else {
-                        $("#today-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
-                        $("#today-pagination-controls").hide();
+                        // Fallback for non-paginated response
+                        updateTodayPaginatedTableLegacy(data.data || []);
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Today traffic history load error:", error);
-                    $("#today-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error loading today traffic data</td></tr>");
+                } else {
+                    $("#today-traffic-data").html(`<tr><td colspan="11" class="loading">Error: ${data.message || "Unknown error"}</td></tr>`);
                     $("#today-pagination-controls").hide();
                 }
-            });
+            } catch (error) {
+                console.error("Today traffic history load error:", error);
+                let errorMsg = "Error loading today traffic data";
+                if (error.name === 'TimeoutError') {
+                    errorMsg = "Request timed out - please try again";
+                }
+                $("#today-traffic-data").html(`<tr><td colspan="11" class="loading">${errorMsg}</td></tr>`);
+                $("#today-pagination-controls").hide();
+            }
         }
         
-        function updateTodayPaginatedTable() {
+        // Cursor-based pagination function for today traffic
+        function updateTodayPaginatedTableCursor(data) {
             let html = "";
             
-            if (allTodayData.length === 0) {
-                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
+            if (!data || data.length === 0) {
+                html = "<tr><td colspan=\"11\" class=\"no-data\">No traffic data found</td></tr>";
+                $("#today-pagination-controls").hide();
+            } else {
+                // Generate table rows for current page
+                data.forEach(function(row) {
+                    html += `<tr>
+                        <td>${formatDateTime(row.t)}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination controls for cursor pagination
+                $("#today-pagination-info").text(`' . v2raysocks_traffic_lang('showing') . ' ${data.length} ' . v2raysocks_traffic_lang('records') . '`);
+                
+                // Enable/disable pagination buttons
+                $("#today-first-page, #today-prev-page").prop("disabled", previousTodayCursors.length === 0);
+                $("#today-next-page, #today-last-page").prop("disabled", !todayHasMore);
+                
+                $("#today-pagination-controls").show();
+            }
+            
+            $("#today-traffic-data").html(html);
+        }
+        
+        // Legacy pagination function for backward compatibility
+        function updateTodayPaginatedTableLegacy(allData) {
+            let html = "";
+            
+            if (allData.length === 0) {
+                html = "<tr><td colspan=\"11\" class=\"no-data\">No traffic data found for today</td></tr>";
                 $("#today-pagination-controls").hide();
             } else {
                 // Calculate pagination
-                todayTotalPages = Math.ceil(allTodayData.length / todayRecordsPerPage);
+                const todayTotalPages = Math.ceil(allData.length / todayRecordsPerPage);
+                const todayCurrentPage = 1; // Reset to first page for new search
                 const startIndex = (todayCurrentPage - 1) * todayRecordsPerPage;
-                const endIndex = Math.min(startIndex + todayRecordsPerPage, allTodayData.length);
-                const pageData = allTodayData.slice(startIndex, endIndex);
+                const endIndex = Math.min(startIndex + todayRecordsPerPage, allData.length);
+                const pageData = allData.slice(startIndex, endIndex);
                 
                 // Generate table rows for current page
                 pageData.forEach(function(row) {
@@ -1258,8 +1356,7 @@ $realTimeMonitorHtml = '
                 });
                 
                 // Update pagination controls
-                $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTodayData.length));
-                $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", todayCurrentPage).replace("{total}", todayTotalPages));
+                $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allData.length));
                 
                 // Enable/disable pagination buttons
                 $("#today-first-page, #today-prev-page").prop("disabled", todayCurrentPage === 1);
@@ -1271,12 +1368,19 @@ $realTimeMonitorHtml = '
             $("#today-traffic-data").html(html);
         }
         
-        // Global refresh function that updates all data on the page
-        function refreshAllData() {
-            loadRealTimeStats();
-            loadCustomTimeRangeData();
-            loadTodayTrafficData();
-            loadTodayTrafficHistory(); // Add today traffic history refresh
+        // Global refresh function that updates all data on the page concurrently
+        async function refreshAllData() {
+            try {
+                // Execute all refresh operations concurrently for better performance
+                await Promise.all([
+                    loadRealTimeStats(),
+                    loadCustomTimeRangeData(),
+                    loadTodayTrafficData(),
+                    loadTodayTrafficHistory() // Add today traffic history refresh
+                ]);
+            } catch (error) {
+                console.error("Error refreshing data:", error);
+            }
         }
     </script>
     
