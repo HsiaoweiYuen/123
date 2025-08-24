@@ -518,15 +518,11 @@ $serviceSearchHtml = '
     <script>
         let serviceChart;
         let currentSearchParams = {};
-        let allServiceData = []; // Store all service data for pagination
-        let serviceCurrentPage = 1;
-        let serviceRecordsPerPage = 50;
-        let serviceTotalPages = 1;
-        
         // Cursor pagination variables for service search
         let serviceCurrentCursor = null;
         let previousServiceCursors = [];
         let serviceHasMore = false;
+        let serviceRecordsPerPage = 50;
         
         let moduleConfig = {
             chart_unit: "auto"
@@ -728,55 +724,88 @@ $serviceSearchHtml = '
             });
             
             // Service search pagination event handlers
+            // Service pagination event handlers - updated for cursor pagination
             $("#service-records-per-page").on("change", function() {
                 serviceRecordsPerPage = parseInt($(this).val());
-                serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentCursor = null;
+                previousServiceCursors = [];
+                if (Object.keys(currentSearchParams).length > 0) {
+                    searchServiceTraffic();
+                }
             });
             
             $("#service-first-page").on("click", function() {
-                serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentCursor = null;
+                previousServiceCursors = [];
+                searchServiceTraffic();
             });
             
             $("#service-prev-page").on("click", function() {
-                if (serviceCurrentPage > 1) {
-                    serviceCurrentPage--;
-                    updateServicePaginatedTable();
+                if (previousServiceCursors.length > 0) {
+                    const prevCursor = previousServiceCursors[previousServiceCursors.length - 1];
+                    searchServiceTraffic('prev', prevCursor);
                 }
             });
             
             $("#service-next-page").on("click", function() {
-                if (serviceCurrentPage < serviceTotalPages) {
-                    serviceCurrentPage++;
-                    updateServicePaginatedTable();
+                if (serviceHasMore && serviceCurrentCursor) {
+                    searchServiceTraffic('next', serviceCurrentCursor);
                 }
             });
             
             $("#service-last-page").on("click", function() {
-                serviceCurrentPage = serviceTotalPages;
-                updateServicePaginatedTable();
+                // For cursor pagination, "last page" is not easily achievable
+                // So we'll disable this or implement a different approach
+                // For now, just go to next page if available
+                if (serviceHasMore && serviceCurrentCursor) {
+                    searchServiceTraffic('next', serviceCurrentCursor);
+                }
             });
         });
         
-        function searchServiceTraffic() {
-            const searchType = $("#search_type").val();
-            const searchValue = $("#search_value").val().trim();
-            const timeRange = $("#time_range").val();
-            const startDate = $("#start_date").val();
-            const endDate = $("#end_date").val();
-            const startTime = $("#start_time").val();
-            const endTime = $("#end_time").val();
+        async function searchServiceTraffic(direction = 'next', cursor = null) {
+            // If this is a pagination request, use cached search params
+            let searchType, searchValue, timeRange, startDate, endDate, startTime, endTime;
             
-            if (!searchValue) {
-                alert("Please enter a search value");
-                return;
+            if (direction !== 'next' || cursor) {
+                // Use cached parameters for pagination
+                searchType = currentSearchParams.search_type;
+                searchValue = currentSearchParams.search_value;
+                timeRange = currentSearchParams.time_range;
+                startDate = currentSearchParams.start_date;
+                endDate = currentSearchParams.end_date;
+                startTime = currentSearchParams.start_time;
+                endTime = currentSearchParams.end_time;
+            } else {
+                // Get fresh parameters from form
+                searchType = $("#search_type").val();
+                searchValue = $("#search_value").val().trim();
+                timeRange = $("#time_range").val();
+                startDate = $("#start_date").val();
+                endDate = $("#end_date").val();
+                startTime = $("#start_time").val();
+                endTime = $("#end_time").val();
+                
+                if (!searchValue) {
+                    alert("Please enter a search value");
+                    return;
+                }
             }
             
             // Build request parameters based on search type
             let requestData = {
-                time_range: timeRange
+                time_range: timeRange,
+                use_pagination: true,
+                limit: serviceRecordsPerPage,
+                search_type: searchType,
+                search_value: searchValue
             };
+            
+            // Add cursor pagination parameters
+            if (cursor) {
+                requestData.cursor = cursor;
+                requestData.direction = direction;
+            }
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
@@ -814,96 +843,191 @@ $serviceSearchHtml = '
                     break;
             }
             
-            currentSearchParams = requestData;
+            // Cache parameters for pagination
+            if (direction === 'next' && !cursor) {
+                currentSearchParams = {...requestData};
+            }
             
             $("#search-results").show();
-            $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Searching traffic data...</td></tr>");
+            $("#service-traffic-data").html("<tr><td colspan=\"11\" class=\"loading\">Searching traffic data...</td></tr>");
             
-            // Try advanced search first for service_id
-            if (searchType === "service_id") {
-                $.ajax({
-                    url: "addonmodules.php?module=v2raysocks_traffic&action=search_service_advanced",
-                    type: "GET",
-                    data: requestData,
-                    dataType: "json",
-                    timeout: 15000,
-                    success: function(response) {
-                        console.log("Advanced service search response:", response);
-                        if (response.status === "success") {
-                            if (response.data && response.data.length > 0) {
-                                updateServiceTrafficTable(response.data);
-                                updateServiceTrafficChart(response.data);
-                            } else {
-                                // Try fallback to regular search
-                                searchServiceTrafficFallback(requestData);
-                            }
-                        } else {
-                            console.error("Advanced service search error:", response);
-                            // Try fallback to regular search
-                            searchServiceTrafficFallback(requestData);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("AJAX error in advanced service search:", status, error);
-                        // Try fallback to regular search
-                        searchServiceTrafficFallback(requestData);
+            try {
+                // Try advanced search first for service_id
+                if (searchType === "service_id") {
+                    const response = await searchServiceAdvanced(requestData);
+                    if (response && response.status === "success" && response.data && response.data.length > 0) {
+                        handleServiceSearchResponse(response, direction, cursor);
+                        await updateServiceTrafficChart(response.data);
+                        return;
                     }
-                });
-            } else {
-                // For other search types, use regular search
-                searchServiceTrafficFallback(requestData);
+                }
+                
+                // Fallback to regular search
+                const response = await searchServiceTrafficFallback(requestData);
+                if (response) {
+                    handleServiceSearchResponse(response, direction, cursor);
+                    await updateServiceTrafficChart(response.data || []);
+                }
+            } catch (error) {
+                console.error("Error in service search:", error);
+                $("#service-traffic-data").html(`<tr><td colspan="11" class="loading">Error: ${error.message || "Search failed"}</td></tr>`);
             }
         }
         
-        function searchServiceTrafficFallback(formData) {
-            console.log("Trying fallback search...");
-            $.ajax({
-                url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
-                type: "GET",
-                data: formData,
-                dataType: "json",
-                timeout: 15000,
-                success: function(response) {
-                    console.log("Fallback service search response:", response);
-                    if (response.status === "success") {
-                        updateServiceTrafficTable(response.data);
-                        updateServiceTrafficChart(response.data);
-                    } else {
-                        console.error("Fallback service search error:", response);
-                        $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
+        async function searchServiceAdvanced(requestData) {
+            try {
+                const url = new URL("addonmodules.php", window.location.origin);
+                url.searchParams.set('module', 'v2raysocks_traffic');
+                url.searchParams.set('action', 'search_service_advanced');
+                
+                // Add all params to URL
+                for (const [key, value] of Object.entries(requestData)) {
+                    if (value !== undefined && value !== null && value !== '') {
+                        url.searchParams.set(key, value);
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error("AJAX error in fallback service search:", status, error);
-                    let errorMsg = "Error loading traffic data";
-                    if (status === "timeout") {
-                        errorMsg = "Search timed out - please try again";
-                    } else if (xhr.responseText) {
-                        errorMsg = "Server error: " + xhr.status;
-                    }
-                    $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">" + errorMsg + "</td></tr>");
                 }
-            });
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Advanced service search error:", error);
+                return null;
+            }
         }
         
-        function updateServiceTrafficTable(data) {
-            // Store all data for pagination
-            allServiceData = data;
-            updateServicePaginatedTable();
+        async function searchServiceTrafficFallback(formData) {
+            console.log("Trying fallback search...");
+            try {
+                const url = new URL("addonmodules.php", window.location.origin);
+                url.searchParams.set('module', 'v2raysocks_traffic');
+                url.searchParams.set('action', 'get_traffic_data');
+                
+                // Add all params to URL
+                for (const [key, value] of Object.entries(formData)) {
+                    if (value !== undefined && value !== null && value !== '') {
+                        url.searchParams.set(key, value);
+                    }
+                }
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log("Fallback service search response:", data);
+                return data;
+            } catch (error) {
+                console.error("Error in fallback service search:", error);
+                let errorMsg = "Error loading traffic data";
+                if (error.name === 'TimeoutError') {
+                    errorMsg = "Search timed out - please try again";
+                }
+                $("#service-traffic-data").html(`<tr><td colspan="11" class="loading">${errorMsg}</td></tr>`);
+                throw error;
+            }
         }
         
-        function updateServicePaginatedTable() {
+        function handleServiceSearchResponse(response, direction, cursor) {
+            if (response.status === "success") {
+                // Handle cursor pagination response
+                if (response.pagination) {
+                    serviceCurrentCursor = response.next_cursor;
+                    serviceHasMore = response.has_more;
+                    
+                    // Update cursor history for prev navigation
+                    if (direction === 'next' && cursor === null) {
+                        // Reset on new search
+                        previousServiceCursors = [];
+                    } else if (direction === 'next' && cursor) {
+                        previousServiceCursors.push(cursor);
+                    } else if (direction === 'prev' && previousServiceCursors.length > 0) {
+                        previousServiceCursors.pop();
+                    }
+                    
+                    updateServiceTrafficTableCursor(response.data || []);
+                } else {
+                    // Fallback for non-paginated response
+                    updateServiceTrafficTableLegacy(response.data || []);
+                }
+            } else {
+                console.error("Service search error:", response);
+                $("#service-traffic-data").html(`<tr><td colspan="11" class="loading">Error: ${response.message || "Unknown error"}</td></tr>`);
+            }
+        }
+        
+        // Cursor-based pagination function for service data
+        function updateServiceTrafficTableCursor(data) {
             let html = "";
             
-            if (allServiceData.length === 0) {
-                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for this search</td></tr>";
+            if (!data || data.length === 0) {
+                html = "<tr><td colspan=\"11\" class=\"no-data\">No traffic data found for this search</td></tr>";
+                $("#service-pagination-controls").hide();
+            } else {
+                // Generate table rows for current page
+                data.forEach(function(row) {
+                    // use actual data timestamp for consistent local timezone formatting
+                    const displayTime = formatDateTime(row.t);
+                    html += `<tr>
+                        <td>${displayTime}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination controls for cursor pagination
+                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing') . ' ${data.length} ' . v2raysocks_traffic_lang('records') . '`);
+                
+                // Enable/disable pagination buttons
+                $("#service-first-page, #service-prev-page").prop("disabled", previousServiceCursors.length === 0);
+                $("#service-next-page, #service-last-page").prop("disabled", !serviceHasMore);
+                
+                $("#service-pagination-controls").show();
+            }
+            
+            $("#service-traffic-data").html(html);
+        }
+        
+        // Legacy pagination function for backward compatibility
+        function updateServiceTrafficTableLegacy(data) {
+            let html = "";
+            
+            if (data.length === 0) {
+                html = "<tr><td colspan=\"11\" class=\"no-data\">No traffic data found for this search</td></tr>";
                 $("#service-pagination-controls").hide();
             } else {
                 // Calculate pagination
-                serviceTotalPages = Math.ceil(allServiceData.length / serviceRecordsPerPage);
+                const serviceTotalPages = Math.ceil(data.length / serviceRecordsPerPage);
+                const serviceCurrentPage = 1; // Reset to first page for new search
                 const startIndex = (serviceCurrentPage - 1) * serviceRecordsPerPage;
-                const endIndex = Math.min(startIndex + serviceRecordsPerPage, allServiceData.length);
-                const pageData = allServiceData.slice(startIndex, endIndex);
+                const endIndex = Math.min(startIndex + serviceRecordsPerPage, data.length);
+                const pageData = data.slice(startIndex, endIndex);
                 
                 // Generate table rows for current page
                 pageData.forEach(function(row) {
@@ -925,8 +1049,7 @@ $serviceSearchHtml = '
                 });
                 
                 // Update pagination controls
-                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . '`.replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allServiceData.length));
-                $("#service-page-info").text(`' . v2raysocks_traffic_lang('page_info') . '`.replace("{current}", serviceCurrentPage).replace("{total}", serviceTotalPages));
+                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . '`.replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", data.length));
                 
                 // Enable/disable pagination buttons
                 $("#service-first-page, #service-prev-page").prop("disabled", serviceCurrentPage === 1);
