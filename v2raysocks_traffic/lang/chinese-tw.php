@@ -149,6 +149,8 @@ $_LANG = [
     // Pagination
     'showing_records' => '顯示第 {start} 到 {end} 條記錄，共 {total} 條',
     'page_info' => '第 {current} 頁，共 {total} 頁',
+    'last_page_not_available_cursor' => '遊標分頁模式下無法跳轉到最後一頁，請使用上一頁/下一頁按鈕。',
+    'unknown' => '未知',
     'first_page' => '首頁',
     'previous_page' => '上一頁',
     'next_page' => '下一頁',

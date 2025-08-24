@@ -149,6 +149,8 @@ $_LANG = [
     // Pagination
     'showing_records' => '显示第 {start} 到 {end} 条记录，共 {total} 条',
     'page_info' => '第 {current} 页，共 {total} 页',
+    'last_page_not_available_cursor' => '游标分页模式下无法跳转到最后一页，请使用上一页/下一页按钮。',
+    'unknown' => '未知',
     'first_page' => '首页',
     'previous_page' => '上一页',
     'next_page' => '下一页',

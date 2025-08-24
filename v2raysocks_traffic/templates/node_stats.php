@@ -1322,7 +1322,7 @@ $nodeStatsHtml = '
                 });
         }
         
-        function loadNodeUsageRecords(direction = 'next', cursor = null) {
+        function loadNodeUsageRecords(direction = "next", cursor = null) {
             // Get search parameters from search controls only
             const searchType = document.getElementById("node-search-type").value;
             const searchValue = document.getElementById("node-search-value").value.trim();
@@ -1378,12 +1378,12 @@ $nodeStatsHtml = '
                             nodeUsageHasMore = data.has_more;
                             
                             // Update cursor history for prev navigation
-                            if (direction === 'next' && cursor === null) {
+                            if (direction === "next" && cursor === null) {
                                 // Reset on new search
                                 previousNodeUsageCursors = [];
-                            } else if (direction === 'next' && cursor) {
+                            } else if (direction === "next" && cursor) {
                                 previousNodeUsageCursors.push(cursor);
-                            } else if (direction === 'prev' && previousNodeUsageCursors.length > 0) {
+                            } else if (direction === "prev" && previousNodeUsageCursors.length > 0) {
                                 previousNodeUsageCursors.pop();
                             }
                             
@@ -2104,24 +2104,26 @@ $nodeStatsHtml = '
                 if (previousNodeUsageCursors.length > 0) {
                     currentNodeUsagePage--;
                     const prevCursor = previousNodeUsageCursors[previousNodeUsageCursors.length - 1];
-                    loadNodeUsageRecords('prev', prevCursor);
+                    loadNodeUsageRecords("prev", prevCursor);
                 }
             });
             
             $("#node-next-page").on("click", function() {
                 if (nodeUsageHasMore && currentNodeUsageCursor) {
                     currentNodeUsagePage++;
-                    loadNodeUsageRecords('next', currentNodeUsageCursor);
+                    loadNodeUsageRecords("next", currentNodeUsageCursor);
                 }
             });
             
             $("#node-last-page").on("click", function() {
-                // For cursor pagination, "last page" is not easily achievable
-                // So we'll disable this or implement a different approach
+                // For cursor pagination, last page is not easily achievable
+                // So we will disable this or implement a different approach
                 // For now, just go to next page if available
                 if (nodeUsageHasMore && currentNodeUsageCursor) {
                     currentNodeUsagePage++;
-                    loadNodeUsageRecords('next', currentNodeUsageCursor);
+                    loadNodeUsageRecords("next", currentNodeUsageCursor);
+                }
+                }
                 }
             });
             

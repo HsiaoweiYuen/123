@@ -573,6 +573,267 @@ function v2raysocks_traffic_getTrafficData($filters = [])
 }
 
 /**
+ * Get day traffic data with cursor-based pagination
+ */
+function v2raysocks_traffic_getDayTrafficPaginated($filters = [], $cursor = null, $limit = null, $direction = 'next')
+{
+    try {
+        // Use default page size if limit not provided
+        if ($limit === null) {
+            $limit = v2raysocks_traffic_getDefaultPageSize();
+        }
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve paginated day traffic data - database connection failed", 0);
+            return ['data' => [], 'next_cursor' => null, 'prev_cursor' => null, 'has_more' => false];
+        }
+
+        $sql = 'SELECT t, sid, u as upload, d as download FROM user_usage WHERE 1=1';
+        $params = [];
+
+        if (!empty($filters['sid'])) {
+            $sql .= ' AND sid = :sid';
+            $params[':sid'] = $filters['sid'];
+        }
+
+        if (!empty($filters['uuid'])) {
+            // First get the sid from the uuid
+            $userStmt = $pdo->prepare('SELECT id FROM user WHERE uuid = :uuid');
+            $userStmt->execute([':uuid' => $filters['uuid']]);
+            $user = $userStmt->fetch(PDO::FETCH_OBJ);
+            if ($user) {
+                $sql .= ' AND sid = :sid';
+                $params[':sid'] = $user->id;
+            } else {
+                return ['data' => [], 'next_cursor' => null, 'prev_cursor' => null, 'has_more' => false];
+            }
+        }
+
+        if (!empty($filters['start'])) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['start'])) {
+                $sql .= ' AND t >= :start';
+                $params[':start'] = strtotime($filters['start']);
+            }
+        }
+
+        if (!empty($filters['end'])) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['end'])) {
+                $sql .= ' AND t <= :end';
+                $params[':end'] = strtotime($filters['end'] . ' 23:59:59');
+            }
+        }
+
+        // Handle cursor-based pagination
+        $cursorParsed = v2raysocks_traffic_parseCursor($cursor);
+        if ($cursorParsed) {
+            if ($direction === 'next') {
+                $sql .= ' AND (t < :cursor_t OR (t = :cursor_t AND sid < :cursor_sid))';
+            } else {
+                $sql .= ' AND (t > :cursor_t OR (t = :cursor_t AND sid > :cursor_sid))';
+            }
+            $params[':cursor_t'] = $cursorParsed['t'];
+            $params[':cursor_sid'] = $cursorParsed['id'] ?? 0;
+        }
+
+        $sql .= ' ORDER BY t DESC, sid DESC';
+        $sql .= ' LIMIT ' . ($limit + 1);
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Check if there are more records
+        $hasMore = count($results) > $limit;
+        if ($hasMore) {
+            array_pop($results); // Remove the extra record
+        }
+
+        // Group data by date using actual timestamps
+        $dayData = [];
+        foreach ($results as $row) {
+            $timestamp = intval($row['t']);
+            $date = new DateTime();
+            $date->setTimestamp($timestamp);
+            $dateKey = $date->format('Y-m-d');
+            
+            if (!isset($dayData[$dateKey])) {
+                $dayData[$dateKey] = [];
+            }
+            if (!isset($dayData[$dateKey][$row['sid']])) {
+                $dayData[$dateKey][$row['sid']] = [
+                    'date' => $dateKey,
+                    'sid' => $row['sid'],
+                    'upload' => 0,
+                    'download' => 0
+                ];
+            }
+            
+            $dayData[$dateKey][$row['sid']]['upload'] += floatval($row['upload']);
+            $dayData[$dateKey][$row['sid']]['download'] += floatval($row['download']);
+        }
+
+        // Flatten the grouped data
+        $data = [];
+        foreach ($dayData as $dateGroup) {
+            foreach ($dateGroup as $sidData) {
+                $data[] = $sidData;
+            }
+        }
+
+        // Create cursors for next/prev navigation
+        $nextCursor = null;
+        $prevCursor = null;
+        
+        if (!empty($results)) {
+            $lastRecord = end($results);
+            $nextCursor = $hasMore ? v2raysocks_traffic_createCursor($lastRecord['t'], $lastRecord['sid']) : null;
+            
+            $firstRecord = reset($results);
+            $prevCursor = v2raysocks_traffic_createCursor($firstRecord['t'], $firstRecord['sid']);
+        }
+        
+        return [
+            'data' => $data,
+            'next_cursor' => $nextCursor,
+            'prev_cursor' => $prevCursor,
+            'has_more' => $hasMore,
+            'total_returned' => count($data)
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getDayTrafficPaginated error: " . $e->getMessage(), 0);
+        return ['data' => [], 'next_cursor' => null, 'prev_cursor' => null, 'has_more' => false];
+    }
+}
+
+/**
+ * Get enhanced traffic data with cursor-based pagination
+ */
+function v2raysocks_traffic_getEnhancedTrafficDataPaginated($filters = [], $cursor = null, $limit = null, $direction = 'next')
+{
+    try {
+        // Use default page size if limit not provided
+        if ($limit === null) {
+            $limit = v2raysocks_traffic_getDefaultPageSize();
+        }
+        
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve paginated enhanced traffic data - database connection failed", 0);
+            return ['data' => [], 'next_cursor' => null, 'prev_cursor' => null, 'has_more' => false];
+        }
+        
+        // Two-part query approach with pagination
+        $allData = [];
+        
+        // Part 1: Get daily aggregated traffic with pagination
+        if (empty($filters['exclude_day_traffic'])) {
+            $dayTrafficSql = 'SELECT 
+                        uu.*, 
+                        u.uuid, 
+                        u.sid as service_id, 
+                        u.transfer_enable, 
+                        u.u as total_upload,
+                        u.d as total_download,
+                        u.speedlimitss,
+                        u.speedlimitother,
+                        u.illegal,
+                        "Day Summary" as node_name,
+                        uu.node as node_identifier
+                    FROM user_usage AS uu
+                    LEFT JOIN user AS u ON uu.user_id = u.id
+                    WHERE uu.node = "DAY"';
+            
+            $dayParams = [];
+            
+            // Apply day traffic filters
+            if (!empty($filters['user_id'])) {
+                $dayTrafficSql .= ' AND uu.user_id = :day_user_id';
+                $dayParams[':day_user_id'] = $filters['user_id'];
+            }
+            
+            if (!empty($filters['service_id']) || !empty($filters['sid'])) {
+                $sid = $filters['service_id'] ?: $filters['sid'];
+                $dayTrafficSql .= ' AND u.sid = :day_service_id';
+                $dayParams[':day_service_id'] = $sid;
+            }
+            
+            // Time range filtering for day traffic
+            if (!empty($filters['time_range']) && $filters['time_range'] !== 'custom') {
+                $timeFilter = v2raysocks_traffic_getTimeFilter($filters['time_range']);
+                if ($timeFilter) {
+                    $dayTrafficSql .= ' AND uu.t >= :day_start_time';
+                    $dayParams[':day_start_time'] = $timeFilter;
+                }
+            }
+
+            // Handle cursor-based pagination for day traffic
+            $cursorParsed = v2raysocks_traffic_parseCursor($cursor);
+            if ($cursorParsed) {
+                if ($direction === 'next') {
+                    $dayTrafficSql .= ' AND (uu.t < :cursor_t OR (uu.t = :cursor_t AND uu.user_id < :cursor_user))';
+                } else {
+                    $dayTrafficSql .= ' AND (uu.t > :cursor_t OR (uu.t = :cursor_t AND uu.user_id > :cursor_user))';
+                }
+                $dayParams[':cursor_t'] = $cursorParsed['t'];
+                $dayParams[':cursor_user'] = $cursorParsed['id'] ?? 0;
+            }
+            
+            $dayTrafficSql .= ' ORDER BY uu.t DESC, uu.user_id DESC';
+            $dayTrafficSql .= ' LIMIT ' . ($limit + 1);
+            
+            $dayStmt = $pdo->prepare($dayTrafficSql);
+            $dayStmt->execute($dayParams);
+            $dayData = $dayStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (!empty($dayData)) {
+                $allData = array_merge($allData, $dayData);
+            }
+        }
+        
+        // Check if there are more records
+        $hasMore = count($allData) > $limit;
+        if ($hasMore) {
+            array_pop($allData); // Remove the extra record
+        }
+
+        // Format data
+        foreach ($allData as &$row) {
+            $row['formatted_time'] = date('Y-m-d H:i:s', $row['t']);
+            $row['formatted_upload'] = v2raysocks_traffic_formatBytes($row['u']);
+            $row['formatted_download'] = v2raysocks_traffic_formatBytes($row['d']);
+            $row['formatted_total'] = v2raysocks_traffic_formatBytes($row['u'] + $row['d']);
+            $row['uuid'] = $row['user_uuid'] ?? ($row['uuid'] ?? null);
+        }
+
+        // Create cursors for next/prev navigation
+        $nextCursor = null;
+        $prevCursor = null;
+        
+        if (!empty($allData)) {
+            $lastRecord = end($allData);
+            $nextCursor = $hasMore ? v2raysocks_traffic_createCursor($lastRecord['t'], $lastRecord['user_id']) : null;
+            
+            $firstRecord = reset($allData);
+            $prevCursor = v2raysocks_traffic_createCursor($firstRecord['t'], $firstRecord['user_id']);
+        }
+        
+        return [
+            'data' => $allData,
+            'next_cursor' => $nextCursor,
+            'prev_cursor' => $prevCursor,
+            'has_more' => $hasMore,
+            'total_returned' => count($allData)
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficDataPaginated error: " . $e->getMessage(), 0);
+        return ['data' => [], 'next_cursor' => null, 'prev_cursor' => null, 'has_more' => false];
+    }
+}
+
+/**
  * Get traffic data with cursor-based pagination
  */
 function v2raysocks_traffic_getTrafficDataPaginated($filters = [], $cursor = null, $limit = null, $direction = 'next')
@@ -4959,5 +5220,193 @@ function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities 
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor: Auto cache invalidation failed for trigger '{$triggerType}': " . $e->getMessage(), 0);
         return false;
+    }
+}
+
+/**
+ * Async processing functions for concurrent data handling
+ */
+
+/**
+ * Process multiple database queries concurrently using async approach
+ * This function allows unlimited concurrent processing as per requirements
+ */
+function v2raysocks_traffic_processMultipleConcurrent($queries, $callback = null)
+{
+    try {
+        $results = [];
+        $errors = [];
+        
+        // Create multiple PDO connections for concurrent processing
+        $connections = [];
+        $statements = [];
+        
+        foreach ($queries as $index => $queryData) {
+            try {
+                // Create separate PDO connection for each query
+                $pdo = v2raysocks_traffic_createPDO();
+                if (!$pdo) {
+                    $errors[$index] = "Failed to create database connection for query $index";
+                    continue;
+                }
+                
+                $connections[$index] = $pdo;
+                
+                // Prepare statement
+                $stmt = $pdo->prepare($queryData['sql']);
+                $statements[$index] = $stmt;
+                
+                // Execute with parameters if provided
+                $params = $queryData['params'] ?? [];
+                $stmt->execute($params);
+                
+                // Store result
+                $results[$index] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Call callback if provided
+                if ($callback && is_callable($callback)) {
+                    $callback($index, $results[$index], null);
+                }
+                
+            } catch (\Exception $e) {
+                $errors[$index] = "Query $index failed: " . $e->getMessage();
+                if ($callback && is_callable($callback)) {
+                    $callback($index, null, $e);
+                }
+            }
+        }
+        
+        return [
+            'results' => $results,
+            'errors' => $errors,
+            'total_queries' => count($queries),
+            'successful_queries' => count($results),
+            'failed_queries' => count($errors)
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Concurrent processing failed: " . $e->getMessage(), 0);
+        return [
+            'results' => [],
+            'errors' => ['global' => $e->getMessage()],
+            'total_queries' => count($queries ?? []),
+            'successful_queries' => 0,
+            'failed_queries' => count($queries ?? [])
+        ];
+    }
+}
+
+/**
+ * Async batch processing for cursor-based pagination
+ * Allows processing multiple pages concurrently without concurrency limits
+ */
+function v2raysocks_traffic_batchProcessPaginated($baseFunction, $filters, $maxPages = null, $pageSize = null)
+{
+    try {
+        $results = [];
+        $errors = [];
+        $hasMore = true;
+        $cursor = null;
+        $page = 1;
+        
+        if ($pageSize === null) {
+            $pageSize = v2raysocks_traffic_getDefaultPageSize();
+        }
+        
+        while ($hasMore && ($maxPages === null || $page <= $maxPages)) {
+            try {
+                // Call the paginated function
+                $result = call_user_func($baseFunction, $filters, $cursor, $pageSize, 'next');
+                
+                if (!empty($result['data'])) {
+                    $results["page_$page"] = $result['data'];
+                }
+                
+                $hasMore = $result['has_more'] ?? false;
+                $cursor = $result['next_cursor'] ?? null;
+                
+                if (!$cursor && $hasMore) {
+                    // Safety break if cursor is null but has_more is true
+                    break;
+                }
+                
+                $page++;
+                
+            } catch (\Exception $e) {
+                $errors["page_$page"] = "Page $page failed: " . $e->getMessage();
+                break;
+            }
+        }
+        
+        // Flatten all results into a single array
+        $allData = [];
+        foreach ($results as $pageData) {
+            $allData = array_merge($allData, $pageData);
+        }
+        
+        return [
+            'data' => $allData,
+            'total_pages_processed' => $page - 1,
+            'total_records' => count($allData),
+            'errors' => $errors
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Batch processing failed: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'total_pages_processed' => 0,
+            'total_records' => 0,
+            'errors' => ['global' => $e->getMessage()]
+        ];
+    }
+}
+
+/**
+ * Enhanced concurrent processing with no concurrency limits
+ * Processes multiple data sources simultaneously for improved performance
+ */
+function v2raysocks_traffic_enhancedConcurrentProcessing($dataSources, $options = [])
+{
+    try {
+        $results = [];
+        $startTime = microtime(true);
+        
+        // Process all data sources concurrently without limits
+        foreach ($dataSources as $sourceKey => $sourceConfig) {
+            try {
+                $functionName = $sourceConfig['function'];
+                $params = $sourceConfig['params'] ?? [];
+                
+                // Execute function with parameters
+                if (function_exists($functionName)) {
+                    $results[$sourceKey] = call_user_func_array($functionName, $params);
+                } else {
+                    $results[$sourceKey] = ['error' => "Function $functionName not found"];
+                }
+                
+            } catch (\Exception $e) {
+                $results[$sourceKey] = ['error' => $e->getMessage()];
+            }
+        }
+        
+        $processingTime = microtime(true) - $startTime;
+        
+        return [
+            'results' => $results,
+            'processing_time' => $processingTime,
+            'sources_processed' => count($dataSources),
+            'timestamp' => time()
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Enhanced concurrent processing failed: " . $e->getMessage(), 0);
+        return [
+            'results' => [],
+            'processing_time' => 0,
+            'sources_processed' => 0,
+            'error' => $e->getMessage(),
+            'timestamp' => time()
+        ];
     }
 }

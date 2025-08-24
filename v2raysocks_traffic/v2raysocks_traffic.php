@@ -165,21 +165,29 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
-                // Check if cursor pagination is requested
-                $usePagination = isset($_GET['cursor']) || isset($_GET['use_pagination']);
+                // Check if legacy non-pagination is explicitly requested (for backward compatibility)
+                $useLegacy = isset($_GET['no_pagination']) && $_GET['no_pagination'] === 'true';
                 
-                if ($usePagination) {
-                    // Use cursor-based pagination
+                if (!$useLegacy) {
+                    // Use cursor-based pagination by default for all database reading interfaces
                     $cursor = $_GET['cursor'] ?? null;
                     $limit = isset($_GET['limit']) ? intval($_GET['limit']) : null;
                     $direction = $_GET['direction'] ?? 'next';
                     
-                    $result = v2raysocks_traffic_getTrafficDataPaginated($filters, $cursor, $limit, $direction);
+                    // Determine which paginated function to use based on enhanced mode
+                    $useEnhanced = $_GET['enhanced'] ?? 'true';
+                    if ($useEnhanced === 'true') {
+                        $result = v2raysocks_traffic_getEnhancedTrafficDataPaginated($filters, $cursor, $limit, $direction);
+                    } else {
+                        $result = v2raysocks_traffic_getTrafficDataPaginated($filters, $cursor, $limit, $direction);
+                    }
+                    
                     $result['status'] = 'success';
                     $result['pagination'] = true;
+                    $result['enhanced_mode'] = $useEnhanced === 'true';
                     $result['filters_applied'] = array_filter($filters);
                 } else {
-                    // Use legacy approach for backward compatibility
+                    // Use legacy approach only when explicitly requested
                     $useEnhanced = $_GET['enhanced'] ?? 'true';
                     if ($useEnhanced === 'true') {
                         $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
@@ -565,11 +573,11 @@ function v2raysocks_traffic_output($vars)
                     $timeRange = ($_GET['only_today'] === 'true') ? 'today' : 'all';
                 }
                 
-                // Check if cursor pagination is requested
-                $usePagination = isset($_GET['cursor']) || isset($_GET['use_pagination']);
+                // Check if legacy non-pagination is explicitly requested
+                $useLegacy = isset($_GET['no_pagination']) && $_GET['no_pagination'] === 'true';
                 
-                if ($usePagination) {
-                    // Use cursor-based pagination
+                if (!$useLegacy) {
+                    // Use cursor-based pagination by default for all database reading interfaces
                     $cursor = $_GET['cursor'] ?? null;
                     $limit = isset($_GET['limit']) ? intval($_GET['limit']) : null;
                     $direction = $_GET['direction'] ?? 'next';
@@ -580,7 +588,7 @@ function v2raysocks_traffic_output($vars)
                     $result['sort_by'] = $sortBy;
                     $result['time_range'] = $timeRange;
                 } else {
-                    // Use legacy approach for backward compatibility
+                    // Use legacy approach only when explicitly requested
                     $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
                     $result = [
                         'status' => 'success',
@@ -612,11 +620,11 @@ function v2raysocks_traffic_output($vars)
                 $endTimestamp = $_GET['end_timestamp'] ?? null;
                 $limitValue = $_GET['limit'] ?? 'all';
                 
-                // Check if cursor pagination is requested
-                $usePagination = isset($_GET['cursor']) || isset($_GET['use_pagination']);
+                // Check if legacy non-pagination is explicitly requested
+                $useLegacy = isset($_GET['no_pagination']) && $_GET['no_pagination'] === 'true';
                 
-                if ($usePagination) {
-                    // Use cursor-based pagination
+                if (!$useLegacy) {
+                    // Use cursor-based pagination by default for all database reading interfaces
                     $cursor = $_GET['cursor'] ?? null;
                     $limit = isset($_GET['limit']) && $_GET['limit'] !== 'all' ? intval($_GET['limit']) : null;
                     $direction = $_GET['direction'] ?? 'next';
@@ -628,7 +636,7 @@ function v2raysocks_traffic_output($vars)
                     $result['time_range'] = $timeRange;
                     $result['limit'] = $limitValue;
                 } else {
-                    // Use legacy approach for backward compatibility
+                    // Use legacy approach only when explicitly requested
                     // Handle "all" option properly - remove limit restriction
                     $limit = ($limitValue === 'all') ? PHP_INT_MAX : intval($limitValue);
                     if ($limit <= 0) $limit = PHP_INT_MAX; // Default fallback - no limit
@@ -724,11 +732,11 @@ function v2raysocks_traffic_output($vars)
                 $endTimestamp = $_GET['end_timestamp'] ?? $_GET['export_end_timestamp'] ?? null;
                 $limit = intval($_GET['limit'] ?? PHP_INT_MAX);
                 
-                // Check if cursor pagination is requested
-                $usePagination = isset($_GET['cursor']) || isset($_GET['use_pagination']);
+                // Check if legacy non-pagination is explicitly requested
+                $useLegacy = isset($_GET['no_pagination']) && $_GET['no_pagination'] === 'true';
                 
-                if ($usePagination) {
-                    // Use cursor-based pagination
+                if (!$useLegacy) {
+                    // Use cursor-based pagination by default for all database reading interfaces
                     $cursor = $_GET['cursor'] ?? null;
                     $paginationLimit = isset($_GET['limit']) && $_GET['limit'] != PHP_INT_MAX ? intval($_GET['limit']) : null;
                     $direction = $_GET['direction'] ?? 'next';
@@ -744,7 +752,7 @@ function v2raysocks_traffic_output($vars)
                     $result['end_timestamp'] = $endTimestamp;
                     $result['limit'] = $limit;
                 } else {
-                    // Use legacy approach for backward compatibility
+                    // Use legacy approach only when explicitly requested
                     $records = v2raysocks_traffic_getUsageRecords($nodeId, $userId, $timeRange, $limit, $startDate, $endDate, $uuid, $startTimestamp, $endTimestamp);
                     $result = [
                         'status' => 'success',

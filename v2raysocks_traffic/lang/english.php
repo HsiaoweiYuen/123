@@ -149,6 +149,8 @@ $_LANG = [
     // Pagination
     'showing_records' => 'Showing {start} to {end} of {total} records',
     'page_info' => 'Page {current} of {total}',
+    'last_page_not_available_cursor' => 'Last page navigation is not available with cursor pagination. Please use Next/Previous buttons.',
+    'unknown' => 'Unknown',
     'first_page' => 'First',
     'previous_page' => 'Previous',
     'next_page' => 'Next',
