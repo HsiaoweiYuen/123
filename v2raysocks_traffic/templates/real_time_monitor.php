@@ -1015,31 +1015,31 @@ $realTimeMonitorHtml = '
             $("#today-records-per-page").on("change", function() {
                 todayRecordsPerPage = parseInt($(this).val());
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                loadTodayTrafficHistory();
             });
             
             $("#today-first-page").on("click", function() {
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                loadTodayTrafficHistory();
             });
             
             $("#today-prev-page").on("click", function() {
                 if (todayCurrentPage > 1) {
                     todayCurrentPage--;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory();
                 }
             });
             
             $("#today-next-page").on("click", function() {
                 if (todayCurrentPage < todayTotalPages) {
                     todayCurrentPage++;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory();
                 }
             });
             
             $("#today-last-page").on("click", function() {
                 todayCurrentPage = todayTotalPages;
-                updateTodayPaginatedTable();
+                loadTodayTrafficHistory();
             });
         });
         
@@ -1164,7 +1164,6 @@ $realTimeMonitorHtml = '
         }
         
         // Today Traffic History Table functionality
-        let allTodayData = [];
         let todayCurrentPage = 1;
         let todayRecordsPerPage = 50;
         let todayTotalPages = 1;
@@ -1174,7 +1173,9 @@ $realTimeMonitorHtml = '
             const timeRange = $("#today-time-range").val();
             
             let params = {
-                time_range: timeRange
+                time_range: timeRange,
+                page: todayCurrentPage,
+                limit: todayRecordsPerPage
             };
             
             if (serviceId) {
@@ -1212,8 +1213,7 @@ $realTimeMonitorHtml = '
                 timeout: 15000,
                 success: function(response) {
                     if (response.status === "success") {
-                        allTodayData = response.data || [];
-                        updateTodayPaginatedTable();
+                        updateTodayTrafficTable(response.data, response.pagination, response.total_count);
                     } else {
                         $("#today-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
                         $("#today-pagination-controls").hide();
@@ -1227,21 +1227,18 @@ $realTimeMonitorHtml = '
             });
         }
         
-        function updateTodayPaginatedTable() {
+        function updateTodayTrafficTable(data, pagination, totalCount) {
             let html = "";
             
-            if (allTodayData.length === 0) {
+            if (data.length === 0) {
                 html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
                 $("#today-pagination-controls").hide();
             } else {
-                // Calculate pagination
-                todayTotalPages = Math.ceil(allTodayData.length / todayRecordsPerPage);
-                const startIndex = (todayCurrentPage - 1) * todayRecordsPerPage;
-                const endIndex = Math.min(startIndex + todayRecordsPerPage, allTodayData.length);
-                const pageData = allTodayData.slice(startIndex, endIndex);
+                // Use server-provided pagination data
+                todayTotalPages = pagination ? pagination.total_pages : 1;
                 
-                // Generate table rows for current page
-                pageData.forEach(function(row) {
+                // Generate table rows for current page (data already filtered by server)
+                data.forEach(function(row) {
                     html += `<tr>
                         <td>${formatDateTime(row.t)}</td>
                         <td>${row.service_id || "-"}</td>
@@ -1257,16 +1254,26 @@ $realTimeMonitorHtml = '
                     </tr>`;
                 });
                 
-                // Update pagination controls
-                $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", allTodayData.length));
-                $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", todayCurrentPage).replace("{total}", todayTotalPages));
-                
-                // Enable/disable pagination buttons
-                $("#today-first-page, #today-prev-page").prop("disabled", todayCurrentPage === 1);
-                $("#today-next-page, #today-last-page").prop("disabled", todayCurrentPage === todayTotalPages);
-                
-                $("#today-pagination-controls").show();
+                // Update pagination controls with server data
+                if (pagination && totalCount > 0) {
+                    const startIndex = ((pagination.current_page - 1) * pagination.per_page) + 1;
+                    const endIndex = Math.min(pagination.current_page * pagination.per_page, totalCount);
+                    
+                    $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex).replace("{end}", endIndex).replace("{total}", totalCount));
+                    $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", pagination.current_page).replace("{total}", pagination.total_pages));
+                    
+                    // Enable/disable pagination buttons based on server response
+                    $("#today-first-page, #today-prev-page").prop("disabled", !pagination.has_prev);
+                    $("#today-next-page, #today-last-page").prop("disabled", !pagination.has_next);
+                    
+                    $("#today-pagination-controls").show();
+                } else {
+                    $("#today-pagination-controls").hide();
+                }
             }
+            
+            $("#today-traffic-data").html(html);
+        }
             
             $("#today-traffic-data").html(html);
         }
