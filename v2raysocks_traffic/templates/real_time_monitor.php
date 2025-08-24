@@ -1020,26 +1020,29 @@ $realTimeMonitorHtml = '
             
             $("#today-first-page").on("click", function() {
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                currentTodayCursor = null;
+                previousTodayCursors = [];
+                loadTodayTrafficHistory();
             });
             
             $("#today-prev-page").on("click", function() {
-                if (todayCurrentPage > 1) {
+                if (previousTodayCursors.length > 0) {
                     todayCurrentPage--;
-                    updateTodayPaginatedTable();
+                    const prevCursor = previousTodayCursors[previousTodayCursors.length - 1];
+                    loadTodayTrafficHistory("prev", prevCursor);
                 }
             });
             
             $("#today-next-page").on("click", function() {
-                if (todayCurrentPage < todayTotalPages) {
+                if (todayHasMore && currentTodayCursor) {
                     todayCurrentPage++;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory("next", currentTodayCursor);
                 }
             });
             
             $("#today-last-page").on("click", function() {
-                todayCurrentPage = todayTotalPages;
-                updateTodayPaginatedTable();
+                // For cursor pagination, last page is not easily achievable
+                alert("' . v2raysocks_traffic_lang('last_page_not_available_cursor') . '");
             });
         });
         
@@ -1163,19 +1166,31 @@ $realTimeMonitorHtml = '
             else return "EB";
         }
         
-        // Today Traffic History Table functionality
-        let allTodayData = [];
+        // Today Traffic History Table functionality - updated for cursor pagination
+        let currentTodayCursor = null;
+        let todayHasMore = false;
+        let previousTodayCursors = [];
+        let allTodayData = []; // Keep for backward compatibility
         let todayCurrentPage = 1;
         let todayRecordsPerPage = 50;
         let todayTotalPages = 1;
         
-        function loadTodayTrafficHistory() {
+        function loadTodayTrafficHistory(direction = "next", cursor = null) {
             const serviceId = $("#today-service-id").val().trim();
             const timeRange = $("#today-time-range").val();
             
             let params = {
-                time_range: timeRange
+                time_range: timeRange,
+                limit: todayRecordsPerPage
             };
+            
+            // Add cursor pagination parameters
+            if (cursor) {
+                params.cursor = cursor;
+            }
+            if (direction) {
+                params.direction = direction;
+            }
             
             if (serviceId) {
                 params.service_id = serviceId;
@@ -1212,8 +1227,14 @@ $realTimeMonitorHtml = '
                 timeout: 15000,
                 success: function(response) {
                     if (response.status === "success") {
-                        allTodayData = response.data || [];
-                        updateTodayPaginatedTable();
+                        // Handle cursor pagination response
+                        if (response.pagination) {
+                            handleTodayCursorPaginationResponse(response, direction);
+                        } else {
+                            // Fallback for legacy mode
+                            allTodayData = response.data || [];
+                            updateTodayPaginatedTable();
+                        }
                     } else {
                         $("#today-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
                         $("#today-pagination-controls").hide();
@@ -1225,6 +1246,73 @@ $realTimeMonitorHtml = '
                     $("#today-pagination-controls").hide();
                 }
             });
+        }
+        
+        function handleTodayCursorPaginationResponse(response, direction) {
+            // Update cursor state
+            if (direction === "next" && currentTodayCursor) {
+                previousTodayCursors.push(currentTodayCursor);
+            } else if (direction === "prev" && previousTodayCursors.length > 0) {
+                previousTodayCursors.pop();
+            }
+            
+            currentTodayCursor = response.next_cursor;
+            todayHasMore = response.has_more;
+            
+            // Store data for backward compatibility
+            allTodayData = response.data || [];
+            
+            // Update table with current page data
+            updateTodayTableCursor(response.data || []);
+            
+            // Update pagination controls
+            updateTodayPaginationCursor();
+        }
+        
+        function updateTodayTableCursor(data) {
+            let html = "";
+            
+            if (data.length === 0) {
+                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
+            } else {
+                // Generate table rows for current page data
+                data.forEach(function(row) {
+                    html += `<tr>
+                        <td>${formatDateTime(row.t)}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+            }
+            
+            $("#today-traffic-data").html(html);
+        }
+        
+        function updateTodayPaginationCursor() {
+            const hasData = allTodayData.length > 0;
+            
+            if (!hasData) {
+                $("#today-pagination-controls").hide();
+                return;
+            }
+            
+            // Update pagination info
+            $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", ((todayCurrentPage - 1) * todayRecordsPerPage) + 1).replace("{end}", ((todayCurrentPage - 1) * todayRecordsPerPage) + allTodayData.length).replace("{total}", "' . v2raysocks_traffic_lang('unknown') . '"));
+            $("#today-page-info").text("' . v2raysocks_traffic_lang('page_info') . '".replace("{current}", todayCurrentPage).replace("{total}", "?"));
+            
+            // Enable/disable pagination buttons
+            $("#today-first-page, #today-prev-page").prop("disabled", todayCurrentPage === 1);
+            $("#today-next-page, #today-last-page").prop("disabled", !todayHasMore);
+            
+            $("#today-pagination-controls").show();
         }
         
         function updateTodayPaginatedTable() {
