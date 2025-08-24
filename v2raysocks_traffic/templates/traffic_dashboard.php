@@ -643,6 +643,11 @@ $trafficDashboardHtml = '
         let currentPage = 1;
         let recordsPerPage = 50;
         let totalPages = 1;
+        
+        // Cursor pagination variables
+        let currentTrafficCursor = null;
+        let previousTrafficCursors = [];
+        let trafficHasMore = false;
         let moduleConfig = {
             chart_unit: "auto"
         };
@@ -703,6 +708,9 @@ $trafficDashboardHtml = '
             // Filter form submission
             $("#traffic-filter").on("submit", function(e) {
                 e.preventDefault();
+                currentPage = 1;
+                currentTrafficCursor = null;
+                previousTrafficCursors = [];
                 loadTrafficData();
             });
             
@@ -724,6 +732,9 @@ $trafficDashboardHtml = '
             // Service ID field change handler for real-time updates
             $("#service-id").on("input", debounce(function() {
                 if ($(this).val().trim() !== "" || $("#time-range").val() !== "month_including_today") {
+                    currentPage = 1;
+                    currentTrafficCursor = null;
+                    previousTrafficCursors = [];
                     loadTrafficData();
                 }
             }, 1000)); // Wait 1 second after user stops typing
@@ -833,31 +844,37 @@ $trafficDashboardHtml = '
             $("#records-per-page").on("change", function() {
                 recordsPerPage = parseInt($(this).val());
                 currentPage = 1;
-                updatePaginatedTable();
+                currentTrafficCursor = null;
+                previousTrafficCursors = [];
+                loadTrafficData();
             });
             
             $("#first-page").on("click", function() {
                 currentPage = 1;
-                updatePaginatedTable();
+                currentTrafficCursor = null;
+                previousTrafficCursors = [];
+                loadTrafficData();
             });
             
             $("#prev-page").on("click", function() {
-                if (currentPage > 1) {
+                if (previousTrafficCursors.length > 0) {
                     currentPage--;
-                    updatePaginatedTable();
+                    const prevCursor = previousTrafficCursors[previousTrafficCursors.length - 1];
+                    loadTrafficData(\'prev\', prevCursor);
                 }
             });
             
             $("#next-page").on("click", function() {
-                if (currentPage < totalPages) {
+                if (trafficHasMore && currentTrafficCursor) {
                     currentPage++;
-                    updatePaginatedTable();
+                    loadTrafficData(\'next\', currentTrafficCursor);
                 }
             });
             
             $("#last-page").on("click", function() {
-                currentPage = totalPages;
-                updatePaginatedTable();
+                // For cursor pagination, "last page" is not easily achievable
+                // We\'ll disable this or implement it differently if needed
+                alert("Last page navigation is not available with cursor pagination. Please use Next to continue browsing.");
             });
         });
         
@@ -975,8 +992,13 @@ $trafficDashboardHtml = '
             });
         }
         
-        function loadTrafficData() {
-            let params = $("#traffic-filter").serialize() + "&grouped=true";
+        function loadTrafficData(direction = \'next\', cursor = null) {
+            let params = $("#traffic-filter").serialize() + "&grouped=true&use_pagination=true&limit=" + recordsPerPage;
+            
+            // Add cursor parameters
+            if (cursor) {
+                params += "&cursor=" + encodeURIComponent(cursor) + "&direction=" + direction;
+            }
             
             // Handle custom time range - convert times to timestamps
             const timeRange = $("#time-range").val();
@@ -1015,8 +1037,29 @@ $trafficDashboardHtml = '
                     console.log("Traffic data response:", response);
                     $("#loading-indicator").remove();
                     if (response.status === "success") {
-                        updateTrafficTable(response.data);
-                        updateTrafficChart(response.data, response.grouped_data);
+                        // Check if cursor pagination response
+                        if (response.pagination) {
+                            allTrafficData = response.data || [];
+                            currentTrafficCursor = response.next_cursor;
+                            trafficHasMore = response.has_more;
+                            
+                            // Update cursor history for prev navigation
+                            if (direction === \'next\' && cursor === null) {
+                                // Reset on new search
+                                previousTrafficCursors = [];
+                            } else if (direction === \'next\' && cursor) {
+                                previousTrafficCursors.push(cursor);
+                            } else if (direction === \'prev\' && previousTrafficCursors.length > 0) {
+                                previousTrafficCursors.pop();
+                            }
+                            
+                            updateTrafficTableCursor();
+                            updateTrafficChart(response.data, response.grouped_data);
+                        } else {
+                            // Fallback to old pagination for compatibility
+                            updateTrafficTable(response.data);
+                            updateTrafficChart(response.data, response.grouped_data);
+                        }
                     } else {
                         console.error("Traffic data error:", response);
                         $("#traffic-data").html("<tr><td colspan=\'11\' class=\'loading\'>Error: " + (response.message || "Unknown error") + "</td></tr>");
@@ -1079,6 +1122,50 @@ $trafficDashboardHtml = '
                 // Enable/disable pagination buttons
                 $("#first-page, #prev-page").prop("disabled", currentPage === 1);
                 $("#next-page, #last-page").prop("disabled", currentPage === totalPages);
+                
+                $("#pagination-controls").show();
+            }
+            
+            $("#traffic-data").html(html);
+        }
+        
+        // New cursor-based pagination function
+        function updateTrafficTableCursor() {
+            let html = "";
+            
+            if (!allTrafficData || allTrafficData.length === 0) {
+                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found</td></tr>";
+                $("#pagination-controls").hide();
+            } else {
+                // Generate table rows - all records are for current page
+                allTrafficData.forEach(function(row) {
+                    html += `<tr>
+                        <td>${formatDateTime(row.t)}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination info - simplified for cursor pagination
+                const recordCount = allTrafficData.length;
+                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", 1).replace("{end}", recordCount).replace("{total}", recordCount + (trafficHasMore ? "+" : "")));
+                $("#page-info").text(`Page ${currentPage} ${trafficHasMore ? "(more available)" : "(last page)"}`);
+                
+                // Enable/disable pagination buttons based on cursor availability
+                const hasPrev = previousTrafficCursors.length > 0;
+                const hasNext = trafficHasMore;
+                
+                $("#first-page, #prev-page").prop("disabled", !hasPrev);
+                $("#next-page").prop("disabled", !hasNext);
+                $("#last-page").prop("disabled", !hasNext);
                 
                 $("#pagination-controls").show();
             }
