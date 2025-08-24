@@ -578,13 +578,33 @@ function v2raysocks_traffic_output($vars)
                     $timeRange = ($_GET['only_today'] === 'true') ? 'today' : 'all';
                 }
                 
-                $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
-                $result = [
-                    'status' => 'success',
-                    'data' => $rankings,
-                    'sort_by' => $sortBy,
-                    'time_range' => $timeRange
-                ];
+                // Check for pagination parameters
+                $usePagination = $_GET['paginated'] ?? 'false';
+                $cursor = $_GET['cursor'] ?? null;
+                $pageSize = !empty($_GET['page_size']) ? intval($_GET['page_size']) : null;
+                
+                if ($usePagination === 'true') {
+                    // Use cursor-based pagination
+                    $result = v2raysocks_traffic_getNodeTrafficRankingsPaginated($sortBy, $timeRange, $cursor, $pageSize, $startTimestamp, $endTimestamp);
+                    $result = [
+                        'status' => 'success',
+                        'data' => $result['data'],
+                        'pagination' => $result['pagination'],
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'paginated' => true
+                    ];
+                } else {
+                    // Use legacy non-paginated approach
+                    $rankings = v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
+                    $result = [
+                        'status' => 'success',
+                        'data' => $rankings,
+                        'sort_by' => $sortBy,
+                        'time_range' => $timeRange,
+                        'paginated' => false
+                    ];
+                }
             } catch (\Exception $e) {
                 logActivity("V2RaySocks Traffic Analysis get_node_traffic_rankings error: " . $e->getMessage(), 0);
                 $result = [

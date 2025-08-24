@@ -4930,3 +4930,200 @@ function v2raysocks_traffic_getUsageRecordsPaginated($nodeId = null, $userId = n
         ];
     }
 }
+
+/**
+ * Enhanced node rankings with cursor pagination
+ */
+function v2raysocks_traffic_getNodeTrafficRankingsPaginated($sortBy = 'traffic_desc', $timeRange = 'today', $cursor = null, $pageSize = null, $startTimestamp = null, $endTimestamp = null)
+{
+    try {
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            return [
+                'data' => [],
+                'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0]
+            ];
+        }
+        
+        // Check if new columns exist in the node table
+        $nodeHasNewFields = true;
+        try {
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'speedlimitss'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimitSS = $stmt->rowCount() > 0;
+            
+            $checkSql = "SHOW COLUMNS FROM node LIKE 'speedlimitother'";
+            $stmt = $pdo->prepare($checkSql);
+            $stmt->execute();
+            $hasSpeedLimitOther = $stmt->rowCount() > 0;
+            
+            $nodeHasNewFields = $hasSpeedLimitSS && $hasSpeedLimitOther;
+        } catch (\Exception $e) {
+            $nodeHasNewFields = false;
+        }
+        
+        // Calculate time range
+        switch ($timeRange) {
+            case 'today':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'week':
+            case '7days':
+                $startTime = strtotime('-6 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case '15days':
+                $startTime = strtotime('-14 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'month':
+            case '30days':
+                $startTime = strtotime('-29 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'all':
+            default:
+                $startTime = 0;
+                $endTime = time();
+                break;
+        }
+        
+        // Override time range if timestamp parameters are provided
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
+        }
+        
+        // Build the query
+        $speedLimitFields = $nodeHasNewFields ? ', n.speedlimitss, n.speedlimitother' : ', NULL as speedlimitss, NULL as speedlimitother';
+        
+        $sql = "SELECT 
+                    n.id,
+                    n.name,
+                    n.address,
+                    n.country,
+                    n.type,
+                    n.statistics,
+                    n.max_traffic,
+                    n.last_online,
+                    n.online
+                    {$speedLimitFields},
+                    COALESCE(SUM(uu.u), 0) as total_upload,
+                    COALESCE(SUM(uu.d), 0) as total_download,
+                    COALESCE(SUM(uu.u + uu.d), 0) as total_traffic,
+                    COUNT(DISTINCT uu.user_id) as unique_users,
+                    COUNT(uu.id) as usage_records
+                FROM node n
+                LEFT JOIN user_usage uu ON (uu.node = n.id OR uu.node = n.name) 
+                    AND uu.t >= :start_time AND uu.t <= :end_time
+                WHERE 1=1
+                GROUP BY n.id, n.name, n.address, n.country, n.type, n.statistics, n.max_traffic, n.last_online, n.online";
+        
+        $params = [
+            ':start_time' => $startTime,
+            ':end_time' => $endTime
+        ];
+        
+        // Determine cursor column and direction based on sort
+        $cursorColumn = 'n.id';
+        $direction = 'DESC';
+        
+        switch ($sortBy) {
+            case 'traffic_desc':
+                $sql .= ' ORDER BY total_traffic DESC, n.id DESC';
+                $cursorColumn = 'total_traffic';
+                break;
+            case 'traffic_asc':
+                $sql .= ' ORDER BY total_traffic ASC, n.id ASC';
+                $cursorColumn = 'total_traffic';
+                $direction = 'ASC';
+                break;
+            case 'users_desc':
+                $sql .= ' ORDER BY unique_users DESC, n.id DESC';
+                $cursorColumn = 'unique_users';
+                break;
+            case 'users_asc':
+                $sql .= ' ORDER BY unique_users ASC, n.id ASC';
+                $cursorColumn = 'unique_users';
+                $direction = 'ASC';
+                break;
+            case 'records_desc':
+                $sql .= ' ORDER BY usage_records DESC, n.id DESC';
+                $cursorColumn = 'usage_records';
+                break;
+            case 'online_first':
+                $sql .= ' ORDER BY n.online DESC, total_traffic DESC, n.id DESC';
+                $cursorColumn = 'n.online';
+                break;
+            default:
+                $sql .= ' ORDER BY total_traffic DESC, n.id DESC';
+                $cursorColumn = 'total_traffic';
+        }
+        
+        // For complex queries, we'll use LIMIT offset approach with cursor as offset
+        $config = v2raysocks_traffic_getPaginationConfig();
+        $pageSize = $pageSize ?: $config['default_page_size'];
+        $pageSize = max($config['min_page_size'], min($config['max_page_size'], $pageSize));
+        
+        $offset = $cursor ? intval($cursor) : 0;
+        $sql .= ' LIMIT :offset, :limit';
+        $params[':offset'] = $offset;
+        $params[':limit'] = $pageSize + 1; // Get one extra to check for next page
+        
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            if (in_array($key, [':offset', ':limit'])) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->execute();
+        
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Check if there's a next page
+        $hasNext = count($results) > $pageSize;
+        if ($hasNext) {
+            array_pop($results); // Remove the extra record
+        }
+        
+        // Process results (same as original function)
+        foreach ($results as &$node) {
+            $node['total_upload'] = floatval($node['total_upload']);
+            $node['total_download'] = floatval($node['total_download']);
+            $node['total_traffic'] = floatval($node['total_traffic']);
+            $node['statistics'] = floatval($node['statistics'] ?? 0);
+            $node['max_traffic'] = floatval($node['max_traffic'] ?? 0);
+            $node['remaining_traffic'] = max(0, $node['max_traffic'] - $node['statistics']);
+            $node['traffic_utilization'] = $node['max_traffic'] > 0 ? ($node['statistics'] / $node['max_traffic']) * 100 : 0;
+            $node['unique_users'] = intval($node['unique_users']);
+            $node['usage_records'] = intval($node['usage_records']);
+            $node['is_online'] = boolval($node['online']);
+            $node['last_online'] = intval($node['last_online']);
+            $node['avg_traffic_per_user'] = $node['unique_users'] > 0 ? $node['total_traffic'] / $node['unique_users'] : 0;
+        }
+        unset($node);
+        
+        $nextCursor = $hasNext ? $offset + $pageSize : null;
+        
+        return [
+            'data' => $results,
+            'pagination' => [
+                'has_next' => $hasNext,
+                'next_cursor' => $nextCursor,
+                'page_size' => $pageSize,
+                'count' => count($results)
+            ]
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getNodeTrafficRankingsPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0, 'error' => $e->getMessage()]
+        ];
+    }
+}
