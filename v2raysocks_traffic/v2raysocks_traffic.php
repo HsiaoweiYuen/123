@@ -152,13 +152,24 @@ function v2raysocks_traffic_output($vars)
                     'end_timestamp' => !empty($_GET['end_timestamp']) ? intval($_GET['end_timestamp']) : null,
                 ];
                 
+                // Add pagination parameters
+                $pagination = [
+                    'page' => !empty($_GET['page']) ? max(1, intval($_GET['page'])) : 1,
+                    'limit' => !empty($_GET['limit']) ? max(1, min(1000, intval($_GET['limit']))) : 50, // Max 1000 records per page
+                    'offset' => 0
+                ];
+                $pagination['offset'] = ($pagination['page'] - 1) * $pagination['limit'];
+                
                 // Use enhanced traffic data function for better node name resolution
                 $useEnhanced = $_GET['enhanced'] ?? 'true';
                 if ($useEnhanced === 'true') {
-                    $trafficData = v2raysocks_traffic_getEnhancedTrafficData($filters);
+                    $result_data = v2raysocks_traffic_getEnhancedTrafficData($filters, $pagination);
                 } else {
-                    $trafficData = v2raysocks_traffic_getTrafficData($filters);
+                    $result_data = v2raysocks_traffic_getTrafficData($filters, $pagination);
                 }
+                
+                $trafficData = $result_data['data'] ?? [];
+                $totalCount = $result_data['total_count'] ?? 0;
                 
                 // Apply PR#37 time grouping if requested
                 $grouped = $_GET['grouped'] ?? 'false';
@@ -173,6 +184,14 @@ function v2raysocks_traffic_output($vars)
                     'data' => $trafficData,
                     'grouped_data' => $groupedData,
                     'count' => count($trafficData),
+                    'total_count' => $totalCount,
+                    'pagination' => [
+                        'current_page' => $pagination['page'],
+                        'per_page' => $pagination['limit'],
+                        'total_pages' => $totalCount > 0 ? ceil($totalCount / $pagination['limit']) : 1,
+                        'has_next' => ($pagination['page'] * $pagination['limit']) < $totalCount,
+                        'has_prev' => $pagination['page'] > 1
+                    ],
                     'filters_applied' => array_filter($filters),
                     'enhanced_mode' => $useEnhanced === 'true'
                 ];

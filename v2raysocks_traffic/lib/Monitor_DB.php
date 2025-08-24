@@ -297,23 +297,27 @@ function v2raysocks_traffic_getDayTraffic($filters = [])
         return [];
     }
 }
-function v2raysocks_traffic_getTrafficData($filters = [])
+function v2raysocks_traffic_getTrafficData($filters = [], $pagination = null)
 {
     try {
-        $cacheKey = 'traffic_data_' . md5(serialize($filters));
+        // Don't cache paginated results to avoid confusion
+        $cacheKey = 'traffic_data_' . md5(serialize($filters) . serialize($pagination));
         
-        // Try to get from cache first, but don't fail if caching is unavailable
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        // Skip cache for paginated requests to ensure real-time data
+        if (empty($pagination)) {
+            // Try to get from cache first, but don't fail if caching is unavailable
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for traffic data: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for traffic data: " . $e->getMessage(), 0);
         }
         
         // Use monitor module's PDO creation for independence
@@ -457,8 +461,55 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         
         $sql .= ' ORDER BY uu.t DESC';
         
+        // If pagination is requested, get total count first
+        $totalCount = 0;
+        if (!empty($pagination)) {
+            // Get total count without limit/offset
+            $countSql = str_replace('SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    uu.node as node_identifier', 'SELECT COUNT(*)', $sql);
+            $countSql = str_replace(' ORDER BY uu.t DESC', '', $countSql);
+            
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $totalCount = $countStmt->fetchColumn();
+            
+            // Add pagination to main query
+            $sql .= ' LIMIT :limit OFFSET :offset';
+            $params[':limit'] = $pagination['limit'];
+            $params[':offset'] = $pagination['offset'];
+        }
+        
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        
+        // Bind pagination parameters explicitly as integers if present
+        if (!empty($pagination)) {
+            $stmt->bindValue(':limit', $pagination['limit'], PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $pagination['offset'], PDO::PARAM_INT);
+            
+            // Bind other parameters
+            foreach ($params as $key => $value) {
+                if ($key !== ':limit' && $key !== ':offset') {
+                    $stmt->bindValue($key, $value);
+                }
+            }
+        } else {
+            // Bind all parameters normally for non-paginated queries
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Validate and clean the traffic data to prevent extreme values
@@ -483,43 +534,60 @@ function v2raysocks_traffic_getTrafficData($filters = [])
         }
         unset($row); // Break reference
         
-        // Try to cache with shorter time for real-time data using unified cache function
-        try {
-            $timeRangeForCache = 'historical';
-            $isRealTime = false;
-            
-            if (isset($filters['time_range'])) {
-                switch ($filters['time_range']) {
-                    case 'today':
-                        $timeRangeForCache = 'today';
-                        $isRealTime = true;
-                        break;
-                    case 'last_1_hour':
-                    case 'last_3_hours':
-                    case 'last_6_hours':
-                    case 'last_12_hours':
-                        $timeRangeForCache = 'today';
-                        $isRealTime = true;
-                        break;
-                    default:
-                        $timeRangeForCache = 'historical';
-                        break;
+        // Don't cache paginated results
+        if (empty($pagination)) {
+            // Try to cache with shorter time for real-time data using unified cache function
+            try {
+                $timeRangeForCache = 'historical';
+                $isRealTime = false;
+                
+                if (isset($filters['time_range'])) {
+                    switch ($filters['time_range']) {
+                        case 'today':
+                            $timeRangeForCache = 'today';
+                            $isRealTime = true;
+                            break;
+                        case 'last_1_hour':
+                        case 'last_3_hours':
+                        case 'last_6_hours':
+                        case 'last_12_hours':
+                            $timeRangeForCache = 'today';
+                            $isRealTime = true;
+                            break;
+                        default:
+                            $timeRangeForCache = 'historical';
+                            break;
+                    }
                 }
+                
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
+                    'data_type' => 'traffic_data',
+                    'time_range' => $timeRangeForCache,
+                    'is_historical' => !$isRealTime
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
             }
-            
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($data), [
-                'data_type' => 'traffic_data',
-                'time_range' => $timeRangeForCache,
-                'is_historical' => !$isRealTime
-            ]);
-        } catch (\Exception $e) {
-            // Cache write failed, but we can still return the data
-            logActivity("V2RaySocks Traffic Monitor: Cache write failed for traffic data: " . $e->getMessage(), 0);
+        }
+        
+        // Return data with total count if pagination is used
+        if (!empty($pagination)) {
+            return [
+                'data' => $data,
+                'total_count' => $totalCount
+            ];
         }
         
         return $data;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getTrafficData error: " . $e->getMessage(), 0);
+        if (!empty($pagination)) {
+            return [
+                'data' => [],
+                'total_count' => 0
+            ];
+        }
         return [];
     }
 }
@@ -528,23 +596,27 @@ function v2raysocks_traffic_getTrafficData($filters = [])
  * Get enhanced traffic data with improved node name resolution
  * Following the nodes module approach for better compatibility
  */
-function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
+function v2raysocks_traffic_getEnhancedTrafficData($filters = [], $pagination = null)
 {
     try {
-        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters));
+        // Don't cache paginated results to avoid confusion
+        $cacheKey = 'enhanced_traffic_' . md5(serialize($filters) . serialize($pagination));
         
-        // Try to get from cache first
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        // Skip cache for paginated requests to ensure real-time data
+        if (empty($pagination)) {
+            // Try to get from cache first
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for enhanced traffic data: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for enhanced traffic data: " . $e->getMessage(), 0);
         }
         
         $pdo = v2raysocks_traffic_createPDO();
@@ -772,37 +844,67 @@ function v2raysocks_traffic_getEnhancedTrafficData($filters = [])
         }
         unset($row); // Break reference
         
-        // Try to cache the results using unified cache function
-        try {
-            $timeRangeForCache = 'historical';
-            if (isset($filters['time_range'])) {
-                switch ($filters['time_range']) {
-                    case 'today':
-                    case 'last_1_hour':
-                    case 'last_3_hours':
-                    case 'last_6_hours':
-                    case 'last_12_hours':
-                        $timeRangeForCache = 'today';
-                        break;
-                    default:
-                        $timeRangeForCache = 'historical';
-                        break;
+        // Sort all data by timestamp descending before pagination
+        usort($allData, function($a, $b) {
+            return $b['t'] - $a['t'];
+        });
+        
+        // Apply pagination if requested
+        $totalCount = count($allData);
+        if (!empty($pagination)) {
+            $offset = $pagination['offset'];
+            $limit = $pagination['limit'];
+            $allData = array_slice($allData, $offset, $limit);
+        }
+        
+        // Don't cache paginated results
+        if (empty($pagination)) {
+            // Try to cache the results using unified cache function
+            try {
+                $timeRangeForCache = 'historical';
+                if (isset($filters['time_range'])) {
+                    switch ($filters['time_range']) {
+                        case 'today':
+                        case 'last_1_hour':
+                        case 'last_3_hours':
+                        case 'last_6_hours':
+                        case 'last_12_hours':
+                            $timeRangeForCache = 'today';
+                            break;
+                        default:
+                            $timeRangeForCache = 'historical';
+                            break;
+                    }
                 }
+                
+                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
+                    'data_type' => 'enhanced_traffic',
+                    'time_range' => $timeRangeForCache,
+                    'is_historical' => ($timeRangeForCache === 'historical')
+                ]);
+            } catch (\Exception $e) {
+                // Cache write failed, but we can still return the data
+                logActivity("V2RaySocks Traffic Monitor: Cache write failed for enhanced traffic data: " . $e->getMessage(), 0);
             }
-            
-            v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($allData), [
-                'data_type' => 'enhanced_traffic',
-                'time_range' => $timeRangeForCache,
-                'is_historical' => ($timeRangeForCache === 'historical')
-            ]);
-        } catch (\Exception $e) {
-            // Cache write failed, but we can still return the data
-            logActivity("V2RaySocks Traffic Monitor: Cache write failed for enhanced traffic data: " . $e->getMessage(), 0);
+        }
+        
+        // Return data with total count if pagination is used
+        if (!empty($pagination)) {
+            return [
+                'data' => $allData,
+                'total_count' => $totalCount
+            ];
         }
         
         return $allData;
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getEnhancedTrafficData error: " . $e->getMessage(), 0);
+        if (!empty($pagination)) {
+            return [
+                'data' => [],
+                'total_count' => 0
+            ];
+        }
         return [];
     }
 }
