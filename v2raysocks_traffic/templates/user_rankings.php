@@ -866,6 +866,11 @@ $userRankingsHtml = '
                                         <option value="50" selected>50</option>
                                         <option value="100">100</option>
                                         <option value="200">200</option>
+                                        <option value="500">500</option>
+                                        <option value="1000">1000</option>
+                                        <option value="1500">1500</option>
+                                        <option value="3000">3000</option>
+                                        <option value="5000">5000</option>
                                     </select>
                                     
                                     <button id="user-first-page" class="btn btn-sm" style="margin-right: 5px;">' . v2raysocks_traffic_lang('first_page') . '</button>
@@ -892,11 +897,21 @@ $userRankingsHtml = '
         let currentSort = { field: "rank", direction: "asc" };
         let allUserRankings = [];
         
+        // Cursor pagination variables for user usage records
+        let currentUserUsageCursor = null;
+        let previousUserUsageCursors = [];
+        let userUsageHasMore = false;
+        
         // Main rankings pagination variables
         let currentRankingsPage = 1;
         let rankingsRecordsPerPage = 50;
         let totalRankingsPages = 1;
         let filteredRankings = [];
+        
+        // Cursor pagination variables for main rankings
+        let currentRankingsCursor = null;
+        let previousRankingsCursors = [];
+        let rankingsHasMore = false;
         
         // Load user rankings on page load
         $(document).ready(function() {
@@ -1376,10 +1391,15 @@ $userRankingsHtml = '
             loadUserModalData();
         }
         
-        function loadUserModalData() {
+        function loadUserModalData(direction = 'next', cursor = null) {
             const timeRange = document.getElementById("time-range").value;
             let chartUrlParams = "addonmodules.php?module=v2raysocks_traffic&action=get_user_traffic_chart&user_id=" + currentUserId + "&time_range=" + timeRange;
-            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}`;
+            let usageUrlParams = `addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&user_id=${currentUserId}&time_range=${timeRange}&use_pagination=true&limit=${userUsageRecordsPerPage}`;
+            
+            // Add cursor pagination parameters
+            if (cursor) {
+                usageUrlParams += `&cursor=${encodeURIComponent(cursor)}&direction=${direction}`;
+            }
             
             // Add custom date range parameters if applicable
             if (timeRange === "custom") {
@@ -1438,16 +1458,63 @@ $userRankingsHtml = '
                 })
             ])
             .then(([chartResponse, usageResponse]) => {
-                // Process chart data
-                if (chartResponse.status === "success" && chartResponse.data) {
-                    displayUserChart(chartResponse.data);
-                    updateUserInfoWithChartData(chartResponse.data);
+                // Process chart data (only on initial load, not during pagination)
+                if (!cursor) {
+                    if (chartResponse.status === "success" && chartResponse.data) {
+                        displayUserChart(chartResponse.data);
+                        updateUserInfoWithChartData(chartResponse.data);
+                    } else {
+                        console.log("Chart API returned error:", chartResponse);
+                        const userInfo = document.getElementById("user-info");
+                        userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
+                        
+                        // Display empty chart
+                        displayUserChart({
+                            labels: [],
+                            upload: [],
+                            download: [],
+                            total: [],
+                            user_id: currentUserId
+                        });
+                    }
+                }
+                
+                // Process usage records with cursor pagination
+                if (usageResponse.status === "success") {
+                    if (usageResponse.pagination) {
+                        // Handle cursor-based pagination response
+                        allUserUsageRecords = usageResponse.data || [];
+                        currentUserUsageCursor = usageResponse.next_cursor;
+                        userUsageHasMore = usageResponse.has_more;
+                        
+                        // Update cursor history for prev navigation
+                        if (direction === 'next' && cursor === null) {
+                            // Reset on new search
+                            previousUserUsageCursors = [];
+                        } else if (direction === 'next' && cursor) {
+                            previousUserUsageCursors.push(cursor);
+                        } else if (direction === 'prev' && previousUserUsageCursors.length > 0) {
+                            previousUserUsageCursors.pop();
+                        }
+                        
+                        updateUserUsagePaginationCursor();
+                    } else {
+                        // Fallback to old pagination for compatibility
+                        allUserUsageRecords = usageResponse.data || [];
+                        filterAndUpdateUserUsageRecords();
+                    }
                 } else {
-                    console.log("Chart API returned error:", chartResponse);
+                    const recordsTbody = document.getElementById("user-records-tbody");
+                    recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error loading user modal data:", error);
+                if (!cursor) {
                     const userInfo = document.getElementById("user-info");
-                    userInfo.innerHTML = `<div class="no-data">${t("no_traffic_data")} ${chartResponse.message || t("no_traffic_records_period")}</div>`;
+                    userInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
                     
-                    // Display empty chart
+                    // Display empty chart on error
                     displayUserChart({
                         labels: [],
                         upload: [],
@@ -1457,31 +1524,8 @@ $userRankingsHtml = '
                     });
                 }
                 
-                // Process usage records
-                if (usageResponse.status === "success") {
-                    allUserUsageRecords = usageResponse.data || [];
-                    filterAndUpdateUserUsageRecords();
-                } else {
-                    const recordsTbody = document.getElementById("user-records-tbody");
-                    recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
-                }
-            })
-            .catch(error => {
-                console.error("Error loading user modal data:", error);
-                const userInfo = document.getElementById("user-info");
                 const recordsTbody = document.getElementById("user-records-tbody");
-                
-                userInfo.innerHTML = `<div class="no-data">${t("loading_failed")} ${error.message || t("network_connection_error")}</div>`;
                 recordsTbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("network_error_retry")}</td></tr>`;
-                
-                // Display empty chart on error
-                displayUserChart({
-                    labels: [],
-                    upload: [],
-                    download: [],
-                    total: [],
-                    user_id: currentUserId
-                });
             });
         }
         
@@ -1818,6 +1862,56 @@ $userRankingsHtml = '
             document.getElementById("user-prev-page").disabled = currentUserUsagePage === 1;
             document.getElementById("user-next-page").disabled = currentUserUsagePage === totalUserUsagePages;
             document.getElementById("user-last-page").disabled = currentUserUsagePage === totalUserUsagePages;
+            
+            paginationDiv.style.display = "block";
+        }
+        
+        // New cursor-based pagination function for user usage records
+        function updateUserUsagePaginationCursor() {
+            const tbody = document.getElementById("user-records-tbody");
+            const paginationDiv = document.getElementById("user-usage-pagination");
+            
+            if (!allUserUsageRecords || allUserUsageRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="no-data">${t("no_usage_records")}</td></tr>`;
+                paginationDiv.style.display = "none";
+                return;
+            }
+            
+            // Generate table rows - all records are for current page
+            let html = "";
+            allUserUsageRecords.forEach(record => {
+                html += `
+                    <tr>
+                        <td>${record.formatted_time}</td>
+                        <td>${record.node_name || `节点 ${record.node}`}</td>
+                        <td>${record.formatted_upload}</td>
+                        <td>${record.formatted_download}</td>
+                        <td>${record.formatted_total}</td>
+                        <td>${record.count_rate}x</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update pagination info - simplified for cursor pagination
+            const recordCount = allUserUsageRecords.length;
+            document.getElementById("user-pagination-info").textContent = t("showing_records", {
+                start: 1,
+                end: recordCount,
+                total: recordCount + (userUsageHasMore ? "+" : "")
+            });
+            document.getElementById("user-page-info").textContent = 
+                `Page ${currentUserUsagePage} ${userUsageHasMore ? "(more available)" : "(last page)"}`;
+            
+            // Enable/disable pagination buttons based on cursor availability
+            const hasPrev = previousUserUsageCursors.length > 0;
+            const hasNext = userUsageHasMore;
+            
+            document.getElementById("user-first-page").disabled = !hasPrev;
+            document.getElementById("user-prev-page").disabled = !hasPrev;
+            document.getElementById("user-next-page").disabled = !hasNext;
+            document.getElementById("user-last-page").disabled = !hasNext;
             
             paginationDiv.style.display = "block";
         }
@@ -2375,43 +2469,58 @@ $userRankingsHtml = '
             
             // Pagination event listeners for user usage records
             $("#user-records-per-page").on("change", function() {
+                userUsageRecordsPerPage = parseInt($(this).val());
                 currentUserUsagePage = 1;
-                updateUserUsagePagination();
+                currentUserUsageCursor = null;
+                previousUserUsageCursors = [];
+                loadUserModalData();
             });
             
             $("#user-first-page").on("click", function() {
                 currentUserUsagePage = 1;
-                updateUserUsagePagination();
+                currentUserUsageCursor = null;
+                previousUserUsageCursors = [];
+                loadUserModalData();
             });
             
             $("#user-prev-page").on("click", function() {
-                if (currentUserUsagePage > 1) {
+                if (previousUserUsageCursors.length > 0) {
                     currentUserUsagePage--;
-                    updateUserUsagePagination();
+                    const prevCursor = previousUserUsageCursors[previousUserUsageCursors.length - 1];
+                    loadUserModalData('prev', prevCursor);
                 }
             });
             
             $("#user-next-page").on("click", function() {
-                if (currentUserUsagePage < totalUserUsagePages) {
+                if (userUsageHasMore && currentUserUsageCursor) {
                     currentUserUsagePage++;
-                    updateUserUsagePagination();
+                    loadUserModalData('next', currentUserUsageCursor);
                 }
             });
             
             $("#user-last-page").on("click", function() {
-                currentUserUsagePage = totalUserUsagePages;
-                updateUserUsagePagination();
+                // For cursor pagination, "last page" is not easily achievable
+                // So we'll disable this or implement a different approach
+                // For now, just go to next page if available
+                if (userUsageHasMore && currentUserUsageCursor) {
+                    currentUserUsagePage++;
+                    loadUserModalData('next', currentUserUsageCursor);
+                }
             });
             
             // Node search event handlers
             $("#search-user-records").on("click", function() {
                 currentUserUsagePage = 1;
+                currentUserUsageCursor = null;
+                previousUserUsageCursors = [];
                 filterAndUpdateUserUsageRecords();
             });
             
             $("#clear-user-search").on("click", function() {
                 document.getElementById("user-node-search").value = "";
                 currentUserUsagePage = 1;
+                currentUserUsageCursor = null;
+                previousUserUsageCursors = [];
                 filterAndUpdateUserUsageRecords();
             });
             
