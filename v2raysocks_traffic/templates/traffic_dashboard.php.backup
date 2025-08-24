@@ -874,8 +874,8 @@ $trafficDashboardHtml = '
                 data: {
                     labels: [],
                     datasets: [
-                        getStandardDatasetConfig("upload", "\' . v2raysocks_traffic_lang(\'upload\') . \'", []),
-                        getStandardDatasetConfig("download", "\' . v2raysocks_traffic_lang(\'download\') . \'", [])
+                        getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", []),
+                        getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", [])
                     ]
                 },
                 options: {
@@ -885,20 +885,20 @@ $trafficDashboardHtml = '
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: "\' . v2raysocks_traffic_lang(\'total_traffic\') . \'"
+                                text: "' . v2raysocks_traffic_lang('total_traffic') . '"
                             }
                         },
                         x: {
                             title: {
                                 display: true,
-                                text: "\' . v2raysocks_traffic_lang(\'time\') . \'"
+                                text: "' . v2raysocks_traffic_lang('time') . '"
                             }
                         }
                     },
                     plugins: {
                         title: {
                             display: true,
-                            text: "\' . v2raysocks_traffic_lang(\'traffic_usage_over_time\') . \'"
+                            text: "' . v2raysocks_traffic_lang('traffic_usage_over_time') . '"
                         },
                         tooltip: {
                             callbacks: {
@@ -911,18 +911,18 @@ $trafficDashboardHtml = '
                                     // Use translation functions instead of regex replacement
                                     let cleanLabel;
                                     if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
-                                        cleanLabel = "\' . v2raysocks_traffic_lang(\'upload\') . \'";
+                                        cleanLabel = "' . v2raysocks_traffic_lang('upload') . '";
                                     } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
-                                        cleanLabel = "\' . v2raysocks_traffic_lang(\'download\') . \'";
+                                        cleanLabel = "' . v2raysocks_traffic_lang('download') . '";
                                     } else if (label.includes("total") || label.includes("总") || label.includes("總")) {
-                                        cleanLabel = "\' . v2raysocks_traffic_lang(\'total_traffic\') . \'";
+                                        cleanLabel = "' . v2raysocks_traffic_lang('total_traffic') . '";
                                     } else if (label.includes("cumulative")) {
                                         if (label.includes("upload") || label.includes("上传") || label.includes("上傳")) {
-                                            cleanLabel = "\' . v2raysocks_traffic_lang(\'cumulative_upload\') . \'";
+                                            cleanLabel = "' . v2raysocks_traffic_lang('cumulative_upload') . '";
                                         } else if (label.includes("download") || label.includes("下载") || label.includes("下載")) {
-                                            cleanLabel = "\' . v2raysocks_traffic_lang(\'cumulative_download\') . \'";
+                                            cleanLabel = "' . v2raysocks_traffic_lang('cumulative_download') . '";
                                         } else {
-                                            cleanLabel = "\' . v2raysocks_traffic_lang(\'total_cumulative_traffic\') . \'";
+                                            cleanLabel = "' . v2raysocks_traffic_lang('total_cumulative_traffic') . '";
                                         }
                                     } else {
                                         // Fallback: remove unit parentheses as before
@@ -1056,12 +1056,12 @@ $trafficDashboardHtml = '
                         trafficHasMore = data.has_more;
                         
                         // Update cursor history for prev navigation
-                        if (direction === \'next\' && cursor === null) {
+                        if (direction === 'next' && cursor === null) {
                             // Reset on new search
                             previousTrafficCursors = [];
-                        } else if (direction === \'next\' && cursor) {
+                        } else if (direction === 'next' && cursor) {
                             previousTrafficCursors.push(cursor);
-                        } else if (direction === \'prev\' && previousTrafficCursors.length > 0) {
+                        } else if (direction === 'prev' && previousTrafficCursors.length > 0) {
                             previousTrafficCursors.pop();
                         }
                         
@@ -1074,18 +1074,18 @@ $trafficDashboardHtml = '
                     }
                 } else {
                     console.error("Traffic data error:", data);
-                    $("#traffic-data").html(`<tr><td colspan=\'11\' class=\'loading\'>Error: ${data.message || "Unknown error"}</td></tr>`);
+                    $("#traffic-data").html(`<tr><td colspan='11' class='loading'>Error: ${data.message || "Unknown error"}</td></tr>`);
                 }
             } catch (error) {
                 console.error("Error loading traffic data:", error);
                 $("#loading-indicator").remove();
                 let errorMsg = "Error loading traffic data";
-                if (error.name === \'TimeoutError\') {
+                if (error.name === 'TimeoutError') {
                     errorMsg = "Request timed out - please try again";
                 } else if (error.message) {
                     errorMsg = "Server error: " + error.message;
                 }
-                $("#traffic-data").html(`<tr><td colspan=\'11\' class=\'loading\'>${errorMsg}</td></tr>`);
+                $("#traffic-data").html(`<tr><td colspan='11' class='loading'>${errorMsg}</td></tr>`);
             }
         }
         
@@ -1118,7 +1118,7 @@ $trafficDashboardHtml = '
                 });
                 
                 // Update pagination controls for cursor pagination
-                $("#pagination-info").text(`\' . v2raysocks_traffic_lang(\'showing\') . \' ${data.length} \' . v2raysocks_traffic_lang(\'records\') . \'`);
+                $("#pagination-info").text(`' . v2raysocks_traffic_lang('showing') . ' ${data.length} ' . v2raysocks_traffic_lang('records') . '`);
                 
                 // Enable/disable pagination buttons
                 $("#first-page, #prev-page").prop("disabled", previousTrafficCursors.length === 0);
@@ -1166,7 +1166,7 @@ $trafficDashboardHtml = '
                 });
                 
                 // Update pagination controls
-                $("#pagination-info").text("\' . v2raysocks_traffic_lang(\'showing_records\') . \'".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", data.length));
+                $("#pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", startIndex + 1).replace("{end}", endIndex).replace("{total}", data.length));
                 
                 // Enable/disable pagination buttons
                 $("#first-page, #prev-page").prop("disabled", currentPage === 1);
@@ -1333,8 +1333,8 @@ $trafficDashboardHtml = '
                 
                 trafficChart.data.labels = defaultLabels;
                 trafficChart.data.datasets = [
-                    getStandardDatasetConfig("upload", "\' . v2raysocks_traffic_lang(\'upload\') . \'", new Array(defaultLabels.length).fill(0), {fill: true}),
-                    getStandardDatasetConfig("download", "\' . v2raysocks_traffic_lang(\'download\') . \'", new Array(defaultLabels.length).fill(0), {fill: true})
+                    getStandardDatasetConfig("upload", "' . v2raysocks_traffic_lang('upload') . '", new Array(defaultLabels.length).fill(0), {fill: true}),
+                    getStandardDatasetConfig("download", "' . v2raysocks_traffic_lang('download') . '", new Array(defaultLabels.length).fill(0), {fill: true})
                 ];
                 trafficChart.update();
                 hideCustomTimeRangeSummary();
@@ -1468,8 +1468,8 @@ $trafficDashboardHtml = '
                     const downloadData = labels.map(time => parseFloat((timeData[time].download / unitDivisor).toFixed(3)));
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `\' . v2raysocks_traffic_lang(\'upload\') . \' (${unit})`, uploadData, {fill: true}),
-                        getStandardDatasetConfig("download", `\' . v2raysocks_traffic_lang(\'download\') . \' (${unit})`, downloadData, {fill: true})
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('upload') . ' (${unit})`, uploadData, {fill: true}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('download') . ' (${unit})`, downloadData, {fill: true})
                     ];
                     break;
                     
@@ -1477,7 +1477,7 @@ $trafficDashboardHtml = '
                     const totalData = labels.map(time => parseFloat(((timeData[time].upload + timeData[time].download) / unitDivisor).toFixed(3)));
                     
                     datasets = [
-                        getStandardDatasetConfig("total", `\' . v2raysocks_traffic_lang(\'total_traffic\') . \' (${unit})`, totalData, {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_traffic') . ' (${unit})`, totalData, {fill: true})
                     ];
                     break;
                     
@@ -1496,8 +1496,8 @@ $trafficDashboardHtml = '
                     });
                     
                     datasets = [
-                        getStandardDatasetConfig("upload", `\' . v2raysocks_traffic_lang(\'cumulative_upload\') . \' (${unit})`, cumulativeUploadData, {fill: true}),
-                        getStandardDatasetConfig("download", `\' . v2raysocks_traffic_lang(\'cumulative_download\') . \' (${unit})`, cumulativeDownloadData, {fill: true})
+                        getStandardDatasetConfig("upload", `' . v2raysocks_traffic_lang('cumulative_upload') . ' (${unit})`, cumulativeUploadData, {fill: true}),
+                        getStandardDatasetConfig("download", `' . v2raysocks_traffic_lang('cumulative_download') . ' (${unit})`, cumulativeDownloadData, {fill: true})
                     ];
                     break;
                     
@@ -1510,14 +1510,14 @@ $trafficDashboardHtml = '
                     });
                     
                     datasets = [
-                        getStandardDatasetConfig("total", `\' . v2raysocks_traffic_lang(\'total_cumulative_traffic\') . \' (${unit})`, cumulativeTotalData, {fill: true})
+                        getStandardDatasetConfig("total", `' . v2raysocks_traffic_lang('total_cumulative_traffic') . ' (${unit})`, cumulativeTotalData, {fill: true})
                     ];
                     break;
             }
             
             trafficChart.data.labels = labels;
             trafficChart.data.datasets = datasets;
-            trafficChart.options.scales.y.title.text = `\' . v2raysocks_traffic_lang(\'traffic\') . \' (${unit})`;
+            trafficChart.options.scales.y.title.text = `' . v2raysocks_traffic_lang('traffic') . ' (${unit})`;
             trafficChart.update();
             
             console.log("Traffic chart updated with", labels.length, "data points in", chartType, "mode using", unit, "units");
