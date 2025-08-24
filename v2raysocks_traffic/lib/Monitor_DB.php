@@ -3346,22 +3346,26 @@ function v2raysocks_traffic_getUserTrafficChart($userId, $timeRange = 'today', $
 /**
  * Get usage records for a specific node or user
  */
-function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $timeRange = 'today', $pagination = null, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
-        // Try cache first, but don't fail if cache is unavailable
-        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
-        try {
-            $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
-            if ($cachedData) {
-                $decodedData = json_decode($cachedData, true);
-                if (!empty($decodedData)) {
-                    return $decodedData;
+        // Don't cache paginated results
+        $cacheKey = 'usage_records_' . md5(($nodeId ?: 'null') . '_' . ($userId ?: 'null') . '_' . ($uuid ?: 'null') . '_' . $timeRange . '_' . serialize($pagination) . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
+        
+        // Skip cache for paginated requests
+        if (empty($pagination)) {
+            try {
+                $cachedData = v2raysocks_traffic_redisOperate('get', ['key' => $cacheKey]);
+                if ($cachedData) {
+                    $decodedData = json_decode($cachedData, true);
+                    if (!empty($decodedData)) {
+                        return $decodedData;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Cache read failed, continue without cache
+                logActivity("V2RaySocks Traffic Monitor: Cache read failed for usage records: " . $e->getMessage(), 0);
             }
-        } catch (\Exception $e) {
-            // Cache read failed, continue without cache
-            logActivity("V2RaySocks Traffic Monitor: Cache read failed for usage records: " . $e->getMessage(), 0);
         }
         
         $pdo = v2raysocks_traffic_createPDO();
@@ -3482,12 +3486,34 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $params[':uuid'] = $uuid;
         }
 
-        $sql .= ' ORDER BY uu.t DESC LIMIT :limit';
-        $params[':limit'] = $limit;
+        $sql .= ' ORDER BY uu.t DESC';
+        
+        // If pagination is requested, get total count first
+        $totalCount = 0;
+        if (!empty($pagination)) {
+            // Get total count without limit/offset
+            $countSql = str_replace('SELECT uu.*, u.uuid', 'SELECT COUNT(*)', $sql);
+            $countSql = str_replace(' ORDER BY uu.t DESC', '', $countSql);
+            
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $totalCount = $countStmt->fetchColumn();
+            
+            // Add pagination to main query
+            $sql .= ' LIMIT :limit OFFSET :offset';
+            $params[':limit'] = $pagination['limit'];
+            $params[':offset'] = $pagination['offset'];
+        } else {
+            // For backward compatibility when no pagination is used
+            $sql .= ' LIMIT :limit';
+            $params[':limit'] = PHP_INT_MAX;
+        }
 
         $stmt = $pdo->prepare($sql);
+        
+        // Bind parameters
         foreach ($params as $key => $value) {
-            if ($key === ':limit') {
+            if (in_array($key, [':limit', ':offset'])) {
                 $stmt->bindValue($key, $value, PDO::PARAM_INT);
             } else {
                 $stmt->bindValue($key, $value);
@@ -3518,23 +3544,40 @@ function v2raysocks_traffic_getUsageRecords($nodeId = null, $userId = null, $tim
             $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
         }
         
-        // Try to cache using unified cache function
-        if (!empty($records)) {
-            try {
-                v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
-                    'data_type' => 'usage_records',
-                    'time_range' => $timeRange === 'today' ? 'today' : 'historical'
-                ]);
-            } catch (\Exception $e) {
-                // Cache write failed, but we can still return the data
-                logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
+        // Don't cache paginated results
+        if (empty($pagination)) {
+            // Try to cache using unified cache function
+            if (!empty($records)) {
+                try {
+                    v2raysocks_traffic_setCacheWithTTL($cacheKey, json_encode($records), [
+                        'data_type' => 'usage_records',
+                        'time_range' => $timeRange === 'today' ? 'today' : 'historical'
+                    ]);
+                } catch (\Exception $e) {
+                    // Cache write failed, but we can still return the data
+                    logActivity("V2RaySocks Traffic Monitor: Cache write failed for usage records: " . $e->getMessage(), 0);
+                }
             }
+        }
+        
+        // Return data with total count if pagination is used
+        if (!empty($pagination)) {
+            return [
+                'data' => $records,
+                'total_count' => $totalCount
+            ];
         }
         
         return $records;
         
     } catch (\Exception $e) {
         logActivity("V2RaySocks Traffic Monitor getUsageRecords error: " . $e->getMessage(), 0);
+        if (!empty($pagination)) {
+            return [
+                'data' => [],
+                'total_count' => 0
+            ];
+        }
         return [];
     }
 }

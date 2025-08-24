@@ -704,7 +704,6 @@ $nodeStatsHtml = '
         let currentNodeChart = null;
         let currentNodeId = null;
         let currentNodeName = null;
-        let allNodeUsageRecords = [];
         let currentNodeUsagePage = 1;
         let nodeUsageRecordsPerPage = 50;
         let totalNodeUsagePages = 1;
@@ -1012,7 +1011,6 @@ $nodeStatsHtml = '
             
             // Reset pagination
             currentNodeUsagePage = 1;
-            allNodeUsageRecords = [];
             document.getElementById("node-usage-pagination").style.display = "none";
             
             // Add event listeners for chart controls
@@ -1094,14 +1092,8 @@ $nodeStatsHtml = '
                     });
                 }
                 
-                // Process usage records
-                if (usageResponse.status === "success") {
-                    allNodeUsageRecords = usageResponse.data || [];
-                    updateNodeUsagePagination();
-                } else {
-                    const recordsTbody = document.getElementById("node-records-tbody");
-                    recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${usageResponse.message}</td></tr>`;
-                }
+                // Load usage records with pagination
+                loadNodeUsageRecords();
             })
             .catch(error => {
                 console.error("Error loading node modal data:", error);
@@ -1323,7 +1315,7 @@ $nodeStatsHtml = '
             const endTime = document.getElementById("node-rankings-end-time").value;
             
             // Build query parameters
-            let queryParams = `node_id=${currentNodeId}`;
+            let queryParams = `node_id=${currentNodeId}&page=${currentNodeUsagePage}&limit=${nodeUsageRecordsPerPage}`;
             
             // Add search value based on selected type
             if (searchValue) {
@@ -1356,11 +1348,11 @@ $nodeStatsHtml = '
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        allNodeUsageRecords = data.data || [];
-                        updateNodeUsagePagination();
+                        updateNodeUsageTable(data.data || [], data.pagination, data.total_count);
                     } else {
                         const recordsTbody = document.getElementById("node-records-tbody");
                         recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
+                        document.getElementById("node-usage-pagination").style.display = "none";
                     }
                 })
                 .catch(error => {
@@ -1375,26 +1367,22 @@ $nodeStatsHtml = '
             loadNodeModalData();
         }
         
-        function updateNodeUsagePagination() {
+        function updateNodeUsageTable(data, pagination, totalCount) {
             const tbody = document.getElementById("node-records-tbody");
             const paginationDiv = document.getElementById("node-usage-pagination");
             
-            if (!allNodeUsageRecords || allNodeUsageRecords.length === 0) {
+            if (!data || data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("no_usage_records")}</td></tr>`;
                 paginationDiv.style.display = "none";
                 return;
             }
             
-            // Calculate pagination
-            nodeUsageRecordsPerPage = parseInt(document.getElementById("node-records-per-page").value);
-            totalNodeUsagePages = Math.ceil(allNodeUsageRecords.length / nodeUsageRecordsPerPage);
-            const startIndex = (currentNodeUsagePage - 1) * nodeUsageRecordsPerPage;
-            const endIndex = Math.min(startIndex + nodeUsageRecordsPerPage, allNodeUsageRecords.length);
-            const pageData = allNodeUsageRecords.slice(startIndex, endIndex);
+            // Use server-provided pagination data
+            totalNodeUsagePages = pagination ? pagination.total_pages : 1;
             
-            // Generate table rows
+            // Generate table rows for current page (data already filtered by server)
             let html = "";
-            pageData.forEach(record => {
+            data.forEach(record => {
                 html += `
                     <tr>
                         <td>${record.formatted_time}</td>
@@ -1410,24 +1398,31 @@ $nodeStatsHtml = '
             
             tbody.innerHTML = html;
             
-            // Update pagination info
-            document.getElementById("node-pagination-info").textContent = t("showing_records", {
-                start: startIndex + 1,
-                end: endIndex,
-                total: allNodeUsageRecords.length
-            });
-            document.getElementById("node-page-info").textContent = t("page_info", {
-                current: currentNodeUsagePage,
-                total: totalNodeUsagePages
-            });
-            
-            // Enable/disable pagination buttons
-            document.getElementById("node-first-page").disabled = currentNodeUsagePage === 1;
-            document.getElementById("node-prev-page").disabled = currentNodeUsagePage === 1;
-            document.getElementById("node-next-page").disabled = currentNodeUsagePage === totalNodeUsagePages;
-            document.getElementById("node-last-page").disabled = currentNodeUsagePage === totalNodeUsagePages;
-            
-            paginationDiv.style.display = "block";
+            // Update pagination controls with server data
+            if (pagination && totalCount > 0) {
+                const startIndex = ((pagination.current_page - 1) * pagination.per_page) + 1;
+                const endIndex = Math.min(pagination.current_page * pagination.per_page, totalCount);
+                
+                document.getElementById("node-pagination-info").textContent = t("showing_records", {
+                    start: startIndex,
+                    end: endIndex,
+                    total: totalCount
+                });
+                document.getElementById("node-page-info").textContent = t("page_info", {
+                    current: pagination.current_page,
+                    total: pagination.total_pages
+                });
+                
+                // Enable/disable pagination buttons based on server response
+                document.getElementById("node-first-page").disabled = !pagination.has_prev;
+                document.getElementById("node-prev-page").disabled = !pagination.has_prev;
+                document.getElementById("node-next-page").disabled = !pagination.has_next;
+                document.getElementById("node-last-page").disabled = !pagination.has_next;
+                
+                paginationDiv.style.display = "block";
+            } else {
+                paginationDiv.style.display = "none";
+            }
         }
         
         // Generate default time labels for empty charts
@@ -1939,7 +1934,6 @@ $nodeStatsHtml = '
             }
             currentNodeId = null;
             currentNodeName = null;
-            allNodeUsageRecords = [];
         }
         
         function exportNodeRankings() {
@@ -1999,31 +1993,32 @@ $nodeStatsHtml = '
             // Pagination event listeners for node usage records
             $("#node-records-per-page").on("change", function() {
                 currentNodeUsagePage = 1;
-                updateNodeUsagePagination();
+                nodeUsageRecordsPerPage = parseInt($(this).val());
+                loadNodeUsageRecords();
             });
             
             $("#node-first-page").on("click", function() {
                 currentNodeUsagePage = 1;
-                updateNodeUsagePagination();
+                loadNodeUsageRecords();
             });
             
             $("#node-prev-page").on("click", function() {
                 if (currentNodeUsagePage > 1) {
                     currentNodeUsagePage--;
-                    updateNodeUsagePagination();
+                    loadNodeUsageRecords();
                 }
             });
             
             $("#node-next-page").on("click", function() {
                 if (currentNodeUsagePage < totalNodeUsagePages) {
                     currentNodeUsagePage++;
-                    updateNodeUsagePagination();
+                    loadNodeUsageRecords();
                 }
             });
             
             $("#node-last-page").on("click", function() {
                 currentNodeUsagePage = totalNodeUsagePages;
-                updateNodeUsagePagination();
+                loadNodeUsageRecords();
             });
             
             // Export form submission for nodes
