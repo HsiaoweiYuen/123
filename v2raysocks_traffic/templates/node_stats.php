@@ -1312,6 +1312,12 @@ $nodeStatsHtml = '
                 });
         }
         
+        // Global variables for node usage cursor pagination
+        let allNodeUsageRecords = [];
+        let nodeUsageCursor = null;
+        let nodeUsageHasMore = true;
+        let nodeUsageLoading = false;
+        
         function loadNodeUsageRecords() {
             // Get search parameters from search controls only
             const searchType = document.getElementById("node-search-type").value;
@@ -1322,15 +1328,15 @@ $nodeStatsHtml = '
             const startTime = document.getElementById("node-rankings-start-time").value;
             const endTime = document.getElementById("node-rankings-end-time").value;
             
-            // Build query parameters
-            let queryParams = `node_id=${currentNodeId}`;
+            // Build base query parameters
+            let baseQueryParams = `node_id=${currentNodeId}&paginated=true`;
             
             // Add search value based on selected type
             if (searchValue) {
                 if (searchType === "uuid") {
-                    queryParams += `&uuid=${encodeURIComponent(searchValue)}`;
+                    baseQueryParams += `&uuid=${encodeURIComponent(searchValue)}`;
                 } else if (searchType === "user_id") {
-                    queryParams += `&user_id=${encodeURIComponent(searchValue)}`;
+                    baseQueryParams += `&user_id=${encodeURIComponent(searchValue)}`;
                 }
             }
             
@@ -1345,19 +1351,68 @@ $nodeStatsHtml = '
                 const endDateTime = todayStr + " " + endTime;
                 const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
                 const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
-                queryParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
+                baseQueryParams += `&export_start_timestamp=${startTimestamp}&export_end_timestamp=${endTimestamp}`;
             } else if (timeFilter !== "today") {
-                queryParams += `&time_range=${timeFilter}`;
+                baseQueryParams += `&time_range=${timeFilter}`;
             } else {
-                queryParams += `&time_range=today`;
+                baseQueryParams += `&time_range=today`;
+            }
+            
+            // Reset pagination state for new query
+            allNodeUsageRecords = [];
+            nodeUsageCursor = null;
+            nodeUsageHasMore = true;
+            nodeUsageLoading = false;
+            
+            // Start loading data with cursor pagination
+            loadNodeUsageRecordsRecursive(baseQueryParams);
+        }
+        
+        function loadNodeUsageRecordsRecursive(baseParams) {
+            if (nodeUsageLoading || !nodeUsageHasMore) {
+                return;
+            }
+            
+            nodeUsageLoading = true;
+            let queryParams = baseParams;
+            
+            // Add cursor if we have one
+            if (nodeUsageCursor) {
+                queryParams += `&cursor=${nodeUsageCursor}`;
+            }
+            
+            // Show loading indicator on first load
+            if (allNodeUsageRecords.length === 0) {
+                const recordsTbody = document.getElementById("node-records-tbody");
+                recordsTbody.innerHTML = `<tr><td colspan="7" class="loading">🔄 ${t("loading_usage_records")}...</td></tr>`;
             }
             
             fetch(`addonmodules.php?module=v2raysocks_traffic&action=get_usage_records&${queryParams}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log("Node usage records response (paginated):", data);
+                    nodeUsageLoading = false;
+                    
                     if (data.status === "success") {
-                        allNodeUsageRecords = data.data || [];
-                        updateNodeUsagePagination();
+                        // Append new data to existing data
+                        allNodeUsageRecords = allNodeUsageRecords.concat(data.data || []);
+                        
+                        // Update pagination state
+                        if (data.pagination) {
+                            nodeUsageHasMore = data.pagination.has_next;
+                            nodeUsageCursor = data.pagination.next_cursor;
+                        } else {
+                            nodeUsageHasMore = false;
+                        }
+                        
+                        // Continue loading if we have more data and haven't reached a reasonable limit
+                        if (nodeUsageHasMore && allNodeUsageRecords.length < 50000) { // Limit to prevent memory issues
+                            setTimeout(() => loadNodeUsageRecordsRecursive(baseParams), 100); // Small delay between requests
+                        } else {
+                            // All data loaded or limit reached, update UI
+                            updateNodeUsagePagination();
+                            console.log("Loaded total node usage records:", allNodeUsageRecords.length);
+                        }
                     } else {
                         const recordsTbody = document.getElementById("node-records-tbody");
                         recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("failed_load_usage_records")} ${data.message}</td></tr>`;
@@ -1365,6 +1420,7 @@ $nodeStatsHtml = '
                 })
                 .catch(error => {
                     console.error("Error loading usage records:", error);
+                    nodeUsageLoading = false;
                     const recordsTbody = document.getElementById("node-records-tbody");
                     recordsTbody.innerHTML = `<tr><td colspan="7" class="no-data">${t("network_error_retry")}</td></tr>`;
                 });

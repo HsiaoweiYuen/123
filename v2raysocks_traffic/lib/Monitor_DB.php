@@ -4206,3 +4206,727 @@ function v2raysocks_traffic_autoInvalidateCache($triggerType, $affectedEntities 
         return false;
     }
 }
+
+/**
+ * Get module pagination configuration
+ */
+function v2raysocks_traffic_getPaginationConfig()
+{
+    try {
+        static $config = null;
+        if ($config !== null) {
+            return $config;
+        }
+        
+        $paginationSize = Capsule::table('tbladdonmodules')
+            ->where('module', 'v2raysocks_traffic')
+            ->where('setting', 'pagination_size')
+            ->value('value');
+            
+        $config = [
+            'default_page_size' => intval($paginationSize ?: 1000),
+            'max_page_size' => 5000,
+            'min_page_size' => 100
+        ];
+        
+        return $config;
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error getting pagination config: " . $e->getMessage(), 0);
+        return [
+            'default_page_size' => 1000,
+            'max_page_size' => 5000,
+            'min_page_size' => 100
+        ];
+    }
+}
+
+/**
+ * Cursor-based pagination utility for database queries
+ * 
+ * @param PDO $pdo Database connection
+ * @param string $sql Base SQL query without LIMIT
+ * @param array $params Query parameters
+ * @param string $cursorColumn Column to use for cursor (usually 'id' or 't')
+ * @param mixed $cursor Current cursor value
+ * @param int $pageSize Number of records per page
+ * @param string $direction Sort direction ('ASC' or 'DESC')
+ * @return array Result set with pagination info
+ */
+function v2raysocks_traffic_cursorPagination($pdo, $sql, $params, $cursorColumn = 'id', $cursor = null, $pageSize = null, $direction = 'DESC')
+{
+    try {
+        $config = v2raysocks_traffic_getPaginationConfig();
+        $pageSize = $pageSize ?: $config['default_page_size'];
+        
+        // Ensure pageSize is within bounds
+        $pageSize = max($config['min_page_size'], min($config['max_page_size'], $pageSize));
+        
+        // Add cursor condition if provided
+        if ($cursor !== null) {
+            $operator = $direction === 'DESC' ? '<' : '>';
+            $sql .= " AND {$cursorColumn} {$operator} :cursor";
+            $params[':cursor'] = $cursor;
+        }
+        
+        // Add ORDER BY and LIMIT
+        $sql .= " ORDER BY {$cursorColumn} {$direction} LIMIT :limit";
+        $params[':limit'] = $pageSize + 1; // Get one extra to check for next page
+        
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            if ($key === ':limit') {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->execute();
+        
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Check if there's a next page
+        $hasNext = count($results) > $pageSize;
+        if ($hasNext) {
+            array_pop($results); // Remove the extra record
+        }
+        
+        // Get next cursor
+        $nextCursor = null;
+        if ($hasNext && !empty($results)) {
+            $lastRecord = end($results);
+            $nextCursor = $lastRecord[$cursorColumn];
+        }
+        
+        return [
+            'data' => $results,
+            'pagination' => [
+                'has_next' => $hasNext,
+                'next_cursor' => $nextCursor,
+                'page_size' => $pageSize,
+                'count' => count($results)
+            ]
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Cursor pagination error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => [
+                'has_next' => false,
+                'next_cursor' => null,
+                'page_size' => $pageSize ?: 1000,
+                'count' => 0,
+                'error' => $e->getMessage()
+            ]
+        ];
+    }
+}
+
+/**
+ * Async processing helper for parallel data retrieval
+ * 
+ * @param array $tasks Array of task configurations
+ * @return array Results from all tasks
+ */
+function v2raysocks_traffic_processAsync($tasks)
+{
+    try {
+        $results = [];
+        
+        // For PHP environments that support pcntl_fork (Unix/Linux)
+        if (function_exists('pcntl_fork') && function_exists('pcntl_wait')) {
+            $results = v2raysocks_traffic_processAsyncWithFork($tasks);
+        } else {
+            // Fallback to sequential processing with time optimization
+            $results = v2raysocks_traffic_processAsyncSequential($tasks);
+        }
+        
+        return $results;
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Async processing error: " . $e->getMessage(), 0);
+        
+        // Fallback to sequential processing
+        return v2raysocks_traffic_processAsyncSequential($tasks);
+    }
+}
+
+/**
+ * Fork-based async processing (for Unix/Linux environments)
+ */
+function v2raysocks_traffic_processAsyncWithFork($tasks)
+{
+    $pids = [];
+    $results = [];
+    $tmpDir = '/tmp/v2raysocks_async_' . uniqid();
+    
+    if (!mkdir($tmpDir, 0755, true)) {
+        // Fall back to sequential if temp dir creation fails
+        return v2raysocks_traffic_processAsyncSequential($tasks);
+    }
+    
+    try {
+        foreach ($tasks as $index => $task) {
+            $pid = pcntl_fork();
+            
+            if ($pid == -1) {
+                // Fork failed, continue with remaining tasks
+                continue;
+            } elseif ($pid == 0) {
+                // Child process
+                try {
+                    $result = call_user_func_array($task['function'], $task['args']);
+                    file_put_contents($tmpDir . '/result_' . $index, serialize($result));
+                    exit(0);
+                } catch (\Exception $e) {
+                    file_put_contents($tmpDir . '/error_' . $index, $e->getMessage());
+                    exit(1);
+                }
+            } else {
+                // Parent process
+                $pids[$index] = $pid;
+            }
+        }
+        
+        // Wait for all child processes
+        foreach ($pids as $index => $pid) {
+            pcntl_waitpid($pid, $status);
+            
+            $resultFile = $tmpDir . '/result_' . $index;
+            $errorFile = $tmpDir . '/error_' . $index;
+            
+            if (file_exists($resultFile)) {
+                $results[$index] = unserialize(file_get_contents($resultFile));
+            } elseif (file_exists($errorFile)) {
+                $results[$index] = ['error' => file_get_contents($errorFile)];
+            } else {
+                $results[$index] = ['error' => 'Process failed'];
+            }
+        }
+        
+    } finally {
+        // Cleanup temp files
+        $files = glob($tmpDir . '/*');
+        foreach ($files as $file) {
+            unlink($file);
+        }
+        rmdir($tmpDir);
+    }
+    
+    return $results;
+}
+
+/**
+ * Sequential processing with time optimization
+ */
+function v2raysocks_traffic_processAsyncSequential($tasks)
+{
+    $results = [];
+    $startTime = microtime(true);
+    $maxExecutionTime = 30; // 30 seconds max
+    
+    foreach ($tasks as $index => $task) {
+        try {
+            // Check execution time limit
+            if (microtime(true) - $startTime > $maxExecutionTime) {
+                $results[$index] = ['error' => 'Execution time limit exceeded'];
+                break;
+            }
+            
+            $result = call_user_func_array($task['function'], $task['args']);
+            $results[$index] = $result;
+            
+        } catch (\Exception $e) {
+            $results[$index] = ['error' => $e->getMessage()];
+        }
+    }
+    
+    return $results;
+}
+
+/**
+ * Enhanced traffic data retrieval with cursor pagination
+ */
+function v2raysocks_traffic_getTrafficDataPaginated($filters = [], $cursor = null, $pageSize = null)
+{
+    try {
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            logActivity("V2RaySocks Traffic Monitor: Cannot retrieve paginated traffic data - database connection failed", 0);
+            return [
+                'data' => [],
+                'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0]
+            ];
+        }
+        
+        // Build base query
+        $sql = 'SELECT 
+                    uu.*, 
+                    u.uuid, 
+                    u.sid as service_id, 
+                    u.transfer_enable, 
+                    u.u as total_upload,
+                    u.d as total_download,
+                    u.speedlimitss,
+                    u.speedlimitother,
+                    u.illegal,
+                    n.name as node_name,
+                    n.address as node_address,
+                    uu.node as node_identifier
+                FROM user_usage AS uu
+                LEFT JOIN user AS u ON uu.user_id = u.id
+                LEFT JOIN node AS n ON uu.node = n.name
+                WHERE 1=1';
+        
+        $params = [];
+        
+        // Apply filters (same as original function)
+        if (!empty($filters['user_id'])) {
+            $sql .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $filters['user_id'];
+        }
+        
+        if (!empty($filters['service_id']) || !empty($filters['sid'])) {
+            $sid = $filters['service_id'] ?: $filters['sid'];
+            $sql .= ' AND u.sid = :service_id';
+            $params[':service_id'] = $sid;
+        }
+        
+        if (!empty($filters['node_id'])) {
+            $sql .= ' AND uu.node = :node_id';
+            $params[':node_id'] = $filters['node_id'];
+        }
+        
+        if (!empty($filters['uuid'])) {
+            $sql .= ' AND u.uuid LIKE :uuid';
+            $params[':uuid'] = '%' . $filters['uuid'] . '%';
+        }
+        
+        // Time range filtering
+        if (!empty($filters['time_range'])) {
+            $timeFilter = v2raysocks_traffic_getTimeFilter($filters['time_range']);
+            if ($timeFilter) {
+                $sql .= ' AND uu.t >= :start_time';
+                $params[':start_time'] = $timeFilter;
+            }
+        }
+        
+        // Custom date range
+        if (!empty($filters['start_date']) || !empty($filters['start'])) {
+            $startDate = $filters['start_date'] ?: $filters['start'];
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+                $startTime = strtotime($startDate . ' 00:00:00');
+                if ($startTime !== false) {
+                    $sql .= ' AND uu.t >= :custom_start';
+                    $params[':custom_start'] = $startTime;
+                }
+            }
+        }
+        
+        if (!empty($filters['end_date']) || !empty($filters['end'])) {
+            $endDate = $filters['end_date'] ?: $filters['end'];
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                $endTime = strtotime($endDate . ' 23:59:59');
+                if ($endTime !== false) {
+                    $sql .= ' AND uu.t <= :custom_end';
+                    $params[':custom_end'] = $endTime;
+                }
+            }
+        }
+        
+        // Timestamp-based filtering
+        if (!empty($filters['start_timestamp'])) {
+            $sql .= ' AND uu.t >= :timestamp_start';
+            $params[':timestamp_start'] = $filters['start_timestamp'];
+        }
+        
+        if (!empty($filters['end_timestamp'])) {
+            $sql .= ' AND uu.t <= :timestamp_end';
+            $params[':timestamp_end'] = $filters['end_timestamp'];
+        }
+        
+        // Use cursor pagination
+        $result = v2raysocks_traffic_cursorPagination($pdo, $sql, $params, 't', $cursor, $pageSize, 'DESC');
+        
+        // Process the data (same as original function)
+        $data = $result['data'];
+        v2raysocks_traffic_validateTrafficData($data);
+        
+        // Add current_node_name field
+        $todayStart = strtotime('today');
+        foreach ($data as &$row) {
+            if (empty($row['node_name']) && !empty($row['node_identifier'])) {
+                $row['node_name'] = $row['node_identifier'];
+            }
+            
+            if ($row['t'] >= $todayStart) {
+                $row['current_node_name'] = $row['node_name'];
+            } else {
+                $row['current_node_name'] = '';
+            }
+        }
+        unset($row);
+        
+        return [
+            'data' => $data,
+            'pagination' => $result['pagination']
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getTrafficDataPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0, 'error' => $e->getMessage()]
+        ];
+    }
+}
+
+/**
+ * Enhanced user rankings with cursor pagination
+ */
+function v2raysocks_traffic_getUserTrafficRankingsPaginated($sortBy = 'traffic_desc', $timeRange = 'today', $cursor = null, $pageSize = null, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+{
+    try {
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            return [
+                'data' => [],
+                'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0]
+            ];
+        }
+        
+        // Calculate time range (same logic as original function)
+        switch ($timeRange) {
+            case 'today':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'week':
+            case '7days':
+                $startTime = strtotime('-6 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case '15days':
+                $startTime = strtotime('-14 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'month':
+            case '30days':
+                $startTime = strtotime('-29 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'custom':
+                if ($startDate && $endDate) {
+                    $startTime = strtotime($startDate . ' 00:00:00');
+                    $endTime = strtotime($endDate . ' 23:59:59');
+                } else {
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
+            case 'time_range':
+                if ($startTimestamp !== null && $endTimestamp !== null) {
+                    $startTime = intval($startTimestamp);
+                    $endTime = intval($endTimestamp);
+                } else {
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
+            case 'all':
+            default:
+                $startTime = 0;
+                $endTime = time();
+                break;
+        }
+        
+        // Override time range if timestamp parameters are provided
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
+        }
+        
+        // Build the query
+        $sql = 'SELECT 
+                    u.id as user_id,
+                    u.uuid,
+                    u.sid,
+                    u.enable,
+                    u.transfer_enable,
+                    u.u as total_upload_user,
+                    u.d as total_download_user,
+                    u.remark,
+                    SUM(uu.u) as period_upload,
+                    SUM(uu.d) as period_download,
+                    (SUM(uu.u) + SUM(uu.d)) as period_traffic,
+                    COUNT(DISTINCT uu.node) as nodes_used,
+                    COUNT(uu.id) as usage_records,
+                    MIN(uu.t) as first_usage,
+                    MAX(uu.t) as last_usage
+                FROM user u
+                LEFT JOIN user_usage uu ON u.id = uu.user_id AND uu.t >= :start_time AND uu.t <= :end_time
+                WHERE 1=1
+                GROUP BY u.id, u.uuid, u.sid, u.enable, u.transfer_enable, u.u, u.d, u.remark';
+        
+        $params = [
+            ':start_time' => $startTime,
+            ':end_time' => $endTime
+        ];
+        
+        // Determine cursor column and direction based on sort
+        $cursorColumn = 'u.id';
+        $direction = 'DESC';
+        
+        switch ($sortBy) {
+            case 'traffic_desc':
+                $sql .= ' ORDER BY period_traffic DESC, u.id DESC';
+                $cursorColumn = 'period_traffic';
+                break;
+            case 'traffic_asc':
+                $sql .= ' ORDER BY period_traffic ASC, u.id ASC';
+                $cursorColumn = 'period_traffic';
+                $direction = 'ASC';
+                break;
+            case 'remaining_desc':
+                $sql .= ' ORDER BY (u.transfer_enable - (u.u + u.d)) DESC, u.id DESC';
+                $cursorColumn = 'u.transfer_enable';
+                break;
+            case 'remaining_asc':
+                $sql .= ' ORDER BY (u.transfer_enable - (u.u + u.d)) ASC, u.id ASC';
+                $cursorColumn = 'u.transfer_enable';
+                $direction = 'ASC';
+                break;
+            case 'nodes_desc':
+                $sql .= ' ORDER BY nodes_used DESC, u.id DESC';
+                $cursorColumn = 'nodes_used';
+                break;
+            case 'recent_activity':
+                $sql .= ' ORDER BY last_usage DESC, u.id DESC';
+                $cursorColumn = 'last_usage';
+                break;
+            default:
+                $sql .= ' ORDER BY period_traffic DESC, u.id DESC';
+                $cursorColumn = 'period_traffic';
+        }
+        
+        // For complex queries, we'll use LIMIT offset approach with cursor as offset
+        $config = v2raysocks_traffic_getPaginationConfig();
+        $pageSize = $pageSize ?: $config['default_page_size'];
+        $pageSize = max($config['min_page_size'], min($config['max_page_size'], $pageSize));
+        
+        $offset = $cursor ? intval($cursor) : 0;
+        $sql .= ' LIMIT :offset, :limit';
+        $params[':offset'] = $offset;
+        $params[':limit'] = $pageSize + 1; // Get one extra to check for next page
+        
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            if (in_array($key, [':offset', ':limit'])) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->execute();
+        
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Check if there's a next page
+        $hasNext = count($results) > $pageSize;
+        if ($hasNext) {
+            array_pop($results); // Remove the extra record
+        }
+        
+        // Process results (same as original function)
+        foreach ($results as &$user) {
+            $user['period_upload'] = floatval($user['period_upload'] ?? 0);
+            $user['period_download'] = floatval($user['period_download'] ?? 0);
+            $user['period_traffic'] = floatval($user['period_traffic'] ?? 0);
+            $user['total_upload_user'] = floatval($user['total_upload_user'] ?? 0);
+            $user['total_download_user'] = floatval($user['total_download_user'] ?? 0);
+            $user['transfer_enable'] = floatval($user['transfer_enable'] ?? 0);
+            $user['remaining_quota'] = $user['transfer_enable'] - ($user['total_upload_user'] + $user['total_download_user']);
+            $user['quota_utilization'] = $user['transfer_enable'] > 0 ? (($user['total_upload_user'] + $user['total_download_user']) / $user['transfer_enable']) * 100 : 0;
+            $user['nodes_used'] = intval($user['nodes_used'] ?? 0);
+            $user['usage_records'] = intval($user['usage_records'] ?? 0);
+            $user['avg_traffic_per_node'] = $user['nodes_used'] > 0 ? $user['period_traffic'] / $user['nodes_used'] : 0;
+        }
+        unset($user);
+        
+        $nextCursor = $hasNext ? $offset + $pageSize : null;
+        
+        return [
+            'data' => $results,
+            'pagination' => [
+                'has_next' => $hasNext,
+                'next_cursor' => $nextCursor,
+                'page_size' => $pageSize,
+                'count' => count($results)
+            ]
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getUserTrafficRankingsPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0, 'error' => $e->getMessage()]
+        ];
+    }
+}
+
+/**
+ * Enhanced usage records with cursor pagination
+ */
+function v2raysocks_traffic_getUsageRecordsPaginated($nodeId = null, $userId = null, $timeRange = 'today', $cursor = null, $pageSize = null, $startDate = null, $endDate = null, $uuid = null, $startTimestamp = null, $endTimestamp = null)
+{
+    try {
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            return [
+                'data' => [],
+                'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0]
+            ];
+        }
+        
+        // Calculate time range (same as original function)
+        switch ($timeRange) {
+            case 'today':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'last_1_hour':
+                $startTime = strtotime('-1 hour');
+                $endTime = time();
+                break;
+            case 'last_3_hours':
+                $startTime = strtotime('-3 hours');
+                $endTime = time();
+                break;
+            case 'last_6_hours':
+                $startTime = strtotime('-6 hours');
+                $endTime = time();
+                break;
+            case 'last_12_hours':
+                $startTime = strtotime('-12 hours');
+                $endTime = time();
+                break;
+            case 'week':
+            case '7days':
+                $startTime = strtotime('-6 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case '15days':
+                $startTime = strtotime('-14 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'month':
+            case '30days':
+                $startTime = strtotime('-29 days', strtotime('today'));
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'custom':
+                if ($startDate && $endDate) {
+                    $startTime = strtotime($startDate . ' 00:00:00');
+                    $endTime = strtotime($endDate . ' 23:59:59');
+                } else {
+                    $startTime = strtotime('today');
+                    $endTime = strtotime('tomorrow') - 1;
+                }
+                break;
+            case 'time_range':
+                $startTime = strtotime('today');
+                $endTime = strtotime('tomorrow') - 1;
+                break;
+            case 'all':
+            default:
+                $startTime = 0;
+                $endTime = time();
+                break;
+        }
+        
+        // Override time range if timestamp parameters are provided
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $startTime = intval($startTimestamp);
+            $endTime = intval($endTimestamp);
+        }
+        
+        $sql = 'SELECT 
+                    uu.id,
+                    uu.user_id,
+                    uu.t,
+                    uu.u,
+                    uu.d,
+                    uu.node,
+                    uu.count_rate,
+                    u.uuid,
+                    u.sid,
+                    n.name as node_name,
+                    n.country as node_country
+                FROM user_usage uu
+                LEFT JOIN user u ON uu.user_id = u.id
+                LEFT JOIN node n ON (uu.node = n.id OR uu.node = n.name)
+                WHERE uu.t >= :start_time AND uu.t <= :end_time';
+        
+        $params = [
+            ':start_time' => $startTime,
+            ':end_time' => $endTime
+        ];
+        
+        if ($nodeId !== null) {
+            $nodeStmt = $pdo->prepare('SELECT name FROM node WHERE id = :node_id');
+            $nodeStmt->execute([':node_id' => $nodeId]);
+            $nodeInfo = $nodeStmt->fetch(PDO::FETCH_ASSOC);
+            $nodeName = $nodeInfo ? $nodeInfo['name'] : '';
+            
+            $sql .= ' AND (uu.node = :node_id OR uu.node = :node_name)';
+            $params[':node_id'] = $nodeId;
+            $params[':node_name'] = $nodeName;
+        }
+        
+        if ($userId !== null) {
+            $sql .= ' AND uu.user_id = :user_id';
+            $params[':user_id'] = $userId;
+        }
+        
+        if ($uuid !== null) {
+            $sql .= ' AND u.uuid = :uuid';
+            $params[':uuid'] = $uuid;
+        }
+        
+        // Use cursor pagination
+        $result = v2raysocks_traffic_cursorPagination($pdo, $sql, $params, 'uu.t', $cursor, $pageSize, 'DESC');
+        
+        // Process results (same as original function)
+        $records = $result['data'];
+        foreach ($records as &$record) {
+            $record['id'] = intval($record['id']);
+            $record['user_id'] = intval($record['user_id']);
+            $record['t'] = intval($record['t']);
+            $record['u'] = floatval($record['u']);
+            $record['d'] = floatval($record['d']);
+            $record['node'] = intval($record['node']);
+            $record['count_rate'] = floatval($record['count_rate'] ?: 1.0);
+            $record['total_traffic'] = $record['u'] + $record['d'];
+            $record['formatted_time'] = (function($timestamp) {
+                $date = new DateTime();
+                $date->setTimestamp($timestamp);
+                return $date->format('Y-m-d H:i:s');
+            })($record['t']);
+            $record['formatted_upload'] = v2raysocks_traffic_formatBytesConfigurable($record['u']);
+            $record['formatted_download'] = v2raysocks_traffic_formatBytesConfigurable($record['d']);
+            $record['formatted_total'] = v2raysocks_traffic_formatBytesConfigurable($record['total_traffic']);
+        }
+        
+        return [
+            'data' => $records,
+            'pagination' => $result['pagination']
+        ];
+        
+    } catch (\Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor getUsageRecordsPaginated error: " . $e->getMessage(), 0);
+        return [
+            'data' => [],
+            'pagination' => ['has_next' => false, 'next_cursor' => null, 'page_size' => $pageSize ?: 1000, 'count' => 0, 'error' => $e->getMessage()]
+        ];
+    }
+}

@@ -975,8 +975,14 @@ $trafficDashboardHtml = '
             });
         }
         
+        // Global variables for cursor pagination
+        let allTrafficData = [];
+        let currentCursor = null;
+        let hasMoreData = true;
+        let isLoading = false;
+        
         function loadTrafficData() {
-            let params = $("#traffic-filter").serialize() + "&grouped=true";
+            let params = $("#traffic-filter").serialize() + "&grouped=true&paginated=true";
             
             // Handle custom time range - convert times to timestamps
             const timeRange = $("#time-range").val();
@@ -1001,9 +1007,34 @@ $trafficDashboardHtml = '
                 }
             }
             
-            // Add loading indicator without clearing existing data
-            const loadingRow = "<tr id=\'loading-indicator\'><td colspan=\'11\' class=\'loading\' style=\'background-color: #f8f9fa; color: #007bff;\'>🔄 Loading traffic data...</td></tr>";
-            $("#traffic-data").prepend(loadingRow);
+            // Reset pagination state for new query
+            allTrafficData = [];
+            currentCursor = null;
+            hasMoreData = true;
+            isLoading = false;
+            
+            // Start loading data with cursor pagination
+            loadTrafficDataRecursive(params);
+        }
+        
+        function loadTrafficDataRecursive(baseParams) {
+            if (isLoading || !hasMoreData) {
+                return;
+            }
+            
+            isLoading = true;
+            let params = baseParams;
+            
+            // Add cursor if we have one
+            if (currentCursor) {
+                params += "&cursor=" + currentCursor;
+            }
+            
+            // Show loading indicator on first load
+            if (allTrafficData.length === 0) {
+                const loadingRow = "<tr id='loading-indicator'><td colspan='11' class='loading' style='background-color: #f8f9fa; color: #007bff;'>🔄 Loading traffic data...</td></tr>";
+                $("#traffic-data").html(loadingRow);
+            }
             
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
@@ -1012,11 +1043,38 @@ $trafficDashboardHtml = '
                 dataType: "json",
                 timeout: 30000, // 30 second timeout
                 success: function(response) {
-                    console.log("Traffic data response:", response);
-                    $("#loading-indicator").remove();
+                    console.log("Traffic data response (paginated):", response);
+                    isLoading = false;
+                    
                     if (response.status === "success") {
-                        updateTrafficTable(response.data);
-                        updateTrafficChart(response.data, response.grouped_data);
+                        // Append new data to existing data
+                        allTrafficData = allTrafficData.concat(response.data);
+                        
+                        // Update pagination state
+                        if (response.pagination) {
+                            hasMoreData = response.pagination.has_next;
+                            currentCursor = response.pagination.next_cursor;
+                        } else {
+                            hasMoreData = false;
+                        }
+                        
+                        // Continue loading if we have more data and haven't reached a reasonable limit
+                        if (hasMoreData && allTrafficData.length < 50000) { // Limit to prevent memory issues
+                            setTimeout(() => loadTrafficDataRecursive(baseParams), 100); // Small delay between requests
+                        } else {
+                            // All data loaded or limit reached, update UI
+                            $("#loading-indicator").remove();
+                            updateTrafficTable(allTrafficData);
+                            
+                            // Use grouped data from the last response if available, otherwise group all data
+                            if (response.grouped_data) {
+                                updateTrafficChart(allTrafficData, response.grouped_data);
+                            } else {
+                                updateTrafficChart(allTrafficData, null);
+                            }
+                            
+                            console.log("Loaded total records:", allTrafficData.length);
+                        }
                     } else {
                         console.error("Traffic data error:", response);
                         $("#traffic-data").html("<tr><td colspan=\'11\' class=\'loading\'>Error: " + (response.message || "Unknown error") + "</td></tr>");

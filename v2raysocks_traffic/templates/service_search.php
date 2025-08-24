@@ -844,8 +844,46 @@ $serviceSearchHtml = '
             }
         }
         
+        // Global variables for service search cursor pagination
+        let allServiceData = [];
+        let serviceCursor = null;
+        let serviceHasMore = true;
+        let serviceLoading = false;
+        
         function searchServiceTrafficFallback(formData) {
-            console.log("Trying fallback search...");
+            console.log("Starting cursor-paginated service search...");
+            
+            // Add pagination parameter
+            formData.paginated = 'true';
+            
+            // Reset pagination state for new search
+            allServiceData = [];
+            serviceCursor = null;
+            serviceHasMore = true;
+            serviceLoading = false;
+            
+            // Start loading data with cursor pagination
+            searchServiceTrafficRecursive(formData);
+        }
+        
+        function searchServiceTrafficRecursive(baseFormData) {
+            if (serviceLoading || !serviceHasMore) {
+                return;
+            }
+            
+            serviceLoading = true;
+            let formData = Object.assign({}, baseFormData);
+            
+            // Add cursor if we have one
+            if (serviceCursor) {
+                formData.cursor = serviceCursor;
+            }
+            
+            // Show loading indicator on first load
+            if (allServiceData.length === 0) {
+                $("#service-traffic-data").html("<tr><td colspan='11' class='loading'>🔄 Loading service data...</td></tr>");
+            }
+            
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
                 type: "GET",
@@ -853,24 +891,45 @@ $serviceSearchHtml = '
                 dataType: "json",
                 timeout: 15000,
                 success: function(response) {
-                    console.log("Fallback service search response:", response);
+                    console.log("Service search response (paginated):", response);
+                    serviceLoading = false;
+                    
                     if (response.status === "success") {
-                        updateServiceTrafficTable(response.data);
-                        updateServiceTrafficChart(response.data);
+                        // Append new data to existing data
+                        allServiceData = allServiceData.concat(response.data);
+                        
+                        // Update pagination state
+                        if (response.pagination) {
+                            serviceHasMore = response.pagination.has_next;
+                            serviceCursor = response.pagination.next_cursor;
+                        } else {
+                            serviceHasMore = false;
+                        }
+                        
+                        // Continue loading if we have more data and haven't reached a reasonable limit
+                        if (serviceHasMore && allServiceData.length < 50000) { // Limit to prevent memory issues
+                            setTimeout(() => searchServiceTrafficRecursive(baseFormData), 100); // Small delay between requests
+                        } else {
+                            // All data loaded or limit reached, update UI
+                            updateServiceTrafficTable(allServiceData);
+                            updateServiceTrafficChart(allServiceData);
+                            console.log("Loaded total service records:", allServiceData.length);
+                        }
                     } else {
-                        console.error("Fallback service search error:", response);
-                        $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
+                        console.error("Service search error:", response);
+                        $("#service-traffic-data").html("<tr><td colspan='11' class='loading'>Error: " + (response.message || "Unknown error") + "</td></tr>");
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error("AJAX error in fallback service search:", status, error);
+                    console.error("AJAX error in service search:", status, error);
+                    serviceLoading = false;
                     let errorMsg = "Error loading traffic data";
                     if (status === "timeout") {
                         errorMsg = "Search timed out - please try again";
                     } else if (xhr.responseText) {
                         errorMsg = "Server error: " + xhr.status;
                     }
-                    $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">" + errorMsg + "</td></tr>");
+                    $("#service-traffic-data").html("<tr><td colspan='11' class='loading'>" + errorMsg + "</td></tr>");
                 }
             });
         }
