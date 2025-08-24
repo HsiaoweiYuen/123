@@ -731,35 +731,42 @@ $serviceSearchHtml = '
             $("#service-records-per-page").on("change", function() {
                 serviceRecordsPerPage = parseInt($(this).val());
                 serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentCursor = null;
+                previousServiceCursors = [];
+                if (Object.keys(currentSearchParams).length > 0) {
+                    searchServiceTraffic();
+                }
             });
             
             $("#service-first-page").on("click", function() {
                 serviceCurrentPage = 1;
-                updateServicePaginatedTable();
+                serviceCurrentCursor = null;
+                previousServiceCursors = [];
+                searchServiceTraffic();
             });
             
             $("#service-prev-page").on("click", function() {
-                if (serviceCurrentPage > 1) {
+                if (previousServiceCursors.length > 0) {
                     serviceCurrentPage--;
-                    updateServicePaginatedTable();
+                    const prevCursor = previousServiceCursors[previousServiceCursors.length - 1];
+                    searchServiceTraffic(\'prev\', prevCursor);
                 }
             });
             
             $("#service-next-page").on("click", function() {
-                if (serviceCurrentPage < serviceTotalPages) {
+                if (serviceHasMore && serviceCurrentCursor) {
                     serviceCurrentPage++;
-                    updateServicePaginatedTable();
+                    searchServiceTraffic(\'next\', serviceCurrentCursor);
                 }
             });
             
             $("#service-last-page").on("click", function() {
-                serviceCurrentPage = serviceTotalPages;
-                updateServicePaginatedTable();
+                // For cursor pagination, "last page" is not easily achievable
+                alert("Last page navigation is not available with cursor pagination. Please use Next to continue browsing.");
             });
         });
         
-        function searchServiceTraffic() {
+        function searchServiceTraffic(direction = \'next\', cursor = null) {
             const searchType = $("#search_type").val();
             const searchValue = $("#search_value").val().trim();
             const timeRange = $("#time_range").val();
@@ -768,15 +775,23 @@ $serviceSearchHtml = '
             const startTime = $("#start_time").val();
             const endTime = $("#end_time").val();
             
-            if (!searchValue) {
+            if (!searchValue && !cursor) {
                 alert("Please enter a search value");
                 return;
             }
             
             // Build request parameters based on search type
             let requestData = {
-                time_range: timeRange
+                time_range: timeRange,
+                use_pagination: true,
+                limit: serviceRecordsPerPage
             };
+            
+            // Add cursor parameters  
+            if (cursor) {
+                requestData.cursor = cursor;
+                requestData.direction = direction;
+            }
             
             if (startDate) requestData.start_date = startDate;
             if (endDate) requestData.end_date = endDate;
@@ -801,17 +816,26 @@ $serviceSearchHtml = '
                 }
             }
             
-            // Add search parameter based on type
-            switch(searchType) {
-                case "service_id":
-                    requestData.service_id = searchValue;
-                    break;
-                case "user_id":
-                    requestData.user_id = searchValue;
-                    break;
-                case "uuid":
-                    requestData.uuid = searchValue;
-                    break;
+            // Add search parameter based on type (only if not using cursor for pagination)
+            if (searchValue || !cursor) {
+                switch(searchType) {
+                    case "service_id":
+                        requestData.service_id = searchValue;
+                        break;
+                    case "user_id":
+                        requestData.user_id = searchValue;
+                        break;
+                    case "uuid":
+                        requestData.uuid = searchValue;
+                        break;
+                }
+            } else {
+                // For cursor pagination, reuse the stored search params
+                Object.assign(requestData, currentSearchParams);
+                requestData.use_pagination = true;
+                requestData.limit = serviceRecordsPerPage;
+                requestData.cursor = cursor;
+                requestData.direction = direction;
             }
             
             currentSearchParams = requestData;
@@ -820,7 +844,7 @@ $serviceSearchHtml = '
             $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Searching traffic data...</td></tr>");
             
             // Try advanced search first for service_id
-            if (searchType === "service_id") {
+            if (searchType === "service_id" || (!searchValue && cursor)) {
                 $.ajax({
                     url: "addonmodules.php?module=v2raysocks_traffic&action=search_service_advanced",
                     type: "GET",
@@ -831,31 +855,52 @@ $serviceSearchHtml = '
                         console.log("Advanced service search response:", response);
                         if (response.status === "success") {
                             if (response.data && response.data.length > 0) {
-                                updateServiceTrafficTable(response.data);
-                                updateServiceTrafficChart(response.data);
+                                // Check if cursor pagination response
+                                if (response.pagination) {
+                                    allServiceData = response.data || [];
+                                    serviceCurrentCursor = response.next_cursor;
+                                    serviceHasMore = response.has_more;
+                                    
+                                    // Update cursor history for prev navigation
+                                    if (direction === \'next\' && cursor === null) {
+                                        // Reset on new search
+                                        previousServiceCursors = [];
+                                    } else if (direction === \'next\' && cursor) {
+                                        previousServiceCursors.push(cursor);
+                                    } else if (direction === \'prev\' && previousServiceCursors.length > 0) {
+                                        previousServiceCursors.pop();
+                                    }
+                                    
+                                    updateServicePaginatedTableCursor();
+                                    updateServiceTrafficChart(response.data);
+                                } else {
+                                    // Fallback to old pagination for compatibility
+                                    updateServiceTrafficTable(response.data);
+                                    updateServiceTrafficChart(response.data);
+                                }
                             } else {
                                 // Try fallback to regular search
-                                searchServiceTrafficFallback(requestData);
+                                searchServiceTrafficFallback(requestData, direction, cursor);
                             }
                         } else {
                             console.error("Advanced service search error:", response);
                             // Try fallback to regular search
-                            searchServiceTrafficFallback(requestData);
+                            searchServiceTrafficFallback(requestData, direction, cursor);
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error("AJAX error in advanced service search:", status, error);
                         // Try fallback to regular search
-                        searchServiceTrafficFallback(requestData);
+                        searchServiceTrafficFallback(requestData, direction, cursor);
                     }
                 });
             } else {
                 // For other search types, use regular search
-                searchServiceTrafficFallback(requestData);
+                searchServiceTrafficFallback(requestData, direction, cursor);
             }
         }
         
-        function searchServiceTrafficFallback(formData) {
+        function searchServiceTrafficFallback(formData, direction = \'next\', cursor = null) {
             console.log("Trying fallback search...");
             $.ajax({
                 url: "addonmodules.php?module=v2raysocks_traffic&action=get_traffic_data",
@@ -866,8 +911,29 @@ $serviceSearchHtml = '
                 success: function(response) {
                     console.log("Fallback service search response:", response);
                     if (response.status === "success") {
-                        updateServiceTrafficTable(response.data);
-                        updateServiceTrafficChart(response.data);
+                        // Check if cursor pagination response
+                        if (response.pagination) {
+                            allServiceData = response.data || [];
+                            serviceCurrentCursor = response.next_cursor;
+                            serviceHasMore = response.has_more;
+                            
+                            // Update cursor history for prev navigation
+                            if (direction === \'next\' && cursor === null) {
+                                // Reset on new search
+                                previousServiceCursors = [];
+                            } else if (direction === \'next\' && cursor) {
+                                previousServiceCursors.push(cursor);
+                            } else if (direction === \'prev\' && previousServiceCursors.length > 0) {
+                                previousServiceCursors.pop();
+                            }
+                            
+                            updateServicePaginatedTableCursor();
+                            updateServiceTrafficChart(response.data);
+                        } else {
+                            // Fallback to old pagination for compatibility
+                            updateServiceTrafficTable(response.data);
+                            updateServiceTrafficChart(response.data);
+                        }
                     } else {
                         console.error("Fallback service search error:", response);
                         $("#service-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
@@ -931,6 +997,52 @@ $serviceSearchHtml = '
                 // Enable/disable pagination buttons
                 $("#service-first-page, #service-prev-page").prop("disabled", serviceCurrentPage === 1);
                 $("#service-next-page, #service-last-page").prop("disabled", serviceCurrentPage === serviceTotalPages);
+                
+                $("#service-pagination-controls").show();
+            }
+            
+            $("#service-traffic-data").html(html);
+        }
+        
+        // New cursor-based pagination function for service search
+        function updateServicePaginatedTableCursor() {
+            let html = "";
+            
+            if (!allServiceData || allServiceData.length === 0) {
+                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for this search</td></tr>";
+                $("#service-pagination-controls").hide();
+            } else {
+                // Generate table rows - all records are for current page
+                allServiceData.forEach(function(row) {
+                    // use actual data timestamp for consistent local timezone formatting
+                    const displayTime = formatDateTime(row.t);
+                    html += `<tr>
+                        <td>${displayTime}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination info - simplified for cursor pagination
+                const recordCount = allServiceData.length;
+                $("#service-pagination-info").text(`' . v2raysocks_traffic_lang('showing_records') . '`.replace("{start}", 1).replace("{end}", recordCount).replace("{total}", recordCount + (serviceHasMore ? "+" : "")));
+                $("#service-page-info").text(`Page ${serviceCurrentPage} ${serviceHasMore ? "(more available)" : "(last page)"}`);
+                
+                // Enable/disable pagination buttons based on cursor availability
+                const hasPrev = previousServiceCursors.length > 0;
+                const hasNext = serviceHasMore;
+                
+                $("#service-first-page, #service-prev-page").prop("disabled", !hasPrev);
+                $("#service-next-page").prop("disabled", !hasNext);
+                $("#service-last-page").prop("disabled", !hasNext);
                 
                 $("#service-pagination-controls").show();
             }

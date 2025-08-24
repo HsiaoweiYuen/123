@@ -1015,31 +1015,36 @@ $realTimeMonitorHtml = '
             $("#today-records-per-page").on("change", function() {
                 todayRecordsPerPage = parseInt($(this).val());
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                todayCurrentCursor = null;
+                todayPreviousCursors = [];
+                loadTodayTrafficHistory();
             });
             
             $("#today-first-page").on("click", function() {
                 todayCurrentPage = 1;
-                updateTodayPaginatedTable();
+                todayCurrentCursor = null;
+                todayPreviousCursors = [];
+                loadTodayTrafficHistory();
             });
             
             $("#today-prev-page").on("click", function() {
-                if (todayCurrentPage > 1) {
+                if (todayPreviousCursors.length > 0) {
                     todayCurrentPage--;
-                    updateTodayPaginatedTable();
+                    const prevCursor = todayPreviousCursors[todayPreviousCursors.length - 1];
+                    loadTodayTrafficHistory(\'prev\', prevCursor);
                 }
             });
             
             $("#today-next-page").on("click", function() {
-                if (todayCurrentPage < todayTotalPages) {
+                if (todayHasMore && todayCurrentCursor) {
                     todayCurrentPage++;
-                    updateTodayPaginatedTable();
+                    loadTodayTrafficHistory(\'next\', todayCurrentCursor);
                 }
             });
             
             $("#today-last-page").on("click", function() {
-                todayCurrentPage = todayTotalPages;
-                updateTodayPaginatedTable();
+                // For cursor pagination, "last page" is not easily achievable
+                alert("Last page navigation is not available with cursor pagination. Please use Next to continue browsing.");
             });
         });
         
@@ -1169,13 +1174,26 @@ $realTimeMonitorHtml = '
         let todayRecordsPerPage = 50;
         let todayTotalPages = 1;
         
-        function loadTodayTrafficHistory() {
+        // Cursor pagination variables for today traffic
+        let todayCurrentCursor = null;
+        let todayPreviousCursors = [];
+        let todayHasMore = false;
+        
+        function loadTodayTrafficHistory(direction = \'next\', cursor = null) {
             const serviceId = $("#today-service-id").val().trim();
             const timeRange = $("#today-time-range").val();
             
             let params = {
-                time_range: timeRange
+                time_range: timeRange,
+                use_pagination: true,
+                limit: todayRecordsPerPage
             };
+            
+            // Add cursor parameters
+            if (cursor) {
+                params.cursor = cursor;
+                params.direction = direction;
+            }
             
             if (serviceId) {
                 params.service_id = serviceId;
@@ -1212,8 +1230,28 @@ $realTimeMonitorHtml = '
                 timeout: 15000,
                 success: function(response) {
                     if (response.status === "success") {
-                        allTodayData = response.data || [];
-                        updateTodayPaginatedTable();
+                        // Check if cursor pagination response
+                        if (response.pagination) {
+                            allTodayData = response.data || [];
+                            todayCurrentCursor = response.next_cursor;
+                            todayHasMore = response.has_more;
+                            
+                            // Update cursor history for prev navigation
+                            if (direction === \'next\' && cursor === null) {
+                                // Reset on new search
+                                todayPreviousCursors = [];
+                            } else if (direction === \'next\' && cursor) {
+                                todayPreviousCursors.push(cursor);
+                            } else if (direction === \'prev\' && todayPreviousCursors.length > 0) {
+                                todayPreviousCursors.pop();
+                            }
+                            
+                            updateTodayPaginatedTableCursor();
+                        } else {
+                            // Fallback to old pagination for compatibility
+                            allTodayData = response.data || [];
+                            updateTodayPaginatedTable();
+                        }
                     } else {
                         $("#today-traffic-data").html("<tr><td colspan=\\"11\\" class=\\"loading\\">Error: " + (response.message || "Unknown error") + "</td></tr>");
                         $("#today-pagination-controls").hide();
@@ -1264,6 +1302,50 @@ $realTimeMonitorHtml = '
                 // Enable/disable pagination buttons
                 $("#today-first-page, #today-prev-page").prop("disabled", todayCurrentPage === 1);
                 $("#today-next-page, #today-last-page").prop("disabled", todayCurrentPage === todayTotalPages);
+                
+                $("#today-pagination-controls").show();
+            }
+            
+            $("#today-traffic-data").html(html);
+        }
+        
+        // New cursor-based pagination function for today traffic
+        function updateTodayPaginatedTableCursor() {
+            let html = "";
+            
+            if (!allTodayData || allTodayData.length === 0) {
+                html = "<tr><td colspan=\\"11\\" class=\\"no-data\\">No traffic data found for today</td></tr>";
+                $("#today-pagination-controls").hide();
+            } else {
+                // Generate table rows - all records are for current page
+                allTodayData.forEach(function(row) {
+                    html += `<tr>
+                        <td>${formatDateTime(row.t)}</td>
+                        <td>${row.service_id || "-"}</td>
+                        <td>${row.user_id || "-"}</td>
+                        <td class="uuid-column" title="${row.uuid || "-"}">${row.uuid || "-"}</td>
+                        <td>${row.node_name || "-"}</td>
+                        <td>${formatBytes(row.u || 0)}</td>
+                        <td>${formatBytes(row.d || 0)}</td>
+                        <td>${formatBytes((row.u || 0) + (row.d || 0))}</td>
+                        <td>${row.speedlimitss || "-"}</td>
+                        <td>${row.speedlimitother || "-"}</td>
+                        <td>${row.illegal || "0"}</td>
+                    </tr>`;
+                });
+                
+                // Update pagination info - simplified for cursor pagination
+                const recordCount = allTodayData.length;
+                $("#today-pagination-info").text("' . v2raysocks_traffic_lang('showing_records') . '".replace("{start}", 1).replace("{end}", recordCount).replace("{total}", recordCount + (todayHasMore ? "+" : "")));
+                $("#today-page-info").text(`Page ${todayCurrentPage} ${todayHasMore ? "(more available)" : "(last page)"}`);
+                
+                // Enable/disable pagination buttons based on cursor availability
+                const hasPrev = todayPreviousCursors.length > 0;
+                const hasNext = todayHasMore;
+                
+                $("#today-first-page, #today-prev-page").prop("disabled", !hasPrev);
+                $("#today-next-page").prop("disabled", !hasNext);
+                $("#today-last-page").prop("disabled", !hasNext);
                 
                 $("#today-pagination-controls").show();
             }
