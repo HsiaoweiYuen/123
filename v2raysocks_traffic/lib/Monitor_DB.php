@@ -6,6 +6,11 @@ if (!defined("WHMCS")) {
 
 require_once __DIR__ . '/Monitor_Redis.php';
 
+// Load optimization classes for large-scale data processing
+require_once __DIR__ . '/../../includes/class-large-data-processor.php';
+require_once __DIR__ . '/../../includes/class-traffic-aggregator.php';
+require_once __DIR__ . '/../../includes/class-cache-manager.php';
+
 use WHMCS\Database\Capsule;
 
 /**
@@ -2372,12 +2377,332 @@ function v2raysocks_traffic_searchByServiceId($serviceId, $filters = [])
     }
 }
 
+// ================================================================
+// LARGE-SCALE DATA OPTIMIZATION FUNCTIONS
+// ================================================================
+
+/**
+ * Initialize optimization components
+ */
+function v2raysocks_traffic_initOptimization()
+{
+    static $initialized = false;
+    static $components = [];
+    
+    if ($initialized) {
+        return $components;
+    }
+    
+    try {
+        $pdo = v2raysocks_traffic_createPDO();
+        if (!$pdo) {
+            throw new Exception("Database connection failed");
+        }
+        
+        $components['cache_manager'] = new V2RaySocks_CacheManager();
+        $components['large_data_processor'] = new V2RaySocks_LargeDataProcessor($pdo);
+        $components['traffic_aggregator'] = new V2RaySocks_TrafficAggregator($pdo);
+        
+        $initialized = true;
+        logActivity("V2RaySocks Traffic Monitor: Optimization components initialized", 0);
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Failed to initialize optimization components: " . $e->getMessage(), 0);
+        // Return empty array to allow fallback to original functions
+        return [];
+    }
+    
+    return $components;
+}
+
+/**
+ * Optimized user traffic rankings for large datasets
+ * 
+ * @param string $sortBy Sorting criteria
+ * @param string $timeRange Time range for data
+ * @param int $limit Result limit
+ * @param string $startDate Start date (optional)
+ * @param string $endDate End date (optional)
+ * @param int $startTimestamp Start timestamp (optional)
+ * @param int $endTimestamp End timestamp (optional)
+ * @return array User rankings
+ */
+function v2raysocks_traffic_getUserTrafficRankingsOptimized($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
+{
+    try {
+        $components = v2raysocks_traffic_initOptimization();
+        
+        // Use optimized processing if components are available
+        if (!empty($components) && isset($components['traffic_aggregator'])) {
+            logActivity("V2RaySocks Traffic Monitor: Using optimized user rankings for large dataset", 0);
+            
+            $result = $components['traffic_aggregator']->getUserTrafficRankings(
+                $sortBy, 
+                $timeRange, 
+                $limit, 
+                $startTimestamp, 
+                $endTimestamp
+            );
+            
+            if (!empty($result)) {
+                return $result;
+            }
+            
+            logActivity("V2RaySocks Traffic Monitor: Optimized processing returned empty, falling back to standard method", 0);
+        }
+        
+        // Fallback to original function
+        return v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error in optimized user rankings: " . $e->getMessage(), 0);
+        // Fallback to original function
+        return v2raysocks_traffic_getUserTrafficRankings($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+    }
+}
+
+/**
+ * Optimized node traffic rankings for large datasets
+ * 
+ * @param string $sortBy Sorting criteria
+ * @param string $timeRange Time range for data
+ * @param int $startTimestamp Start timestamp (optional)
+ * @param int $endTimestamp End timestamp (optional)
+ * @return array Node rankings
+ */
+function v2raysocks_traffic_getNodeTrafficRankingsOptimized($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
+{
+    try {
+        $components = v2raysocks_traffic_initOptimization();
+        
+        // Use optimized processing if components are available
+        if (!empty($components) && isset($components['traffic_aggregator'])) {
+            logActivity("V2RaySocks Traffic Monitor: Using optimized node rankings for large dataset", 0);
+            
+            $result = $components['traffic_aggregator']->getNodeTrafficRankings(
+                $sortBy, 
+                $timeRange, 
+                $startTimestamp, 
+                $endTimestamp
+            );
+            
+            if (!empty($result)) {
+                return $result;
+            }
+            
+            logActivity("V2RaySocks Traffic Monitor: Optimized processing returned empty, falling back to standard method", 0);
+        }
+        
+        // Fallback to original function
+        return v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error in optimized node rankings: " . $e->getMessage(), 0);
+        // Fallback to original function
+        return v2raysocks_traffic_getNodeTrafficRankings($sortBy, $timeRange, $startTimestamp, $endTimestamp);
+    }
+}
+
+/**
+ * Optimized traffic data retrieval for large datasets
+ * 
+ * @param array $filters Filter parameters
+ * @return array Traffic data
+ */
+function v2raysocks_traffic_getTrafficDataOptimized($filters = [])
+{
+    try {
+        $components = v2raysocks_traffic_initOptimization();
+        
+        // For large time ranges or when specifically requested, use optimization
+        $useOptimization = false;
+        
+        // Check if this is a large dataset request
+        if (!empty($filters['start_timestamp']) && !empty($filters['end_timestamp'])) {
+            $timeRange = $filters['end_timestamp'] - $filters['start_timestamp'];
+            // Use optimization for time ranges > 7 days
+            if ($timeRange > (7 * 24 * 3600)) {
+                $useOptimization = true;
+            }
+        }
+        
+        // Check for explicit optimization request
+        if (isset($filters['use_optimization']) && $filters['use_optimization']) {
+            $useOptimization = true;
+        }
+        
+        if ($useOptimization && !empty($components) && isset($components['traffic_aggregator'])) {
+            logActivity("V2RaySocks Traffic Monitor: Using optimized traffic data retrieval for large dataset", 0);
+            
+            $result = $components['traffic_aggregator']->getAggregatedTrafficData($filters, 'hour');
+            
+            if (!empty($result)) {
+                return $result;
+            }
+            
+            logActivity("V2RaySocks Traffic Monitor: Optimized traffic data returned empty, falling back to standard method", 0);
+        }
+        
+        // Fallback to original function
+        return v2raysocks_traffic_getTrafficData($filters);
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error in optimized traffic data: " . $e->getMessage(), 0);
+        // Fallback to original function
+        return v2raysocks_traffic_getTrafficData($filters);
+    }
+}
+
+/**
+ * Batch process large datasets with memory management
+ * 
+ * @param string $operation Operation type (user_rankings, node_rankings, traffic_data)
+ * @param array $params Operation parameters
+ * @return array Processing results
+ */
+function v2raysocks_traffic_batchProcessLargeDataset($operation, $params = [])
+{
+    try {
+        $components = v2raysocks_traffic_initOptimization();
+        
+        if (empty($components) || !isset($components['large_data_processor'])) {
+            throw new Exception("Large data processor not available");
+        }
+        
+        logActivity("V2RaySocks Traffic Monitor: Starting batch processing for operation: $operation", 0);
+        
+        $processor = $components['large_data_processor'];
+        
+        switch ($operation) {
+            case 'user_rankings':
+                return v2raysocks_traffic_getUserTrafficRankingsOptimized(
+                    $params['sortBy'] ?? 'traffic_desc',
+                    $params['timeRange'] ?? 'today',
+                    $params['limit'] ?? PHP_INT_MAX,
+                    null,
+                    null,
+                    $params['startTimestamp'] ?? null,
+                    $params['endTimestamp'] ?? null
+                );
+                
+            case 'node_rankings':
+                return v2raysocks_traffic_getNodeTrafficRankingsOptimized(
+                    $params['sortBy'] ?? 'traffic_desc',
+                    $params['timeRange'] ?? 'today',
+                    $params['startTimestamp'] ?? null,
+                    $params['endTimestamp'] ?? null
+                );
+                
+            case 'traffic_data':
+                $filters = $params['filters'] ?? [];
+                $filters['use_optimization'] = true;
+                return v2raysocks_traffic_getTrafficDataOptimized($filters);
+                
+            default:
+                throw new Exception("Unknown operation: $operation");
+        }
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error in batch processing: " . $e->getMessage(), 0);
+        return [];
+    }
+}
+
+/**
+ * Get optimization status and performance metrics
+ * 
+ * @return array Optimization status
+ */
+function v2raysocks_traffic_getOptimizationStatus()
+{
+    try {
+        $components = v2raysocks_traffic_initOptimization();
+        
+        $status = [
+            'optimization_available' => !empty($components),
+            'components' => [
+                'cache_manager' => isset($components['cache_manager']),
+                'large_data_processor' => isset($components['large_data_processor']),
+                'traffic_aggregator' => isset($components['traffic_aggregator'])
+            ],
+            'database_indexes' => []
+        ];
+        
+        // Check if optimization indexes exist
+        if (!empty($components)) {
+            $pdo = v2raysocks_traffic_createPDO();
+            if ($pdo) {
+                try {
+                    $stmt = $pdo->prepare("SHOW INDEX FROM user_usage WHERE Key_name LIKE 'idx_%'");
+                    $stmt->execute();
+                    $indexes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $status['database_indexes'] = count($indexes);
+                } catch (Exception $e) {
+                    $status['database_indexes'] = 'check_failed';
+                }
+            }
+        }
+        
+        // Get cache statistics if available
+        if (isset($components['cache_manager'])) {
+            $status['cache_stats'] = $components['cache_manager']->getStats();
+        }
+        
+        return $status;
+        
+    } catch (Exception $e) {
+        logActivity("V2RaySocks Traffic Monitor: Error getting optimization status: " . $e->getMessage(), 0);
+        return [
+            'optimization_available' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+// ================================================================
+// END LARGE-SCALE DATA OPTIMIZATION FUNCTIONS
+// ================================================================
+
 /**
  * Get node traffic rankings with today's data only
  */
 function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $startTimestamp = null, $endTimestamp = null)
 {
     try {
+        // Auto-detect large dataset and use optimization if available
+        $useOptimization = false;
+        
+        // Check for large time ranges that would benefit from optimization
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $timeRangeSeconds = $endTimestamp - $startTimestamp;
+            // Use optimization for time ranges > 1 day
+            if ($timeRangeSeconds > (24 * 3600)) {
+                $useOptimization = true;
+            }
+        } elseif (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'all'])) {
+            $useOptimization = true;
+        }
+        
+        // Try optimized processing for large datasets
+        if ($useOptimization) {
+            try {
+                $optimizedResult = v2raysocks_traffic_getNodeTrafficRankingsOptimized(
+                    $sortBy, $timeRange, $startTimestamp, $endTimestamp
+                );
+                
+                // If optimization succeeded and returned data, use it
+                if (!empty($optimizedResult)) {
+                    logActivity("V2RaySocks Traffic Monitor: Used optimized processing for large node rankings dataset", 0);
+                    return $optimizedResult;
+                }
+            } catch (Exception $e) {
+                logActivity("V2RaySocks Traffic Monitor: Node optimization failed, falling back to standard processing: " . $e->getMessage(), 0);
+            }
+        }
+        
+        // Continue with standard processing for smaller datasets or optimization fallback
+        logActivity("V2RaySocks Traffic Monitor: Using standard processing for node rankings", 0);
+        
         // Try cache first, but don't fail if cache is unavailable
         $cacheKey = 'node_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
@@ -2622,6 +2947,45 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
 function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
 {
     try {
+        // Auto-detect large dataset and use optimization if available
+        $useOptimization = false;
+        
+        // Check for large time ranges that would benefit from optimization
+        if ($startTimestamp !== null && $endTimestamp !== null) {
+            $timeRange = $endTimestamp - $startTimestamp;
+            // Use optimization for time ranges > 1 day or high record estimates
+            if ($timeRange > (24 * 3600)) {
+                $useOptimization = true;
+            }
+        } elseif (in_array($timeRange, ['week', '7days', '15days', 'month', '30days', 'all'])) {
+            $useOptimization = true;
+        }
+        
+        // Use optimization for unlimited or large limits (likely large datasets)
+        if ($limit > 10000 || $limit === PHP_INT_MAX) {
+            $useOptimization = true;
+        }
+        
+        // Try optimized processing for large datasets
+        if ($useOptimization) {
+            try {
+                $optimizedResult = v2raysocks_traffic_getUserTrafficRankingsOptimized(
+                    $sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp
+                );
+                
+                // If optimization succeeded and returned data, use it
+                if (!empty($optimizedResult)) {
+                    logActivity("V2RaySocks Traffic Monitor: Used optimized processing for large user rankings dataset", 0);
+                    return $optimizedResult;
+                }
+            } catch (Exception $e) {
+                logActivity("V2RaySocks Traffic Monitor: Optimization failed, falling back to standard processing: " . $e->getMessage(), 0);
+            }
+        }
+        
+        // Continue with standard processing for smaller datasets or optimization fallback
+        logActivity("V2RaySocks Traffic Monitor: Using standard processing for user rankings", 0);
+        
         // Try cache first, but don't fail if cache is unavailable
         $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
         try {
