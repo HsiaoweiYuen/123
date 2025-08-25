@@ -2621,6 +2621,16 @@ function v2raysocks_traffic_getNodeTrafficRankings($sortBy = 'traffic_desc', $ti
  */
 function v2raysocks_traffic_getUserTrafficRankings($sortBy = 'traffic_desc', $timeRange = 'today', $limit = PHP_INT_MAX, $startDate = null, $endDate = null, $startTimestamp = null, $endTimestamp = null)
 {
+    // 首先检查是否需要使用优化处理（大数据处理优化功能）
+    // First check if optimized processing is needed (Big Data Processing Optimization)
+    if (function_exists('v2raysocks_traffic_getUserTrafficRankingsWithAutoOptimization')) {
+        $optimizedResult = v2raysocks_traffic_getUserTrafficRankingsWithAutoOptimization($sortBy, $timeRange, $limit, $startDate, $endDate, $startTimestamp, $endTimestamp);
+        if ($optimizedResult !== null) {
+            return $optimizedResult; // 使用优化处理结果
+        }
+        // 如果返回null，继续使用标准处理
+    }
+    
     try {
         // Try cache first, but don't fail if cache is unavailable
         $cacheKey = 'user_traffic_rankings_' . md5($sortBy . '_' . $timeRange . '_' . $limit . '_' . ($startDate ?: '') . '_' . ($endDate ?: '') . '_' . ($startTimestamp ?: '') . '_' . ($endTimestamp ?: ''));
